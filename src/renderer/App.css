@@ -1,0 +1,81 @@
+/*
+ * @NOTE: Prepend a `~` to css file paths that are in your node_modules
+ *        See https://github.com/webpack-contrib/sass-loader#imports
+ */
+
+body {
+	position: relative;
+	color: white;
+	height: 100vh;
+	background: linear-gradient(
+		220.96deg,
+		#423805 -38.09%,
+		#0d2646 51.77%,
+		#0e4916 140.35%
+	);
+	font-family: sans-serif;
+	overflow-y: hidden;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+#root {
+	width: 100% !important;
+	height: 100% !important;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.chat-emote {
+	font-weight: 900;
+	height: 23px;
+	grid-column: 1;
+	grid-row: 1;
+	display: inline-block;
+	vertical-align: middle;
+	margin: auto;
+	object-fit: contain;
+}
+
+.chat-badge {
+	display: inline-block;
+	vertical-align: middle;
+	text-align: center;
+	margin-right: 2px;
+}
+.chat-message-timestamp {
+	margin-right: 0.3rem;
+	display: inline;
+}
+
+.chat-user-username {
+	margin-left: 3px;
+}
+
+.chat-message-container {
+	display: block;
+	position: relative;
+	overflow-wrap: anywhere;
+}
+
+.chat-message-container .chat-message-background {
+	position: relative;
+	padding: 0.2rem 0.3rem;
+}
+
+.removedMessage {
+	text-decoration: line-through;
+	color: "rgba(0,0,0,0.1)" !important;
+}
+
+.removedMessage:hover {
+	text-decoration: none;
+	color: "rgba(0,0,0,0.1)" !important;
+}
+
+.newAction {
+	border: 1px solid green !important;
+}
+/*npx tailwindcss -i ./src/renderer/App.css -o ./dist/output.css --watch*/
