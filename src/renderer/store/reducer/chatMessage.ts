@@ -1,6 +1,5 @@
 import { SubscriberBadge } from "../../constants/kick";
 import { Emote } from "../../constants/seventv";
-import { data } from "../../data/dummy2";
 import {
 	HostInfo,
 	ModMessage,
@@ -21,13 +20,13 @@ interface MessageState {
 	hostInfo: HostInfo[];
 }
 const initialState: MessageState = {
-	// kickEmoteList: [],
-	// sevenTvEmoteList: [],
-	// messageList: [],
-	// subList: [],
-	// modAction: [],
-	//channelBadges: [],
-	...data,
+	kickEmoteList: [],
+	sevenTvEmoteList: [],
+	messageList: [],
+	subList: [],
+	modAction: [],
+	channelBadges: [],
+	hostInfo: [],
 };
 
 const ChatMessageReducers = (

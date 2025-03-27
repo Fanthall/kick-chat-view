@@ -72,12 +72,13 @@ export interface ModMessage {
 	//unban
 	unbanned_by?: User;
 	//delete
-	message?: {
-		id?: string;
-		messageList?: UserMessage[];
-	};
+	message?: ModUserHistory;
 }
 
+export interface ModUserHistory {
+	id?: string;
+	messageList?: UserMessage[];
+}
 export interface SubListItem {
 	username: string;
 	giftedList?: string[];

@@ -1,5 +1,5 @@
 import moment from "moment";
-import { FunctionComponent, useEffect, useRef, useState } from "react";
+import React, { FunctionComponent, useEffect, useRef, useState } from "react";
 import defaultSubBadge from "../../kickBadges/defaultSubBadge.png";
 import { useFanthalSelector } from "../../store/hooks/hooks";
 import { SubListItem } from "../../util/chatInterface";
@@ -7,22 +7,12 @@ import ScrollableView from "../Component/ScrollableView/ScrollableView";
 interface SubViewProps {}
 const SubView: FunctionComponent<SubViewProps> = (props) => {
 	const divRef = useRef<HTMLDivElement>(null);
-	const buttonDivRef = useRef<HTMLDivElement>(null);
 	const messages = useFanthalSelector((state) => state.messages);
 	const [subs, setSubs] = useState<SubListItem[]>([]);
 
-	const [scrollPosition, setScrollPosition] = useState<number>(0);
-	const [scrolled, setScrolled] = useState(false);
-	const [autoScrolled, setAutoScrolled] = useState(false);
 	useEffect(() => {
 		setSubs(messages.subList);
 	}, [messages.subList]);
-	useEffect(() => {
-		//Manuel scroll olmayan durumda auto scroll engelleniyor
-		if (!scrolled) {
-			divRef.current?.lastElementChild?.scrollIntoView();
-		}
-	}, [subs]);
 
 	useEffect(() => {
 		//başlangıçta en alta atar
@@ -118,14 +108,14 @@ const SubView: FunctionComponent<SubViewProps> = (props) => {
 	return (
 		<>
 			<h1
-				className="text-center font-semibold text-secondary-500 border border-solid border-default-200"
+				className="w-full text-center font-semibold text-secondary-500 border border-solid border-default-200 "
 				style={{
 					backgroundColor: "rgba(0,0,0,0.7)",
 				}}
 			>
 				Subscriptions
 			</h1>
-			<ScrollableView className="h-[95%]">
+			<ScrollableView className="w-full" style={{ flexGrow: 1 }}>
 				{subs.map((sub) => {
 					return <Action sub={sub} />;
 				})}

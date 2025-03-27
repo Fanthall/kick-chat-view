@@ -24,11 +24,8 @@ body {
 	height: 100% !important;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 .chat-emote {
+	width: 23px;
 	font-weight: 900;
 	height: 23px;
 	grid-column: 1;
@@ -78,4 +75,24 @@ body {
 .newAction {
 	border: 1px solid green !important;
 }
+
+.hidden-emote {
+	display: none !important;
+}
+
+.sus-user {
+	background-color: rgba(255, 165, 0, 0.4) !important;
+	border-radius: 5px;
+}
+.subs-publication {
+	border-width: 1px;
+	border-style: solid;
+	border-color: rgb(214, 38, 190) !important;
+	border-radius: 5px;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
 /*npx tailwindcss -i ./src/renderer/App.css -o ./dist/output.css --watch*/

@@ -76,7 +76,7 @@ export const setHostInfo = (hostInfo: HostInfo) => {
 };
 const removeHostAction = (hostInfo: HostInfo): MessageActions => {
 	return {
-		type: ChatMessageTypes.SET_HOST_ACTION,
+		type: ChatMessageTypes.REMOVE_HOST_ACTION,
 		hostInfo: hostInfo,
 	};
 };

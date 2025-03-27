@@ -1,5 +1,5 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig } from "axios";
 
 export function makeRequest<T>(config: AxiosRequestConfig) {
-  return axios.request<T>(config);
+	return axios.request<T>(config);
 }

@@ -1,8 +1,10 @@
 import { configureStore } from "@reduxjs/toolkit";
 import ChatMessageReducers from "./reducer/chatMessage";
+import GeneralReducers from "./reducer/general";
 
 const rootReducer = {
 	messages: ChatMessageReducers,
+	generals: GeneralReducers,
 };
 const Store = configureStore({
 	reducer: rootReducer,

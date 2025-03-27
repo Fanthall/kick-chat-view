@@ -1,4 +1,4 @@
-import {
+import React, {
 	FunctionComponent,
 	ReactNode,
 	useEffect,
@@ -9,6 +9,7 @@ interface ScrollableViewProps {
 	children?: ReactNode;
 	className?: string;
 	style?: React.CSSProperties;
+	height?: number;
 }
 
 const ScrollableView: FunctionComponent<ScrollableViewProps> = (props) => {
@@ -63,7 +64,7 @@ const ScrollableView: FunctionComponent<ScrollableViewProps> = (props) => {
 			</div>
 			{scrolled && (
 				<div
-					className="w-full text-center"
+					className="w-fit right-0"
 					style={{
 						position: "absolute",
 						bottom: 0,

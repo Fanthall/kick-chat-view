@@ -1,8 +1,14 @@
 import Moment from "moment";
-import { FunctionComponent, useEffect, useRef, useState } from "react";
+import React, { FunctionComponent, useEffect, useState } from "react";
 import { GoReply } from "react-icons/go";
+import { TfiAnnouncement } from "react-icons/tfi";
 import { toast } from "react-toastify";
-import { useFanthalSelector } from "../../store/hooks/hooks";
+import { fetchGitHubData } from "../../services/githubAccessHandle";
+import MessageActionsFunc from "../../store/actions/chatMessage";
+import {
+	useFanthalDispatch,
+	useFanthalSelector,
+} from "../../store/hooks/hooks";
 import { UserMessage } from "../../util/chatInterface";
 import ScrollableView from "../Component/ScrollableView/ScrollableView";
 import moderator from "./../../kickBadges/channelMod.png";
@@ -13,42 +19,65 @@ import vip from "./../../kickBadges/vip.png";
 
 interface ChatProps {}
 const Chat: FunctionComponent<ChatProps> = () => {
-	const divRef = useRef<HTMLDivElement>(null);
 	const messages = useFanthalSelector((state) => state.messages);
 	const [messageList, setMessageList] = useState<UserMessage[]>([]);
+	const dispatch = useFanthalDispatch();
 	const [username, setUsername] = useState<string | undefined>(undefined);
-	const [scrolled, setScrolled] = useState(false);
 	const kickEmoteRegex = /\[emote:(\d+):(\w+)\]/g;
+	const [susUsers, setSusUsers] = useState<string[]>([]);
+	const [blockEmotes, setBlockEmotes] = useState<string[]>([]);
 
 	useEffect(() => {
-		const funk = (setUsername: (val: string) => void) => {
+		const setName = () => {
 			const username = localStorage.getItem("username");
+			const blockEmotes = localStorage.getItem("blockEmotes");
 			if (username) setUsername(username);
+			setInterval(() => {
+				fetchGitHubData().then((res) => {
+					setSusUsers(res);
+				});
+			}, 30000);
+			if (blockEmotes) setBlockEmotes(JSON.parse(blockEmotes));
 		};
-		funk(setUsername);
-	}, []);
+		const setSusAndBlockEmotes = () => {
+			const susUsers = localStorage.getItem("susUsers");
+			const blockEmotes = localStorage.getItem("blockEmotes");
+			if (susUsers) setSusUsers(JSON.parse(susUsers));
+			if (blockEmotes) setBlockEmotes(JSON.parse(blockEmotes));
+		};
 
-	useEffect(() => {
-		//Manuel scroll olmayan durumda auto scroll engelleniyor
-		if (!scrolled) {
-			divRef.current?.lastElementChild?.scrollIntoView();
+		setName();
+		function localStorageChanged(event: StorageEvent) {
+			setSusAndBlockEmotes();
+
+			// Değişiklik yapılan localStorage anahtarını kontrol edebilirsiniz.
+			// event.key kullanarak.
+			// Yeni ve eski değerleri event.newValue ve event.oldValue kullanarak alabilirsiniz.
 		}
-	}, [messageList]);
 
-	useEffect(() => {
-		//başlangıçta en alta atar
-		setTimeout(() => {
-			divRef.current?.lastElementChild?.scrollIntoView();
-		}, 1000);
+		window.addEventListener("storage", localStorageChanged);
 	}, []);
 
 	useEffect(() => {
 		setMessageList(messages.messageList);
 	}, [messages.messageList]);
 
+	useEffect(() => {
+		for (const hostInfo of messages.hostInfo) {
+			toast(
+				<div className="flex flex-col justify-center items-center">
+					<div className=" font-bold">{`${hostInfo.host_username} ${hostInfo.number_viewers} kişi ile geldi.`}</div>
+					<div className="test">{hostInfo.optional_message}</div>
+				</div>
+			);
+
+			dispatch(MessageActionsFunc.removeHostInfo(hostInfo));
+		}
+	}, [messages.hostInfo]);
+
 	return (
 		<>
-			<ScrollableView className="h-[95%]">
+			<ScrollableView className="h-[95%] p-2">
 				{messageList.map((item) => {
 					const sevenTvEmoteSetMessage = item.content
 						.split(" ")
@@ -59,7 +88,7 @@ const Chat: FunctionComponent<ChatProps> = () => {
 								}
 							);
 							if (emoteData) {
-								return `<img class="chat-emote" src="${emoteData?.data.host.url}/${emoteData?.data.host.files[0].name}" alt="${word}" title="${word}" />`;
+								return `<img class="chat-emote" src="https:${emoteData?.data.host.url}/${emoteData?.data.host.files[0].name}" alt="${word}" title="${word}" />`;
 							} else {
 								return word;
 							}
@@ -139,6 +168,45 @@ const Chat: FunctionComponent<ChatProps> = () => {
 							//TODO: Diğer badgeler eklenecek.
 						}
 					});
+					let message =
+						`<p style="display: inline-block; vertical-align: middle;">` +
+						`<span class="chat-message-timestamp" style="color: gray;">${Moment(
+							new Date(item.created_at),
+							"YYYY-MM-DDTHH:mm:ss"
+						).format("HH:mm:ss")}</span>` +
+						chatBadges?.join("") +
+						`<span class="${
+							item.removed ? "removedMessage" : ""
+						}"><span class="chat-user-username" style="color: ${item
+							.sender.identity?.color};">${
+							item.sender.username
+						}</span> : ` +
+						sevenTvEmoteSetMessage.replace(
+							/\[emote:(\d+):(\w+)\]/g,
+							'<img class="chat-emote" src="https://files.kick.com/emotes/$1/fullsize" alt="$2" title="$2" />'
+						) +
+						"</span></p>";
+					// if (blockEmotes.length>0) {
+					// 	const regexPattern: string = `<img\\s+[^>]*alt="[^"]*(${blockEmotes.join(
+					// 		"|"
+					// 	)})[^"]*"[^>]*>`;
+					// 	const regex: RegExp = new RegExp(regexPattern, "gi");
+					// 	const matchedTags: RegExpMatchArray | null =
+					// 		message.match(regex);
+
+					// 	// Bulunan etiketlerin class özniteliğini güncelleme
+					// 	if (matchedTags) {
+					// 		matchedTags.forEach((tag: string) => {
+					// 			message = message.replace(
+					// 				tag,
+					// 				tag.replace("chat-emote", "chat-emote hidden-emote")
+					// 			);
+					// 		});
+					// 	}
+					// }
+					const sus = susUsers.filter(
+						(i) => i.toLowerCase() === item.sender.username.toLowerCase()
+					);
 					return (
 						<div
 							key={"message-list-" + item.id}
@@ -150,6 +218,8 @@ const Chat: FunctionComponent<ChatProps> = () => {
 									.includes(username ? username.toLowerCase() : "")
 									? " border border-solid border-danger rounded-small p-1"
 									: ""
+							} ${sus.length > 0 ? " sus-user" : ""}${
+								item.type === "celebration" ? " subs-publication " : ""
 							}`}
 						>
 							<div className="chat-message-background" tabIndex={0}>
@@ -170,26 +240,18 @@ const Chat: FunctionComponent<ChatProps> = () => {
 										)}`}
 									</div>
 								)}
+								{item.type === "celebration" && (
+									<div
+										className="flex flex-row justify-start items-center ml-2 text-small"
+										style={{ color: "gray" }}
+									>
+										<TfiAnnouncement style={{ marginRight: 5 }} />
+										Abonelik:
+									</div>
+								)}
 								<span
 									dangerouslySetInnerHTML={{
-										__html:
-											`<p style="display: inline-block; vertical-align: middle;">` +
-											`<span class="chat-message-timestamp" style="color: gray;">${Moment(
-												new Date(item.created_at),
-												"YYYY-MM-DDTHH:mm:ss"
-											).format("HH:mm:ss")}</span>` +
-											chatBadges?.join("") +
-											`<span class="${
-												item.removed ? "removedMessage" : ""
-											}"><span class="chat-user-username" style="color: ${item
-												.sender.identity?.color};">${
-												item.sender.username
-											}</span> : ` +
-											sevenTvEmoteSetMessage.replace(
-												kickEmoteRegex,
-												'<img class="chat-emote" src="https://files.kick.com/emotes/$1/fullsize" alt="$2" title="$2" />'
-											) +
-											"</span></p>",
+										__html: message,
 									}}
 								></span>
 							</div>
@@ -207,9 +269,7 @@ const Chat: FunctionComponent<ChatProps> = () => {
 				<div
 					className="border border-solid border-default-200 w-[20%] h-[90%] flex justify-center items-center"
 					onClick={() => {
-						toast("Wow so easy!", {
-							type: "info",
-						});
+						toast("Wow so easy!", { type: "info" });
 					}}
 				>
 					button

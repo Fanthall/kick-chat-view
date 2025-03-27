@@ -1,5 +1,5 @@
 import { NextUIProvider } from "@nextui-org/react";
-import { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./dist/output.css";
@@ -10,24 +10,16 @@ import { useFanthalDispatch } from "./store/hooks/hooks";
 import { chatListener } from "./util/chatConnection";
 export default function App() {
 	const dispatch = useFanthalDispatch();
-	const [subWindow, setSubWindow] = useState<boolean>(false);
 	useEffect(() => {
 		// TODO: sağ üstte ayarlardan eklenecek
-		localStorage.setItem("userName", "Fanthal");
-		dispatch(chatListener());
+		//localStorage.setItem("userName", "Fanthal");
 		getEmote()
 			.then((res) => {
 				dispatch(MessageActionsFunc.setSevenTvEmotes(res.data.emotes));
 			})
 			.catch((err) => {});
+		dispatch(chatListener());
 	}, []);
-	window.electron.ipcRenderer.once("open-user-detail", (arg) => {
-		console.log("open-user-detail: ", arg);
-		setSubWindow(true);
-	});
-	if (subWindow) {
-		return <div>test</div>;
-	}
 
 	return (
 		<NextUIProvider
