@@ -9,6 +9,7 @@ export interface User {
 }
 export interface UserMessage {
 	id: string;
+	channelSlug?: string;
 	removed?: boolean;
 	chatroom_id: number;
 	content: string;
@@ -28,6 +29,8 @@ export interface UserMessage {
 }
 
 export interface GiftSubMessage {
+	id?: string;
+	channelSlug?: string;
 	chatroom_id: number;
 	gifted_usernames: string[];
 	gifter_username: string;
@@ -35,6 +38,8 @@ export interface GiftSubMessage {
 }
 
 export interface SubMessage {
+	id?: string;
+	channelSlug?: string;
 	chatroom_id: number;
 	username: string;
 	months: number;
@@ -64,6 +69,10 @@ export interface DeleteMessage {
 export interface ModMessage {
 	type: "ban" | "to" | "delete" | "unban";
 	id: string;
+	channelSlug?: string;
+	status?: "pending" | "success" | "failed";
+	error?: string;
+	reason?: string;
 	user?: User;
 	created_at: number;
 	//ban-to
@@ -79,15 +88,47 @@ export interface ModUserHistory {
 	id?: string;
 	messageList?: UserMessage[];
 }
-export interface SubListItem {
+
+export type ActivityKind =
+	| "subscription_new"
+	| "subscription_renewal"
+	| "subscription_gift"
+	| "reward_redemption"
+	| "kicks_gifted";
+
+export type ActivityStatus = "pending" | "accepted" | "rejected";
+
+export interface ActivityUser {
+	id?: number;
 	username: string;
+	slug?: string;
+	profilePicture?: string;
+}
+
+export interface ActivityItem {
+	id?: string;
+	channelSlug?: string;
+	kind: ActivityKind;
+	actor: ActivityUser;
+	targetUsers?: ActivityUser[];
+	amount?: number;
+	title?: string;
+	message?: string;
+	status?: ActivityStatus;
+	createdAt: number;
+	raw?: unknown;
+	// Legacy subscription fields kept for old Pusher payload compatibility.
+	username?: string;
 	giftedList?: string[];
 	months?: number;
 	streak?: number;
 	create_at: number;
 }
 
+export type SubListItem = ActivityItem;
+
 export interface HostInfo {
+	channelSlug?: string;
 	optional_message: string;
 	number_viewers: number;
 	host_username: string;

@@ -20,6 +20,8 @@ export const data: {
 	channelBadges: [],
 	kickEmoteList: [],
 	sevenTvEmoteList: [],
+	subList: [],
+	modAction: [],
 	hostInfo: [
 		{
 			host_username: "Fanthal",

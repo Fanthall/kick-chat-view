@@ -19,7 +19,8 @@ import { MdAccessTime } from "react-icons/md";
 import { TbSwordOff } from "react-icons/tb";
 import { useFanthalSelector } from "../../store/hooks/hooks";
 import { ModMessage } from "../../util/chatInterface";
-import DraggableView from "../Component/DraggableView/DraggableView";
+import { getActiveChannelSlug } from "../../util/channelSettings";
+import { buildUserWindowPayload } from "../../util/userWindowPayload";
 import ScrollableView from "../Component/ScrollableView/ScrollableView";
 import moderator from "./../../kickBadges/channelMod.png";
 import founder from "./../../kickBadges/founder.png";
@@ -32,6 +33,7 @@ const ModActions: FunctionComponent<ModActionsProps> = () => {
 	const buttonDivRef = useRef<HTMLDivElement>(null);
 	const messages = useFanthalSelector((state) => state.messages);
 	const [modActions, setModActions] = useState<ModMessage[]>([]);
+	const activeChannelSlug = getActiveChannelSlug();
 
 	const [scrolled, setScrolled] = useState(false);
 
@@ -50,8 +52,30 @@ const ModActions: FunctionComponent<ModActionsProps> = () => {
 	}, []);
 
 	useEffect(() => {
-		setModActions(messages.modAction);
-	}, [messages.modAction]);
+		setModActions(
+			messages.modAction.filter(
+				(item) => !activeChannelSlug || item.channelSlug === activeChannelSlug
+			)
+		);
+	}, [messages.modAction, activeChannelSlug]);
+
+	useEffect(() => {
+		const latestAction = messages.modAction[messages.modAction.length - 1];
+		const user =
+			latestAction?.user || latestAction?.message?.messageList?.[0]?.sender;
+		if (!user) return;
+
+		window.electron.userWindow.update(
+			buildUserWindowPayload({
+				user,
+				messages: messages.messageList,
+				modActions: messages.modAction,
+				openedFrom: "moderation",
+				channelName: localStorage.getItem("channelName") || undefined,
+				canModerateChannel: false,
+			})
+		);
+	}, [messages.modAction, messages.messageList]);
 
 	const kickEmoteRegex = /\[emote:(\d+):(\w+)\]/g;
 	const Action: FunctionComponent<{
@@ -59,7 +83,6 @@ const ModActions: FunctionComponent<ModActionsProps> = () => {
 		operation: ModMessage;
 		title: string;
 	}> = (props) => {
-		const [isOpen, setOpen] = useState<boolean>(false);
 		const [newAction, setNewAction] = useState<boolean>(false);
 		useEffect(() => {
 			const now = new Date();
@@ -128,6 +151,10 @@ const ModActions: FunctionComponent<ModActionsProps> = () => {
 						}}
 					>
 						{props.title}&nbsp;
+						<span className={`mod-action-status mod-action-status-${props.operation.status || "success"}`}>
+							{props.operation.status || "success"}
+						</span>
+						&nbsp;
 						{props.operation.type === "delete" ? (
 							<span className="font-semibold" style={{ color: "white" }}>
 								<>
@@ -156,216 +183,37 @@ const ModActions: FunctionComponent<ModActionsProps> = () => {
 							<Button
 								size="sm"
 								onPress={() => {
-									setOpen(true);
+									const user =
+										props.operation.user ||
+										props.operation.message?.messageList?.[0]?.sender;
+									if (!user) return;
+									window.electron.userWindow.open(
+										buildUserWindowPayload({
+											user,
+											messages: messages.messageList,
+											modActions: messages.modAction,
+											openedFrom: "moderation",
+											channelName:
+												localStorage.getItem("channelName") ||
+												undefined,
+											canModerateChannel: false,
+										})
+									);
 								}}
 								className="text-secondary-500"
 								variant="light"
 							>
-								Message History
+								Open User Window
 							</Button>
 						</div>
 					)}
 				</div>
-				{isOpen && (
-					<DraggableView
-						title={"User History"}
-						maxHeight={600}
-						maxWidth={400}
-						content={
-							<div
-								className="flex justify-start items-start flex-row h-[90%] w-full border border-solid border-default-200 pl-2"
-								style={{
-									overflow: "hidden",
-									backgroundColor: "rgba(0,0,0,0.6)",
-								}}
-							>
-								<div
-									style={{
-										width: "100%",
-										height: "100%",
-										overflowY: "scroll",
-										paddingRight: 17 /* Increase/decrease this value for cross-browser compatibility */,
-										boxSizing:
-											"content-box" /* So the width will be 100% + 17px */,
-									}}
-								>
-									{props.operation.message?.messageList?.map(
-										(item) => {
-											const sevenTvEmoteSetMessage = item.content
-												.split(" ")
-												.map((word) => {
-													const emoteData =
-														messages.sevenTvEmoteList?.find(
-															(obj) => {
-																return obj.name === word;
-															}
-														);
-													if (emoteData) {
-														return `<img class="chat-emote" src="${emoteData?.data.host.url}/${emoteData?.data.host.files[0].name}" alt="${word}" title="${word}" />`;
-													} else {
-														return word;
-													}
-												})
-												.join(" ");
-
-											const chatBadges =
-												item.sender.identity?.badges.map(
-													(badge) => {
-														switch (badge.type.toLowerCase()) {
-															case "host":
-																break;
-															case "founder":
-																return `<img
-														class="chat-badge"
-														key="${item.id}-founderBadge"
-														width="20px"
-														height="20px"
-														src="${founder}"
-														alt="founder"
-														title="founder"
-													/>`;
-															case "subscriber":
-																const userBadge =
-																	messages.channelBadges.find(
-																		(channelBadge) => {
-																			if (
-																				badge.count! >=
-																				channelBadge.months
-																			)
-																				return channelBadge;
-																		}
-																	);
-																return `<img
-									class="chat-badge"
-									key="${item.id}-subBadge"
-									width="20px"
-									height="20px"
-									src="${userBadge?.badge_image.src}"
-									alt="sub-${badge.count}"
-									title="sub-${badge.count}"
-								/>`;
-															case "og":
-																return `<img
-									class="chat-badge"
-									key="${item.id}-ogBadge"
-									width="20px"
-									height="20px"
-									src="${og}"
-									alt="og"
-									title="og"
-								/>`;
-															case "vip":
-																return `<img
-									class="chat-badge"
-									key="${item.id}-vipBadge"
-									width="20px"
-									height="20px"
-									src="${vip}"
-									alt="vip"
-									title="vip"
-								/>`;
-															case "verified":
-																return `<img
-									class="chat-badge"
-									key="${item.id}-verifiedBadge"
-									width="20px"
-									height="20px"
-									src="${verified}"
-									alt="verified"
-									title="verified"
-								/>`;
-															case "moderator":
-																return `<img
-									class="chat-badge"
-									key="${item.id}-modBadge"
-									width="20px"
-									height="20px"
-									src="${moderator}"
-									alt="moderator"
-									title="vimoderatorp"
-								/>`;
-															//TODO: Diğer badgeler eklenecek.
-														}
-													}
-												);
-											return (
-												<div
-													key={"message-list-" + item.id}
-													className={`chat-message-container`}
-												>
-													<div
-														className="chat-message-background"
-														tabIndex={0}
-													>
-														{item.type === "reply" && (
-															<div
-																className="flex flex-row justify-start items-center ml-2 text-small"
-																style={{ color: "gray" }}
-															>
-																<GoReply
-																	style={{
-																		marginRight: 5,
-																	}}
-																/>
-																{`${item.metadata
-																	?.original_sender
-																	.username} : ${item.metadata?.original_message.content.substring(
-																	0,
-																	Math.min(
-																		50,
-																		item.metadata
-																			?.original_message
-																			.content.length
-																	)
-																)}`}
-															</div>
-														)}
-
-														<span
-															className="chat-message-body "
-															dangerouslySetInnerHTML={{
-																__html:
-																	`<p style="display: inline-block; vertical-align: middle;">` +
-																	`<span class="chat-message-timestamp" style="color: gray;">${moment(
-																		new Date(item.created_at),
-																		"YYYY-MM-DDTHH:mm:ss"
-																	).format(
-																		"HH:mm:ss"
-																	)}</span>` +
-																	chatBadges?.join("") +
-																	`<span class="chat-user-username" style="color: ${item.sender.identity?.color};">${item.sender.username}</span> : ` +
-																	sevenTvEmoteSetMessage.replace(
-																		kickEmoteRegex,
-																		'<img class="chat-emote" src="https://files.kick.com/emotes/$1/fullsize" alt="$2" title="$2" />'
-																	) +
-																	"</p>",
-															}}
-														></span>
-													</div>
-												</div>
-											);
-										}
-									)}
-								</div>
-							</div>
-						}
-						onClose={() => {
-							setOpen(false);
-						}}
-						position={{ top: 50, left: 150 }}
-					/>
-				)}
 			</div>
 		);
 	};
 	return (
 		<>
-			<h1
-				className="w-full text-center font-semibold text-secondary-500 border border-solid border-default-200"
-				style={{
-					backgroundColor: "rgba(0,0,0,0.7)",
-				}}
-			>
+			<h1 className="panel-title">
 				Mod İşlemleri
 			</h1>
 

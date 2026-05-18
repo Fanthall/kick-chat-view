@@ -12,6 +12,34 @@ import { BrowserWindow, app, ipcMain, shell } from "electron";
 import log from "electron-log";
 import { autoUpdater } from "electron-updater";
 import path from "path";
+import {
+	acceptKickChannelRewardRedemptions,
+	banKickUser,
+	connectKick,
+	deleteKickChatMessage,
+	deleteKickEventSubscriptions,
+	disconnectKick,
+	getKickAuthStatus,
+	getKickCategoryById,
+	getKickChannelRewardRedemptions,
+	getKickChannelRewards,
+	getKickChannelBySlug,
+	getKickKicksLeaderboard,
+	getKickLivestreams,
+	getKickOwnChannels,
+	getKickStoredConfig,
+	getKickUsers,
+	listKickEventSubscriptions,
+	patchKickChannel,
+	refreshKick,
+	rejectKickChannelRewardRedemptions,
+	searchKickCategories,
+	sendKickChatMessage,
+	subscribeKickEvents,
+	timeoutKickUser,
+	unbanKickUser,
+} from "./kickService";
+import type { UserWindowPayload } from "../shared/userWindow";
 import MenuBuilder from "./menu";
 import { resolveHtmlPath } from "./util";
 
@@ -19,18 +47,233 @@ class AppUpdater {
 	constructor() {
 		log.transports.file.level = "info";
 		autoUpdater.logger = log;
-		autoUpdater.checkForUpdatesAndNotify();
+		autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+			log.warn("auto-update check skipped:", err?.message ?? err);
+		});
 	}
 }
 
 let mainWindow: BrowserWindow | null = null;
 
-let subWindow: BrowserWindow | null = null;
+const userWindows = new Map<string, BrowserWindow>();
+const userWindowPayloads = new Map<string, UserWindowPayload>();
+let kickConnectionWindow: BrowserWindow | null = null;
+
+const sendUserWindowPayload = (key: string) => {
+	const userWindow = userWindows.get(key);
+	const payload = userWindowPayloads.get(key);
+	if (!userWindow || userWindow.isDestroyed() || !payload) return;
+
+	userWindow.webContents.send("user-window:payload", payload);
+};
+
+const createUserWindow = (payload: UserWindowPayload) => {
+	const existingWindow = userWindows.get(payload.key);
+	if (existingWindow && !existingWindow.isDestroyed()) {
+		existingWindow.focus();
+		userWindowPayloads.set(payload.key, payload);
+		sendUserWindowPayload(payload.key);
+		return;
+	}
+
+	const userWindow = new BrowserWindow({
+		show: false,
+		width: 560,
+		height: 720,
+		minWidth: 420,
+		minHeight: 520,
+		parent: mainWindow ?? undefined,
+		webPreferences: {
+			preload: app.isPackaged
+				? path.join(__dirname, "preload.js")
+				: path.join(__dirname, "../../.erb/dll/preload.js"),
+		},
+	});
+
+	userWindows.set(payload.key, userWindow);
+	userWindowPayloads.set(payload.key, payload);
+	userWindow.loadURL(`${resolveHtmlPath("index.html")}#/user-window`);
+
+	userWindow.webContents.on("did-finish-load", () => {
+		sendUserWindowPayload(payload.key);
+	});
+
+	userWindow.on("ready-to-show", () => {
+		userWindow.show();
+		userWindow.focus();
+	});
+
+	userWindow.on("closed", () => {
+		userWindows.delete(payload.key);
+		userWindowPayloads.delete(payload.key);
+	});
+};
+
+const createKickConnectionWindow = () => {
+	if (kickConnectionWindow && !kickConnectionWindow.isDestroyed()) {
+		kickConnectionWindow.focus();
+		return;
+	}
+
+	kickConnectionWindow = new BrowserWindow({
+		show: false,
+		width: 620,
+		height: 720,
+		minWidth: 500,
+		minHeight: 560,
+		parent: mainWindow ?? undefined,
+		webPreferences: {
+			preload: app.isPackaged
+				? path.join(__dirname, "preload.js")
+				: path.join(__dirname, "../../.erb/dll/preload.js"),
+		},
+	});
+
+	kickConnectionWindow.loadURL(
+		`${resolveHtmlPath("index.html")}#/kick-connection`
+	);
+
+	kickConnectionWindow.on("ready-to-show", () => {
+		kickConnectionWindow?.show();
+		kickConnectionWindow?.focus();
+	});
+
+	kickConnectionWindow.on("closed", () => {
+		kickConnectionWindow = null;
+	});
+};
 
 ipcMain.on("ipc-example", async (event, arg) => {
 	const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
 	console.log(msgTemplate(arg));
 	event.reply("ipc-example", msgTemplate("pong"));
+});
+
+ipcMain.handle("kick:get-auth-status", () => {
+	return getKickAuthStatus();
+});
+
+ipcMain.handle("kick:get-stored-config", () => {
+	return getKickStoredConfig();
+});
+
+ipcMain.handle("kick:connect", (_event, request) => {
+	return connectKick(request);
+});
+
+ipcMain.handle("kick:disconnect", () => {
+	return disconnectKick();
+});
+
+ipcMain.handle("kick:refresh", () => {
+	return refreshKick();
+});
+
+ipcMain.handle("kick:get-channel-by-slug", (_event, slug: string) => {
+	return getKickChannelBySlug(slug);
+});
+
+ipcMain.handle("kick:patch-channel", (_event, request) => {
+	return patchKickChannel(request);
+});
+
+ipcMain.handle(
+	"kick:search-categories",
+	(_event, query: string, limit?: number) => {
+		return searchKickCategories(query, limit);
+	}
+);
+
+ipcMain.handle("kick:get-category-by-id", (_event, id: number) => {
+	return getKickCategoryById(id);
+});
+
+ipcMain.handle("kick:get-own-channels", () => {
+	return getKickOwnChannels();
+});
+
+ipcMain.handle("kick:get-users", (_event, ids?: number[]) => {
+	return getKickUsers(ids);
+});
+
+ipcMain.handle("kick:get-livestreams", (_event, broadcasterUserIds?: number[]) => {
+	return getKickLivestreams(broadcasterUserIds);
+});
+
+ipcMain.handle("kick:send-chat-message", (_event, request) => {
+	return sendKickChatMessage(request);
+});
+
+ipcMain.handle("kick:delete-chat-message", (_event, messageId: string) => {
+	return deleteKickChatMessage(messageId);
+});
+
+ipcMain.handle("kick:ban-user", (_event, request) => {
+	return banKickUser(request);
+});
+
+ipcMain.handle("kick:timeout-user", (_event, request) => {
+	return timeoutKickUser(request);
+});
+
+ipcMain.handle("kick:unban-user", (_event, request) => {
+	return unbanKickUser(request);
+});
+
+ipcMain.handle("kick:list-event-subscriptions", (_event, broadcasterUserId?: number) => {
+	return listKickEventSubscriptions(broadcasterUserId);
+});
+
+ipcMain.handle("kick:subscribe-to-events", (_event, request) => {
+	return subscribeKickEvents(request);
+});
+
+ipcMain.handle("kick:delete-event-subscriptions", (_event, ids: string[]) => {
+	return deleteKickEventSubscriptions(ids);
+});
+
+ipcMain.handle("kick:get-channel-rewards", () => {
+	return getKickChannelRewards();
+});
+
+ipcMain.handle("kick:get-channel-reward-redemptions", (_event, request) => {
+	return getKickChannelRewardRedemptions(request);
+});
+
+ipcMain.handle("kick:accept-channel-reward-redemptions", (_event, ids: string[]) => {
+	return acceptKickChannelRewardRedemptions(ids);
+});
+
+ipcMain.handle("kick:reject-channel-reward-redemptions", (_event, ids: string[]) => {
+	return rejectKickChannelRewardRedemptions(ids);
+});
+
+ipcMain.handle("kick:get-kicks-leaderboard", (_event, top?: number) => {
+	return getKickKicksLeaderboard(top);
+});
+
+ipcMain.handle("user-window:open", (_event, payload: UserWindowPayload) => {
+	createUserWindow(payload);
+});
+
+ipcMain.handle("user-window:update", (_event, payload: UserWindowPayload) => {
+	const existingWindow = userWindows.get(payload.key);
+	if (!existingWindow || existingWindow.isDestroyed()) return;
+	userWindowPayloads.set(payload.key, payload);
+	sendUserWindowPayload(payload.key);
+});
+
+ipcMain.handle("user-window:close", (_event, key: string) => {
+	const existingWindow = userWindows.get(key);
+	if (existingWindow && !existingWindow.isDestroyed()) {
+		existingWindow.close();
+	}
+	userWindows.delete(key);
+	userWindowPayloads.delete(key);
+});
+
+ipcMain.handle("kick-connection-window:open", () => {
+	createKickConnectionWindow();
 });
 
 if (process.env.NODE_ENV === "production") {

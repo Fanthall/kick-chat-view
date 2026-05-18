@@ -246,16 +246,16 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "electron-react-boilerplate",
-      "repo": "electron-react-boilerplate"
+      "owner": "Fanthall",
+      "repo": "kick-chat-view"
     }
   },
   "collective": {
     "url": "https://opencollective.com/electron-react-boilerplate-594"
   },
-  "devEngines": {
-    "node": ">=14.x",
-    "npm": ">=7.x"
+  "engines": {
+    "node": ">=24.11.1",
+    "npm": ">=10"
   },
   "electronmon": {
     "patterns": [

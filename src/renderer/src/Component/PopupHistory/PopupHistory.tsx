@@ -3,12 +3,12 @@ import React, { FunctionComponent } from "react";
 import { GoReply } from "react-icons/go";
 import { useFanthalSelector } from "../../../store/hooks/hooks";
 import { ModUserHistory } from "../../../util/chatInterface";
+import {
+	buildBadgesHtml,
+	buildEmoteMessageHtml,
+} from "../../../util/chatHtml";
+import { escapeHtml, safeColor } from "../../../util/htmlSafe";
 import DraggableView from "../DraggableView/DraggableView";
-import moderator from "./../../kickBadges/channelMod.png";
-import founder from "./../../kickBadges/founder.png";
-import og from "./../../kickBadges/og.png";
-import verified from "./../../kickBadges/verified.png";
-import vip from "./../../kickBadges/vip.png";
 interface PopupHistoryProps {
 	onClose: () => void;
 
@@ -16,7 +16,6 @@ interface PopupHistoryProps {
 }
 const PopupHistory: FunctionComponent<PopupHistoryProps> = (props) => {
 	const messages = useFanthalSelector((state) => state.messages);
-	const kickEmoteRegex = /\[emote:(\d+):(\w+)\]/g;
 	return (
 		<DraggableView
 			title={"User History"}
@@ -41,96 +40,23 @@ const PopupHistory: FunctionComponent<PopupHistoryProps> = (props) => {
 						}}
 					>
 						{props.history?.messageList?.map((item) => {
-							const sevenTvEmoteSetMessage = item.content
-								.split(" ")
-								.map((word) => {
-									const emoteData = messages.sevenTvEmoteList?.find(
-										(obj) => {
-											return obj.name === word;
-										}
-									);
-									if (emoteData) {
-										return `<img class="chat-emote" src="${emoteData?.data.host.url}/${emoteData?.data.host.files[0].name}" alt="${word}" title="${word}" />`;
-									} else {
-										return word;
-									}
-								})
-								.join(" ");
-
-							const chatBadges = item.sender.identity?.badges.map(
-								(badge) => {
-									switch (badge.type.toLowerCase()) {
-										case "host":
-											break;
-										case "founder":
-											return `<img
-                                    class="chat-badge"
-                                    key="${item.id}-founderBadge"
-                                    width="20px"
-                                    height="20px"
-                                    src="${founder}"
-                                    alt="founder"
-                                    title="founder"
-                                />`;
-										case "subscriber":
-											const userBadge = messages.channelBadges.find(
-												(channelBadge) => {
-													if (badge.count! >= channelBadge.months)
-														return channelBadge;
-												}
-											);
-											return `<img
-                class="chat-badge"
-                key="${item.id}-subBadge"
-                width="20px"
-                height="20px"
-                src="${userBadge?.badge_image.src}"
-                alt="sub-${badge.count}"
-                title="sub-${badge.count}"
-            />`;
-										case "og":
-											return `<img
-                class="chat-badge"
-                key="${item.id}-ogBadge"
-                width="20px"
-                height="20px"
-                src="${og}"
-                alt="og"
-                title="og"
-            />`;
-										case "vip":
-											return `<img
-                class="chat-badge"
-                key="${item.id}-vipBadge"
-                width="20px"
-                height="20px"
-                src="${vip}"
-                alt="vip"
-                title="vip"
-            />`;
-										case "verified":
-											return `<img
-                class="chat-badge"
-                key="${item.id}-verifiedBadge"
-                width="20px"
-                height="20px"
-                src="${verified}"
-                alt="verified"
-                title="verified"
-            />`;
-										case "moderator":
-											return `<img
-                class="chat-badge"
-                key="${item.id}-modBadge"
-                width="20px"
-                height="20px"
-                src="${moderator}"
-                alt="moderator"
-                title="vimoderatorp"
-            />`;
-										//TODO: Diğer badgeler eklenecek.
-									}
-								}
+							const senderUsername = item.sender?.username || "";
+							const senderColor = item.sender?.identity?.color || "white";
+							const originalSenderUsername =
+								item.metadata?.original_sender?.username || "";
+							const originalMessageContent =
+								item.metadata?.original_message?.content || "";
+							const isReply =
+								item.type === "reply" &&
+								originalSenderUsername !== "" &&
+								originalMessageContent !== "";
+							const badgesHtml = buildBadgesHtml(
+								item.sender.identity?.badges,
+								messages.channelBadges
+							);
+							const contentHtml = buildEmoteMessageHtml(
+								item.content,
+								messages.sevenTvEmoteList
 							);
 							return (
 								<div
@@ -141,23 +67,18 @@ const PopupHistory: FunctionComponent<PopupHistoryProps> = (props) => {
 										className="chat-message-background"
 										tabIndex={0}
 									>
-										{item.type === "reply" && (
-											<div
-												className="flex flex-row justify-start items-center ml-2 text-small"
-												style={{ color: "gray" }}
-											>
+										{isReply && (
+											<div className="chat-message-reply-preview flex flex-row justify-start items-center ml-2 text-small">
 												<GoReply
 													style={{
 														marginRight: 5,
 													}}
 												/>
-												{`${item.metadata?.original_sender
-													.username} : ${item.metadata?.original_message.content.substring(
+												{`${originalSenderUsername} : ${originalMessageContent.substring(
 													0,
 													Math.min(
 														50,
-														item.metadata?.original_message
-															.content.length
+														originalMessageContent.length
 													)
 												)}`}
 											</div>
@@ -168,16 +89,15 @@ const PopupHistory: FunctionComponent<PopupHistoryProps> = (props) => {
 											dangerouslySetInnerHTML={{
 												__html:
 													`<p style="display: inline-block; vertical-align: middle;">` +
-													`<span class="chat-message-timestamp" style="color: gray;">${moment(
+													`<span class="chat-message-timestamp">${moment(
 														new Date(item.created_at),
 														"YYYY-MM-DDTHH:mm:ss"
 													).format("HH:mm:ss")}</span>` +
-													chatBadges?.join("") +
-													`<span class="chat-user-username" style="color: ${item.sender.identity?.color};">${item.sender.username}</span> : ` +
-													sevenTvEmoteSetMessage.replace(
-														kickEmoteRegex,
-														'<img class="chat-emote" src="https://files.kick.com/emotes/$1/fullsize" alt="$2" title="$2" />'
-													) +
+													badgesHtml +
+													`<span class="chat-user-username" style="color: ${safeColor(
+														senderColor
+													)};">${escapeHtml(senderUsername)}</span> : ` +
+													contentHtml +
 													"</p>",
 											}}
 										></span>

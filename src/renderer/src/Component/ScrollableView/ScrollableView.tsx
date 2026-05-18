@@ -63,16 +63,9 @@ const ScrollableView: FunctionComponent<ScrollableViewProps> = (props) => {
 				{props.children}
 			</div>
 			{scrolled && (
-				<div
-					className="w-fit right-0"
-					style={{
-						position: "absolute",
-						bottom: 0,
-						zIndex: 99,
-						backgroundColor: "rgba(128,128,128,0.2)",
-					}}
-				>
-					Auto scroll paused
+				<div className="auto-scroll-paused-badge">
+					<span className="auto-scroll-paused-dot" />
+					Auto scroll duraklatıldı
 				</div>
 			)}
 		</div>
