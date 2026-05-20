@@ -1981,7 +1981,7 @@ body.modern-shell-root #root {
 
 	/* Row density */
 	--ms-row-h: 30px;
-	--ms-topbar-h: 56px;
+	--ms-topbar-h: 68px;
 
 	/* OKLCH color tokens (Designs/ prototype-aligned) */
 	--ms-bg-0: oklch(0.18 0.015 240);
@@ -4794,13 +4794,16 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 /* ── Fix 4: Topbar layout (Designs/styles.css .topbar → modern scope) ── */
+/* Sprint 32: topbar height 56 -> 68; stream title + kategori satiri eklenince
+   meta column iki + iki satira cikabiliyor (channel name + tabs + stream),
+   eski yukseklik kayma yapiyordu. min-height kullanarak responsive da kalir. */
 [data-app-shell="modern"] .topbar {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto auto;
 	align-items: center;
 	gap: 16px;
-	padding: 0 12px 0 16px;
-	height: 56px;
+	padding: 6px 12px 6px 16px;
+	min-height: 68px;
 	background: var(--bg-1);
 	border-bottom: 1px solid var(--bd-1);
 	flex: 0 0 auto;
@@ -6236,6 +6239,40 @@ html.modern-shell-root[data-theme="light"] {
 	flex: 1;
 	text-align: center;
 	padding: 4px 0;
+}
+
+/* Sprint 32: owner-only role mgmt — mod / VIP / OG toggle butonlari.
+   Aktif rol (is-on) mint vurguda, edilgen rol soluk surface. */
+[data-app-shell="modern"] .uw-strip-roles {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .uw-btn-ghost {
+	height: 26px;
+	padding: 0 10px;
+	border-radius: 4px;
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	background: transparent;
+	color: var(--ms-fg-2, #b6b9c0);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+[data-app-shell="modern"] .uw-btn-ghost:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 12%, transparent);
+	color: var(--ms-fg-1, #e6e9ee);
+	border-color: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 45%, var(--ms-border));
+}
+[data-app-shell="modern"] .uw-btn-ghost.is-on {
+	background: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 20%, transparent);
+	color: var(--ms-ac-mint, #2fd3a0);
+	border-color: var(--ms-ac-mint, #2fd3a0);
+}
+[data-app-shell="modern"] .uw-btn-ghost:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
 }
 
 

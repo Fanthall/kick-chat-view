@@ -49,22 +49,19 @@ export interface EmotePickerModernProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TAB_ORDER: EpTabKey[] = [
-	"favorites",
-	"kick",
-	"seventv",
-	"bttv",
-	"ffz",
-	"emoji",
-];
+// Sprint 32: BTTV ve FFZ tablari kaldirildi (kullanici istegi).
+// "kick" tab artik **kanal emote** (kick-channel + kick-subscriber + seventv-channel).
+// "emoji" tab artik **Kick global** (kick-global setleri, Kick Global + Emoji
+// dahil hepsi).
+const TAB_ORDER: EpTabKey[] = ["favorites", "kick", "seventv", "emoji"];
 
 const TAB_LABEL: Record<EpTabKey, string> = {
 	favorites: "Favorites",
-	kick: "Kick",
+	kick: "Kanal",
 	seventv: "7TV",
 	bttv: "BTTV",
 	ffz: "FFZ",
-	emoji: "Emoji",
+	emoji: "Kick",
 };
 
 // ─── Provider helpers ─────────────────────────────────────────────────────────
@@ -77,13 +74,13 @@ const isFfzProvider = (p: EmoteProvider) => p.startsWith("ffz-");
 const filterSetsForTab = (sets: EmoteSet[], tab: EpTabKey): EmoteSet[] => {
 	switch (tab) {
 		case "kick":
+			// Kanal emote: Kick channel + Kick subscriber + 7TV channel.
 			return sets.filter(
 				(s) =>
-					isKickProvider(s.provider) &&
-					!(
-						s.provider === "kick-global" &&
-						s.name.toLowerCase().includes("emoji")
-					)
+					s.provider === "kick-channel" ||
+					s.provider === "kick-subscriber" ||
+					s.provider === "seventv-channel" ||
+					s.provider === "seventv-personal"
 			);
 		case "seventv":
 			return sets.filter((s) => isSevenTvProvider(s.provider));
@@ -92,11 +89,8 @@ const filterSetsForTab = (sets: EmoteSet[], tab: EpTabKey): EmoteSet[] => {
 		case "ffz":
 			return sets.filter((s) => isFfzProvider(s.provider));
 		case "emoji":
-			return sets.filter(
-				(s) =>
-					s.provider === "kick-global" &&
-					s.name.toLowerCase().includes("emoji")
-			);
+			// Kick global (eski "Kick" + "Emoji" karisik).
+			return sets.filter((s) => s.provider === "kick-global");
 		default:
 			return sets;
 	}
@@ -326,8 +320,6 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 		return counts;
 	}, [index, favoriteEntries]);
 
-	const ffzHasErr = false; // No live provider status in renderer; placeholder
-
 	const handlePick = (entry: EmoteEntry) => {
 		onPick(entry, { keepOpen: false });
 		onClose();
@@ -395,9 +387,6 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 						>
 							{TAB_LABEL[t]}
 							<span className="count">{tabCounts[t]}</span>
-							{t === "ffz" && ffzHasErr && (
-								<span className="err" title="Provider error" />
-							)}
 						</button>
 					))}
 				</div>
@@ -593,18 +582,8 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 							<span style={{ color: "var(--fg-2)" }}>7TV</span>
 							<span className="mono num">{tally.s7tv}</span>
 						</div>
-						<div className="prov-stat" title="BTTV emotes">
-							<span className="prov-dot ok" />
-							<span style={{ color: "var(--fg-2)" }}>BTTV</span>
-							<span className="mono num">{tally.bttv}</span>
-						</div>
-						<div className="prov-stat" title="FFZ emotes">
-							<span
-								className={`prov-dot ${ffzHasErr ? "err" : tally.ffz > 0 ? "ok" : "loading"}`}
-							/>
-							<span style={{ color: "var(--fg-2)" }}>FFZ</span>
-							<span className="mono num">{tally.ffz}</span>
-						</div>
+						{/* Sprint 32: BTTV / FFZ footer status indicator'lari kaldirildi
+						    (provider tablari da kaldirildi). */}
 					</div>
 					<div style={{ display: "flex", alignItems: "center", gap: 6 }}>
 						<span>{totalEmotes} total</span>

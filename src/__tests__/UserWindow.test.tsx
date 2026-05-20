@@ -102,6 +102,8 @@ function makeElectronMock(payload?: UserWindowPayload) {
 			getChannelBySlug: jest.fn().mockResolvedValue({
 				data: [{ broadcaster_user_id: 9000 }],
 			}),
+			// Sprint 32: UserWindow artik getUsers'i da cagiriyor (owner detection)
+			getUsers: jest.fn().mockResolvedValue({ data: [{ user_id: 9000 }] }),
 			timeoutUser: jest.fn().mockResolvedValue({}),
 			banUser: jest.fn().mockResolvedValue({}),
 			unbanUser: jest.fn().mockResolvedValue({}),

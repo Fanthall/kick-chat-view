@@ -122,8 +122,10 @@ const UserWindow: FunctionComponent = () => {
 	const [broadcasterUserId, setBroadcasterUserId] = useState<
 		number | undefined
 	>();
+	const [oauthUserId, setOauthUserId] = useState<number | undefined>();
 	const [grantedScopes, setGrantedScopes] = useState<string[]>([]);
 	const [moderationLoading, setModerationLoading] = useState<string>("");
+	const [roleLoading, setRoleLoading] = useState<string>("");
 	const [activeTab, setActiveTab] = useState<Tab>("overview");
 
 	// Timeout state
@@ -161,11 +163,13 @@ const UserWindow: FunctionComponent = () => {
 		Promise.all([
 			window.electron.kick.getChannelBySlug(payload.channelName),
 			window.electron.kick.getAuthStatus().catch(() => undefined),
+			window.electron.kick.getUsers().catch(() => undefined),
 		])
-			.then(([channelResponse, authStatus]) => {
+			.then(([channelResponse, authStatus, userResponse]: any[]) => {
 				setBroadcasterUserId(
 					channelResponse?.data?.[0]?.broadcaster_user_id
 				);
+				setOauthUserId(userResponse?.data?.[0]?.user_id);
 				setGrantedScopes(
 					parseKickScopes(
 						authStatus?.grantedScopes,
@@ -177,6 +181,7 @@ const UserWindow: FunctionComponent = () => {
 			})
 			.catch(() => {
 				setBroadcasterUserId(undefined);
+				setOauthUserId(undefined);
 				setGrantedScopes([]);
 			});
 	}, [payload?.channelName]);
@@ -188,9 +193,38 @@ const UserWindow: FunctionComponent = () => {
 		grantedScopes,
 		"moderation:chat_message:manage"
 	);
+	const hasChatWriteScope = hasKickScope(grantedScopes, "chat:write");
 	const canUseModerationUi = payload?.canModerateChannel === true;
 	const canModerateUser =
 		canUseModerationUi && !!broadcasterUserId && hasBanScope;
+
+	// Sprint 32: owner-only — kanal sahibi rol yönetimi yapabilir
+	// (mod / VIP / OG ekle/çıkar). Moderator yapamaz. Kick'in resmi public
+	// API'sinde dedicated endpoint yok; chat slash command (`/mod`, `/unmod`,
+	// `/vip`, `/unvip`, `/og`, `/unog`) ile yönetiliyor — sendChatMessage
+	// üstünden gönderiyoruz.
+	const isOwner =
+		!!broadcasterUserId &&
+		!!oauthUserId &&
+		broadcasterUserId === oauthUserId;
+	const targetUserBadges = payload?.user.identity?.badges || [];
+	const targetIsMod = targetUserBadges.some(
+		(b) => (b.type || "").toLowerCase() === "moderator"
+	);
+	const targetIsVip = targetUserBadges.some(
+		(b) => (b.type || "").toLowerCase() === "vip"
+	);
+	const targetIsOg = targetUserBadges.some(
+		(b) => (b.type || "").toLowerCase() === "og"
+	);
+	const targetIsSelf =
+		!!payload && !!oauthUserId && payload.user.id === oauthUserId;
+	const targetIsOwner =
+		!!payload &&
+		!!broadcasterUserId &&
+		payload.user.id === broadcasterUserId;
+	// Sahip kendine veya başka sahibe rol atayamaz.
+	const canManageRoles = isOwner && !targetIsSelf && !targetIsOwner;
 	const canDeleteMessages =
 		canUseModerationUi && !!broadcasterUserId && hasMessageManageScope;
 
@@ -371,6 +405,57 @@ const UserWindow: FunctionComponent = () => {
 				toast(err.message || `${action} request failed.`, { type: "error" });
 			})
 			.finally(() => setModerationLoading(""));
+	};
+
+	// Sprint 32: rol yönetimi (owner-only) — Kick slash command'larıyla.
+	const runRoleCommand = (
+		role: "mod" | "vip" | "og",
+		direction: "grant" | "revoke"
+	) => {
+		if (!payload) return;
+		if (!canManageRoles) {
+			toast("Yalnızca kanal sahibi rol atayabilir.", { type: "warning" });
+			return;
+		}
+		if (!broadcasterUserId) {
+			toast("Broadcaster ID yüklenmedi.", { type: "warning" });
+			return;
+		}
+		if (!hasChatWriteScope) {
+			toast("Kick chat:write scope yok — chat command gönderilemiyor.", {
+				type: "warning",
+			});
+			return;
+		}
+		const verb =
+			direction === "grant"
+				? role === "mod"
+					? "/mod"
+					: role === "vip"
+					? "/vip"
+					: "/og"
+				: role === "mod"
+				? "/unmod"
+				: role === "vip"
+				? "/unvip"
+				: "/unog";
+		const slug = payload.user.slug || payload.user.username;
+		const content = `${verb} ${slug}`;
+		const loadingKey = `${role}-${direction}`;
+		setRoleLoading(loadingKey);
+		window.electron.kick
+			.sendChatMessage({
+				broadcaster_user_id: broadcasterUserId,
+				content,
+				type: "user",
+			})
+			.then(() => {
+				toast(`${content} gönderildi.`, { type: "success" });
+			})
+			.catch((err: any) => {
+				toast(err?.message || `${content} gönderilemedi.`, { type: "error" });
+			})
+			.finally(() => setRoleLoading(""));
 	};
 
 	const runDeleteMessage = (message: UserMessage) => {
@@ -674,6 +759,90 @@ const UserWindow: FunctionComponent = () => {
 							{/* Sprint 26: Account section removed — joined dates not
 							    available from current IPC, so placeholder "—" was
 							    just noise. */}
+
+							{/* Sprint 32: owner-only rol yönetimi (mod / VIP / OG).
+							    Kanal sahibi kendisi değilse görünmez. Kendine veya
+							    diğer kanal sahibine atama engelli. */}
+							{canManageRoles && hasChatWriteScope && (
+								<>
+									<span className="uw-strip-divider" aria-hidden />
+									<div className="uw-strip-group uw-strip-roles">
+										<span className="uw-strip-heading">ROL</span>
+										<button
+											type="button"
+											className={`uw-btn-ghost uw-strip-role${
+												targetIsMod ? " is-on" : ""
+											}`}
+											disabled={!!roleLoading}
+											title={
+												targetIsMod
+													? "Moderatör yetkisini kaldır (/unmod)"
+													: "Moderatör yap (/mod)"
+											}
+											onClick={() =>
+												runRoleCommand(
+													"mod",
+													targetIsMod ? "revoke" : "grant"
+												)
+											}
+										>
+											{roleLoading.startsWith("mod-")
+												? "..."
+												: targetIsMod
+												? "Unmod"
+												: "Mod"}
+										</button>
+										<button
+											type="button"
+											className={`uw-btn-ghost uw-strip-role${
+												targetIsVip ? " is-on" : ""
+											}`}
+											disabled={!!roleLoading}
+											title={
+												targetIsVip
+													? "VIP'i kaldır (/unvip)"
+													: "VIP yap (/vip)"
+											}
+											onClick={() =>
+												runRoleCommand(
+													"vip",
+													targetIsVip ? "revoke" : "grant"
+												)
+											}
+										>
+											{roleLoading.startsWith("vip-")
+												? "..."
+												: targetIsVip
+												? "Unvip"
+												: "VIP"}
+										</button>
+										<button
+											type="button"
+											className={`uw-btn-ghost uw-strip-role${
+												targetIsOg ? " is-on" : ""
+											}`}
+											disabled={!!roleLoading}
+											title={
+												targetIsOg
+													? "OG'i kaldır (/unog)"
+													: "OG yap (/og)"
+											}
+											onClick={() =>
+												runRoleCommand(
+													"og",
+													targetIsOg ? "revoke" : "grant"
+												)
+											}
+										>
+											{roleLoading.startsWith("og-")
+												? "..."
+												: targetIsOg
+												? "Unog"
+												: "OG"}
+										</button>
+									</div>
+								</>
+							)}
 						</>
 					) : (
 						<div className="uw-strip-empty">
