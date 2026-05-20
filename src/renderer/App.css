@@ -27,10 +27,24 @@ body {
 	align-items: stretch;
 }
 
-/* Sprint 9: modern shell — full-bleed, no body padding/gradient frame. */
+/* Sprint 9 + 16: modern shell — full-bleed, no body padding/gradient frame.
+   `:has` works in modern Electron, but App.tsx also sets `.modern-shell-root`
+   on <html>+<body> when modern shell mounts so the rule applies even when
+   the popup windows reuse the same stylesheet without `:has` support. */
+html.modern-shell-root,
+body.modern-shell-root,
 body:has([data-app-shell="modern"]) {
+	padding: 0 !important;
+	margin: 0 !important;
+	background: var(--ms-bg-0, #0c0d10) !important;
+}
+html.modern-shell-root,
+body.modern-shell-root {
+	overflow: hidden;
+}
+body.modern-shell-root #root {
 	padding: 0;
-	background: var(--ms-bg-0, #0c0d10);
+	margin: 0;
 }
 #root {
 	width: 100% !important;

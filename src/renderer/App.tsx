@@ -11,6 +11,8 @@ import KickConnection from "./src/KickConnection/KickConnection";
 import Layout from "./src/Layout/Layout";
 import LayoutModern from "./src/Layout/LayoutModern";
 import UserWindow from "./src/UserWindow/UserWindow";
+import ActivityWindowShell from "./src/ActivityView/ActivityWindowShell";
+import ModerationWindowShell from "./src/ModActions/ModerationWindowShell";
 import MessageActionsFunc from "./store/actions/chatMessage";
 import { useFanthalDispatch } from "./store/hooks/hooks";
 import {
@@ -57,6 +59,9 @@ export default function App() {
 	const dispatch = useFanthalDispatch();
 	const isUserWindow = window.location.hash.startsWith("#/user-window");
 	const isKickConnection = window.location.hash.startsWith("#/kick-connection");
+	// Sprint 14: panel pop-out windows reuse the same index.html entry.
+	const isActivityWindow = window.location.hash.startsWith("#/activity-window");
+	const isModerationWindow = window.location.hash.startsWith("#/moderation-window");
 	const [shellPreference, setShellPreference] = useState<"classic" | "modern">(
 		getShellPreference
 	);
@@ -83,8 +88,27 @@ export default function App() {
 			window.removeEventListener("chat-view-shell-preference-changed", handleShellChange);
 		};
 	}, []);
+	// Sprint 16: when modern shell is active, mark <html>+<body> with a class
+	// so CSS can drop the classic body padding/gradient frame reliably (the
+	// :has() selector fallback works on modern Chromium but isn't guaranteed
+	// across the popup windows / older Electron contexts).
 	useEffect(() => {
-		if (isUserWindow || isKickConnection) return;
+		const html = document.documentElement;
+		const body = document.body;
+		if (useModernShell) {
+			html.classList.add("modern-shell-root");
+			body.classList.add("modern-shell-root");
+		} else {
+			html.classList.remove("modern-shell-root");
+			body.classList.remove("modern-shell-root");
+		}
+		return () => {
+			html.classList.remove("modern-shell-root");
+			body.classList.remove("modern-shell-root");
+		};
+	}, [useModernShell]);
+	useEffect(() => {
+		if (isUserWindow || isKickConnection || isActivityWindow || isModerationWindow) return;
 		// TODO: sağ üstte ayarlardan eklenecek
 		//localStorage.setItem("userName", "Fanthal");
 		getEmote()
@@ -175,7 +199,11 @@ export default function App() {
 			>
 				<div className="flex justify-start items-center flex-col w-full h-full">
 					<div className="w-[98%] h-[98%]">
-						{isUserWindow ? (
+						{isActivityWindow ? (
+							<ActivityWindowShell />
+						) : isModerationWindow ? (
+							<ModerationWindowShell />
+						) : isUserWindow ? (
 							<UserWindow />
 						) : isKickConnection ? (
 							<KickConnection />
