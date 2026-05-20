@@ -126,6 +126,7 @@ export const dict: Dict = {
 	"mod.section.history": { tr: "Son aksiyonlar", en: "Recent actions" },
 	"mod.history.empty": { tr: "Hiçbir mod aksiyonu kaydedilmedi.", en: "No mod actions recorded." },
 	"mod.detail": { tr: "Detay", en: "Detail" },
+	"mod.clear-selected": { tr: "Seçimi temizle", en: "Clear selection" },
 	"mod.unban.selected": { tr: "Banı kaldır", en: "Unban" },
 	"mod.ban.label": { tr: "Ban", en: "Ban" },
 	"mod.clear.label": { tr: "Mesajları temizle", en: "Clear msgs" },

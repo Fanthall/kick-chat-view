@@ -284,9 +284,12 @@ describe("ActivityViewModern — expand drawer", () => {
 	});
 });
 
-// ─── Test 4: Raw JSON toggle ──────────────────────────────────────────────────
-describe("ActivityViewModern — raw JSON toggle", () => {
-	it("raw JSON toggle shows and hides pre block", () => {
+// Sprint 38: Raw JSON toggle + ham JSON dump tamamen kaldırıldı. Önceki
+// "raw JSON toggle" ve "maskSensitive on raw JSON" testleri artık geçerli
+// değil — onların yerine activity expand artık yalnız human-readable
+// summary gösteriyor (Sprint 35 ile eklendi).
+describe("ActivityViewModern — expand summary (Sprint 38)", () => {
+	it("expand panel renders without any JSON pre block or toggle", () => {
 		const store = buildStore([rewardActivity]);
 		render(
 			<Provider store={store}>
@@ -294,50 +297,13 @@ describe("ActivityViewModern — raw JSON toggle", () => {
 			</Provider>
 		);
 
-		// Open drawer
 		fireEvent.click(screen.getByText(/Hydrate/i));
 
-		// Find the json toggle button by its class
-		const toggleBtn = document.querySelector("button.act-json-toggle") as HTMLButtonElement;
-		expect(toggleBtn).toBeInTheDocument();
+		// JSON toggle button ve <pre class="act-json"> artık DOM'da yok.
+		expect(
+			document.querySelector("button.act-json-toggle")
+		).not.toBeInTheDocument();
 		expect(document.querySelector(".act-json")).not.toBeInTheDocument();
-
-		// Show JSON
-		fireEvent.click(toggleBtn!);
-		expect(document.querySelector(".act-json")).toBeInTheDocument();
-
-		// Hide JSON
-		fireEvent.click(document.querySelector("button.act-json-toggle") as HTMLButtonElement);
-		expect(document.querySelector(".act-json")).not.toBeInTheDocument();
-	});
-});
-
-// ─── Test 5: maskSensitive on raw JSON ───────────────────────────────────────
-describe("ActivityViewModern — maskSensitive on raw JSON", () => {
-	it("redacts token-like strings from displayed raw JSON", () => {
-		// rewardActivity has raw.secret_token = "abcdefghijklmnopqrstuvwxyz1234567890" (36 chars)
-		const store = buildStore([rewardActivity]);
-		render(
-			<Provider store={store}>
-				<ActivityViewModern />
-			</Provider>
-		);
-
-		// Open drawer, then show JSON via class selector
-		fireEvent.click(screen.getByText(/Hydrate/i));
-		const toggleBtn = document.querySelector("button.act-json-toggle") as HTMLButtonElement;
-		expect(toggleBtn).toBeInTheDocument();
-		fireEvent.click(toggleBtn!);
-
-		const pre = document.querySelector(".act-json");
-		expect(pre).toBeInTheDocument();
-
-		// Token-like value should be redacted (36 char alphanum string)
-		expect(pre!.textContent).not.toContain("abcdefghijklmnopqrstuvwxyz1234567890");
-		expect(pre!.textContent).toContain("********");
-
-		// Non-token string should still appear
-		expect(pre!.textContent).toContain("testuser");
 	});
 });
 

@@ -808,10 +808,38 @@ interface AdvancedSectionProps {
 	onShellToggle: (v: boolean) => void;
 }
 
+// Sprint 38: Advanced topic toggle artık localStorage'a persist ediliyor.
+// `chatViewAdvancedTopics` JSON map: { [topic]: enabled }. Eski varsayılan
+// "ok" status'lar yine true; "off" olanlar default false ama kullanıcı
+// açtığında persist eder. channel.kicks.v1 default ON (Sprint 38 isteği —
+// "ayarlarda gelişmişte bits'i açtım onun default görünmesi").
+const ADVANCED_TOPICS_STORAGE_KEY = "chatViewAdvancedTopics";
+const DEFAULT_ENABLED_TOPICS: Record<string, boolean> = {
+	"chat.message.v1": true,
+	"chat.deleted.v1": true,
+	"channel.subscription.v2": true,
+	"channel.gift.v2": true,
+	"channel.kicks.v1": true,
+	"channel.reward.v1": true,
+};
+
 const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggle }) => {
-	const [topics, setTopics] = useState(
-		() => ADVANCED_TOPICS.map((t) => ({ ...t, enabled: t.status === "ok" }))
-	);
+	const [topics, setTopics] = useState(() => {
+		let stored: Record<string, boolean> = {};
+		try {
+			const raw = localStorage.getItem(ADVANCED_TOPICS_STORAGE_KEY);
+			if (raw) stored = JSON.parse(raw);
+		} catch {
+			/* ignore */
+		}
+		return ADVANCED_TOPICS.map((t) => ({
+			...t,
+			enabled:
+				stored[t.topic] !== undefined
+					? stored[t.topic]
+					: DEFAULT_ENABLED_TOPICS[t.topic] ?? t.status === "ok",
+		}));
+	});
 	const [verboseLogging, setVerboseLogging] = useState(
 		() => localStorage.getItem("chatViewVerboseLogging") === "true"
 	);
@@ -823,11 +851,28 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 	});
 
 	const handleTopicToggle = (topic: string) => {
-		setTopics((prev) =>
-			prev.map((t) =>
+		setTopics((prev) => {
+			const next = prev.map((t) =>
 				t.topic === topic ? { ...t, enabled: !t.enabled } : t
-			)
-		);
+			);
+			// Sprint 38: persist toggle map'i.
+			try {
+				const map: Record<string, boolean> = {};
+				next.forEach((t) => {
+					map[t.topic] = t.enabled;
+				});
+				localStorage.setItem(
+					ADVANCED_TOPICS_STORAGE_KEY,
+					JSON.stringify(map)
+				);
+				window.dispatchEvent(
+					new Event("chat-view-advanced-topics-changed")
+				);
+			} catch {
+				/* quota / serialization edge case */
+			}
+			return next;
+		});
 	};
 
 	const handleVerboseLogging = (v: boolean) => {

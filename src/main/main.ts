@@ -386,6 +386,17 @@ ipcMain.on("panel-window:request-payload", (_event, panel: PanelKind) => {
 	}
 });
 
+/**
+ * Sprint 37: pop-out → main "clear mod target" relay. Pop-out içindeki
+ * Mod target kartında X butonuna basılınca, ana renderer'ın da
+ * selectedModUser state'ini sıfırlaması için olay forward edilir.
+ */
+ipcMain.on("panel-window:clear-mod-target", () => {
+	if (mainWindow && !mainWindow.isDestroyed()) {
+		mainWindow.webContents.send("panel-window:mod-target-cleared");
+	}
+});
+
 if (process.env.NODE_ENV === "production") {
 	const sourceMapSupport = require("source-map-support");
 	sourceMapSupport.install();

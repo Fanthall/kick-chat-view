@@ -346,6 +346,14 @@ const LayoutModern: FunctionComponent = () => {
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [messages.activityList, messages.modAction, messages.messageList, roleInfo, selectedModUser, suspendedUsers, blockedEmotes]);
 
+	// Sprint 37: pop-out window 'X clear' bastığında ana renderer'ı senkronla.
+	useEffect(() => {
+		const unsub = (window.electron?.panelWindow as any)?.onModTargetCleared?.(
+			() => setSelectedModUser(undefined)
+		);
+		return () => unsub?.();
+	}, []);
+
 	// Sprint 17: live-sync — pop-out window'lara state degisikliklerini debounced
 	// push'la, sadece "Refresh" butonuna bagli olmasin. sendPayload main relay'i
 	// pop-out acik degilse no-op yapar; surekli push wasteful degil.
@@ -579,10 +587,9 @@ const LayoutModern: FunctionComponent = () => {
 						<Icon name="timeout" size={13} />
 						<span className="num mono" data-testid="tb-uptime">{uptime}</span>
 					</div>
-					<div className="tb-stat" title="Category">
-						<Icon name="info" size={13} />
-						<span data-testid="tb-category">{categoryName}</span>
-					</div>
+					{/* Sprint 38: kategori chip kaldırıldı — kategori zaten
+					    .tb-meta-stream satırında (kanal adı altında) gözüküyor,
+					    burada duplicate oluyordu. */}
 					{/* Role — Fix 6 */}
 					{(roleInfo.isOwner || roleInfo.isMod) && (
 						<>
@@ -749,6 +756,25 @@ const LayoutModern: FunctionComponent = () => {
 						aria-modal="true"
 						aria-label={drawerPanel === "activity" ? t("topbar.activity") : t("topbar.moderation")}
 					>
+						{/* Sprint 37: drawer'da pop-out aç butonu — panel ayrı
+						    pencerede açılır, drawer kapanır. */}
+						<button
+							type="button"
+							className="drawer-popout icon-btn"
+							onClick={() => {
+								const panel = drawerPanel;
+								if (!panel) return;
+								window.electron?.panelWindow
+									?.open(panel)
+									?.catch(() => {});
+								setDrawerPanel(undefined);
+							}}
+							aria-label="Open in separate window"
+							title="Open in separate window"
+							style={{ position: "absolute", top: 6, right: 38, zIndex: 2 }}
+						>
+							<Icon name="popOut" size={14} />
+						</button>
 						<button
 							type="button"
 							className="drawer-close icon-btn"
