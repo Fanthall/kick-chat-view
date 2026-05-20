@@ -124,7 +124,7 @@ describe("ModActionsModern — no user selected", () => {
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern />
+				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 		expect(screen.getByTestId("mod-target-empty")).toBeInTheDocument();
@@ -141,7 +141,7 @@ describe("ModActionsModern — selected user card", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern />
+				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 		expect(screen.getByTestId("mod-target-card")).toBeInTheDocument();
@@ -160,7 +160,7 @@ describe("ModActionsModern — quick action disabled state", () => {
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern />
+				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 		const timeoutBtns = screen.getAllByRole("button", { name: /timeout/i });
@@ -178,7 +178,7 @@ describe("ModActionsModern — timeout action", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern />
+				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 
@@ -203,7 +203,7 @@ describe("ModActionsModern — ban action", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern />
+				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 
@@ -228,7 +228,7 @@ describe("ModActionsModern — keyboard shortcuts", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern />
+				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 
@@ -249,7 +249,7 @@ describe("ModActionsModern — keyboard shortcuts", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern />
+				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 
@@ -278,7 +278,7 @@ describe("ModActionsModern — suspended users", () => {
 		const store = buildStore([]);
 		const { rerender } = render(
 			<Provider store={store}>
-				<ModActionsModern />
+				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 
@@ -297,5 +297,86 @@ describe("ModActionsModern — suspended users", () => {
 		// localStorage should be updated
 		const stored = JSON.parse(localStorage.getItem("susUsers") || "[]");
 		expect(stored).not.toContain("banneduser");
+	});
+});
+
+// ─── Test 9: Viewer mode (Sprint 10) ─────────────────────────────────────────
+
+describe("ModActionsModern — viewer mode (not mod/owner)", () => {
+	it("hides Quick actions + Chat controls sections when isMod=false", () => {
+		const store = buildStore([baseModAction]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={false} isOwner={false} />
+			</Provider>
+		);
+		expect(screen.queryByText(/quick actions/i)).not.toBeInTheDocument();
+		expect(screen.queryByText(/chat controls/i)).not.toBeInTheDocument();
+		// Suspended users section still rendered (read-only)
+		expect(
+			screen.getByRole("button", { name: /suspended users/i })
+		).toBeInTheDocument();
+	});
+
+	it("hides Unban button when isMod=false", () => {
+		localStorage.setItem("susUsers", JSON.stringify(["banneduser"]));
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={false} />
+			</Provider>
+		);
+		expect(screen.getByTestId("suspended-row-banneduser")).toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: /unban banneduser/i })
+		).not.toBeInTheDocument();
+	});
+
+	it("shows viewer mode placeholder text when no user selected", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={false} />
+			</Provider>
+		);
+		expect(
+			screen.getByText(/viewer mode — moderation actions hidden/i)
+		).toBeInTheDocument();
+	});
+});
+
+// ─── Test 10: Collapsible sections (Sprint 10) ───────────────────────────────
+
+describe("ModActionsModern — collapsible sections", () => {
+	it("toggles section collapsed state on chevron click", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={true} />
+			</Provider>
+		);
+		const selectedToggle = screen.getByRole("button", {
+			name: /selected user/i,
+		});
+		expect(selectedToggle).toHaveAttribute("aria-expanded", "true");
+		fireEvent.click(selectedToggle);
+		expect(selectedToggle).toHaveAttribute("aria-expanded", "false");
+	});
+
+	it("persists collapsed state to localStorage", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={true} />
+			</Provider>
+		);
+		const actionsToggle = screen.getByRole("button", {
+			name: /quick actions/i,
+		});
+		fireEvent.click(actionsToggle);
+		const stored = JSON.parse(
+			localStorage.getItem("chatViewModSections") || "{}"
+		);
+		expect(stored.actions).toBe(true);
 	});
 });

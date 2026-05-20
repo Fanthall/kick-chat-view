@@ -2961,6 +2961,38 @@ body:has([data-app-shell="modern"]) {
 	align-items: center;
 	justify-content: space-between;
 }
+
+/* Sprint 10: collapsible section toggle */
+[data-app-shell="modern"] .mod-section.is-collapsed {
+	padding-bottom: 8px;
+}
+[data-app-shell="modern"] .mod-section.is-collapsed h3 {
+	margin-bottom: 0;
+}
+[data-app-shell="modern"] .mod-section-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: none;
+	border: none;
+	padding: 2px 0;
+	color: inherit;
+	font: inherit;
+	letter-spacing: inherit;
+	text-transform: inherit;
+	cursor: pointer;
+	border-radius: 3px;
+}
+[data-app-shell="modern"] .mod-section-toggle:hover {
+	color: var(--ms-fg-1, #ebecef);
+}
+[data-app-shell="modern"] .mod-section-toggle:focus-visible {
+	outline: 1px solid var(--ms-ac-mint, var(--ac-mint));
+	outline-offset: 1px;
+}
+[data-app-shell="modern"] .mod-section-body[hidden] {
+	display: none;
+}
 [data-app-shell="modern"] .mod-target {
 	display: flex;
 	align-items: center;

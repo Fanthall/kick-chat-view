@@ -122,13 +122,53 @@ const ChatToggle: FunctionComponent<{ ctrl: ChatControl }> = ({ ctrl }) => {
 	);
 };
 
+// ─── Collapsible section state (Sprint 10) ───────────────────────────────────
+
+const SECTIONS_STORAGE_KEY = "chatViewModSections";
+
+type SectionId = "selected" | "actions" | "controls" | "suspended";
+
+const loadCollapsed = (): Record<SectionId, boolean> => {
+	try {
+		const raw = localStorage.getItem(SECTIONS_STORAGE_KEY);
+		if (!raw) return { selected: false, actions: false, controls: false, suspended: false };
+		return { selected: false, actions: false, controls: false, suspended: false, ...JSON.parse(raw) };
+	} catch {
+		return { selected: false, actions: false, controls: false, suspended: false };
+	}
+};
+
+const saveCollapsed = (state: Record<SectionId, boolean>) => {
+	try {
+		localStorage.setItem(SECTIONS_STORAGE_KEY, JSON.stringify(state));
+	} catch {
+		/* ignore */
+	}
+};
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface ModActionsModernProps {
 	onClose?: () => void;
+	/** Sprint 10: gate write-actions when user isn't owner/mod. */
+	isOwner?: boolean;
+	isMod?: boolean;
 }
 
-const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({ onClose }) => {
+const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
+	onClose,
+	isOwner = false,
+	isMod = false,
+}) => {
+	const canModerate = isOwner || isMod;
+	const [collapsed, setCollapsed] = useState<Record<SectionId, boolean>>(loadCollapsed);
+	const toggleSection = (id: SectionId) => {
+		setCollapsed((prev) => {
+			const next = { ...prev, [id]: !prev[id] };
+			saveCollapsed(next);
+			return next;
+		});
+	};
 	const messages = useFanthalSelector((state) => state.messages);
 	const channelBadges = useFanthalSelector((state) => state.messages.channelBadges);
 	const activeChannelSlug = getActiveChannelSlug();
@@ -305,10 +345,24 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({ onClose })
 				style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}
 			>
 				{/* Section 1: Selected user */}
-				<div className="mod-section">
+				<div className={`mod-section${collapsed.selected ? " is-collapsed" : ""}`}>
 					<h3>
-						Selected user
+						<button
+							type="button"
+							className="mod-section-toggle"
+							aria-expanded={!collapsed.selected}
+							aria-controls="mod-sec-selected"
+							onClick={() => toggleSection("selected")}
+						>
+							<Icon name={collapsed.selected ? "chevron" : "chevd"} size={10} />
+							Selected user
+						</button>
 					</h3>
+					<div
+						id="mod-sec-selected"
+						className="mod-section-body"
+						hidden={collapsed.selected}
+					>
 					{selectedUser ? (
 						<div className="mod-target" data-testid="mod-target-card">
 							<div className="mod-target-ava" aria-hidden="true">
@@ -331,15 +385,28 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({ onClose })
 						</div>
 					) : (
 						<div className="mod-target-empty" data-testid="mod-target-empty">
-							Click a chat row to select a user
+							{canModerate
+								? "Click a chat row to select a user"
+								: "Viewer mode — moderation actions hidden"}
 						</div>
 					)}
+					</div>
 				</div>
 
-				{/* Section 2: Quick actions */}
-				<div className="mod-section">
+				{/* Section 2: Quick actions — only when user can moderate */}
+				{canModerate && (
+				<div className={`mod-section${collapsed.actions ? " is-collapsed" : ""}`}>
 					<h3>
-						Quick actions
+						<button
+							type="button"
+							className="mod-section-toggle"
+							aria-expanded={!collapsed.actions}
+							aria-controls="mod-sec-actions"
+							onClick={() => toggleSection("actions")}
+						>
+							<Icon name={collapsed.actions ? "chevron" : "chevd"} size={10} />
+							Quick actions
+						</button>
 						{selectedUser && (
 							<span
 								style={{
@@ -354,7 +421,11 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({ onClose })
 							</span>
 						)}
 					</h3>
-					<div className="mod-grid">
+					<div
+						id="mod-sec-actions"
+						className="mod-section-body mod-grid"
+						hidden={collapsed.actions}
+					>
 						<button
 							className="mod-btn"
 							disabled={!selectedUser}
@@ -435,21 +506,48 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({ onClose })
 						</button>
 					</div>
 				</div>
+				)}
 
-				{/* Section 3: Chat controls */}
-				<div className="mod-section">
-					<h3>Chat controls</h3>
-					<div className="mod-list">
+				{/* Section 3: Chat controls — only when user can moderate */}
+				{canModerate && (
+				<div className={`mod-section${collapsed.controls ? " is-collapsed" : ""}`}>
+					<h3>
+						<button
+							type="button"
+							className="mod-section-toggle"
+							aria-expanded={!collapsed.controls}
+							aria-controls="mod-sec-controls"
+							onClick={() => toggleSection("controls")}
+						>
+							<Icon name={collapsed.controls ? "chevron" : "chevd"} size={10} />
+							Chat controls
+						</button>
+					</h3>
+					<div
+						id="mod-sec-controls"
+						className="mod-section-body mod-list"
+						hidden={collapsed.controls}
+					>
 						{CHAT_CONTROLS.map((ctrl) => (
 							<ChatToggle key={ctrl.key} ctrl={ctrl} />
 						))}
 					</div>
 				</div>
+				)}
 
-				{/* Section 4: Suspended users */}
-				<div className="mod-section">
+				{/* Section 4: Suspended users — visible to everyone (read-only for viewers) */}
+				<div className={`mod-section${collapsed.suspended ? " is-collapsed" : ""}`}>
 					<h3>
-						Suspended users
+						<button
+							type="button"
+							className="mod-section-toggle"
+							aria-expanded={!collapsed.suspended}
+							aria-controls="mod-sec-suspended"
+							onClick={() => toggleSection("suspended")}
+						>
+							<Icon name={collapsed.suspended ? "chevron" : "chevd"} size={10} />
+							Suspended users
+						</button>
 						<span
 							className="mono num"
 							style={{
@@ -463,7 +561,12 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({ onClose })
 							{suspendedList.length}
 						</span>
 					</h3>
-					<div className="mod-list" data-testid="suspended-list">
+					<div
+						id="mod-sec-suspended"
+						className="mod-list mod-section-body"
+						data-testid="suspended-list"
+						hidden={collapsed.suspended}
+					>
 						{suspendedList.length === 0 && (
 							<div
 								style={{
@@ -499,15 +602,17 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({ onClose })
 											{entry.until}
 										</span>
 									)}
-									<button
-										className="btn ghost"
-										style={{ padding: "3px 6px", fontSize: 11 }}
-										onClick={() => handleUnban(entry)}
-										type="button"
-										aria-label={`Unban ${entry.username}`}
-									>
-										Unban
-									</button>
+									{canModerate && (
+										<button
+											className="btn ghost"
+											style={{ padding: "3px 6px", fontSize: 11 }}
+											onClick={() => handleUnban(entry)}
+											type="button"
+											aria-label={`Unban ${entry.username}`}
+										>
+											Unban
+										</button>
+									)}
 								</div>
 							</div>
 						))}

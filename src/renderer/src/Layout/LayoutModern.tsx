@@ -496,7 +496,10 @@ const LayoutModern: FunctionComponent = () => {
 				{/* Moderation panel */}
 				{showModeration && (
 					<aside className="panel" aria-label="Moderation">
-						<ModActionsModern />
+						<ModActionsModern
+							isOwner={roleInfo.isOwner}
+							isMod={roleInfo.isMod}
+						/>
 					</aside>
 				)}
 			</div>
