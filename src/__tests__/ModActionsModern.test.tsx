@@ -342,7 +342,9 @@ describe("ModActionsModern — suspended users", () => {
 		);
 
 		expect(screen.getByTestId("suspended-row-banneduser")).toBeInTheDocument();
-		expect(screen.getByText("banneduser")).toBeInTheDocument();
+		// Sprint 21: "banneduser" artik hem suspended hem recent actions
+		// listelerinde gorulebilir — getAllByText ile ikisini de kabul et.
+		expect(screen.getAllByText("banneduser").length).toBeGreaterThan(0);
 
 		fireEvent.click(screen.getByRole("button", { name: /unban banneduser/i }));
 

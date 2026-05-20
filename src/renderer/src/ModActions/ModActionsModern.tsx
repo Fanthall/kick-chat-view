@@ -216,15 +216,23 @@ const TimeoutPicker: FunctionComponent<{
 
 const SECTIONS_STORAGE_KEY = "chatViewModSections";
 
-type SectionId = "selected" | "actions" | "controls" | "suspended";
+type SectionId = "selected" | "actions" | "controls" | "suspended" | "history";
+
+const defaultCollapsed: Record<SectionId, boolean> = {
+	selected: false,
+	actions: false,
+	controls: false,
+	suspended: false,
+	history: true, // Sprint 21: default kapalı (yer kaplamasın)
+};
 
 const loadCollapsed = (): Record<SectionId, boolean> => {
 	try {
 		const raw = localStorage.getItem(SECTIONS_STORAGE_KEY);
-		if (!raw) return { selected: false, actions: false, controls: false, suspended: false };
-		return { selected: false, actions: false, controls: false, suspended: false, ...JSON.parse(raw) };
+		if (!raw) return { ...defaultCollapsed };
+		return { ...defaultCollapsed, ...JSON.parse(raw) };
 	} catch {
-		return { selected: false, actions: false, controls: false, suspended: false };
+		return { ...defaultCollapsed };
 	}
 };
 
@@ -523,10 +531,73 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 		? buildBadgesHtml(selectedUser.identity.badges, channelBadges)
 		: "";
 
-	// ─── Meta line ───────────────────────────────────────────────────────────────
+	// ─── Filtered mod actions for this channel ──────────────────────────────────
 	const filteredModActions = messages.modAction.filter(
 		(m) => !activeChannelSlug || m.channelSlug === activeChannelSlug
 	);
+
+	// Sprint 21: selected user banlı mı? (Selected user card için Ban/Unban toggle)
+	const selectedUserIsBanned = useMemo(() => {
+		if (!selectedUser) return false;
+		const uname = selectedUser.username.toLowerCase();
+		// Latest action on this user
+		let latest: ModMessage | undefined;
+		for (const action of filteredModActions) {
+			if (!action.user?.username) continue;
+			if (action.user.username.toLowerCase() !== uname) continue;
+			if (!latest || Number(action.created_at) > Number(latest.created_at)) {
+				latest = action;
+			}
+		}
+		if (!latest) return false;
+		if (latest.type === "ban") return true;
+		if (latest.type === "to" && latest.expires_at) {
+			return new Date(latest.expires_at).getTime() > Date.now();
+		}
+		return false;
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [selectedUser, filteredModActions.length]);
+
+	function handleSelectedUnban() {
+		if (!selectedUser || !broadcasterUserId) return;
+		window.electron.kick
+			.unbanUser({
+				broadcaster_user_id: broadcasterUserId,
+				user_id: selectedUser.id,
+			})
+			.then(() => toast.success(`@${selectedUser.username} unbanlandi.`))
+			.catch((err: any) =>
+				toast.error(err?.message || "Unban basarisiz.")
+			);
+	}
+
+	// Sprint 21: Son 10 mod aksiyonu (unban dahil) — kullaniciya tam log gosterir.
+	const recentActions = useMemo(() => {
+		return filteredModActions
+			.slice()
+			.sort((a, b) => Number(b.created_at) - Number(a.created_at))
+			.slice(0, 10);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [filteredModActions.length]);
+
+	function openModAction(action: ModMessage) {
+		if (!action.user) return;
+		try {
+			const payload = buildUserWindowPayload({
+				user: action.user,
+				messages: messages.messageList,
+				modActions: messages.modAction,
+				openedFrom: "moderation",
+				channelName: activeChannelSlug || undefined,
+				canModerateChannel: canModerate,
+			});
+			window.electron.userWindow.open(payload);
+		} catch (err: any) {
+			toast.error(err?.message || "User window acilamadi.");
+		}
+	}
+
+	// ─── Meta line ───────────────────────────────────────────────────────────────
 	const userTimeouts = selectedUser
 		? filteredModActions.filter(
 			(m) => (m.type === "to") && m.user?.id === selectedUser.id
@@ -623,10 +694,28 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 											style={{ display: "inline-flex", alignItems: "center", gap: 2 }}
 										/>
 									)}
+									{selectedUserIsBanned && (
+										<span
+											className="mod-target-status"
+											title="Su an kisitli"
+										>
+											kisitli
+										</span>
+									)}
 								</div>
 								<div className="mod-target-meta">
 									{userMsgCount} msgs · {userTimeouts} timeouts
 								</div>
+								{canModerate && selectedUserIsBanned && (
+									<button
+										type="button"
+										className="mod-target-unban"
+										onClick={handleSelectedUnban}
+										aria-label={`Unban ${selectedUser.username}`}
+									>
+										<Icon name="check" size={11} /> Bani kaldir
+									</button>
+								)}
 							</div>
 						</div>
 					) : (
@@ -761,6 +850,104 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					</div>
 				</div>
 				)}
+
+				{/* Section 3.5: Recent mod actions (Sprint 21) — log of all actions
+				    (ban / unban / timeout / delete) for the active channel. */}
+				<div className={`mod-section${collapsed.history ? " is-collapsed" : ""}`}>
+					<h3>
+						<button
+							type="button"
+							className="mod-section-toggle"
+							aria-expanded={!collapsed.history}
+							aria-controls="mod-sec-history"
+							onClick={() => toggleSection("history")}
+						>
+							<Icon name={collapsed.history ? "chevron" : "chevd"} size={10} />
+							Son aksiyonlar
+						</button>
+						<span
+							className="mono num"
+							style={{
+								textTransform: "none",
+								letterSpacing: 0,
+								color: "var(--ms-fg-4, var(--fg-4))",
+								fontSize: 11,
+								fontWeight: 400,
+							}}
+						>
+							{recentActions.length}
+						</span>
+					</h3>
+					<div
+						id="mod-sec-history"
+						className="mod-list mod-section-body"
+						hidden={collapsed.history}
+					>
+						{recentActions.length === 0 && (
+							<div
+								style={{
+									fontSize: 11,
+									color: "var(--ms-fg-4, var(--fg-4))",
+									textAlign: "center",
+									padding: "8px 0",
+								}}
+							>
+								Hicbir mod aksiyonu kaydedilmedi.
+							</div>
+						)}
+						{recentActions.map((action) => {
+							const actor =
+								action.banned_by?.username ||
+								action.unbanned_by?.username ||
+								"system";
+							const tStr = action.created_at
+								? new Date(Number(action.created_at)).toLocaleTimeString(
+										undefined,
+										{ hour: "2-digit", minute: "2-digit" }
+								  )
+								: "";
+							return (
+								<div
+									key={action.id}
+									className="mod-list-row mod-list-row-clickable"
+									onDoubleClick={() => openModAction(action)}
+									onContextMenu={(e) => {
+										e.preventDefault();
+										openModAction(action);
+									}}
+									title="Cift tik veya sag tik: kullanici detayini ac"
+								>
+									<div
+										style={{
+											display: "flex",
+											flexDirection: "column",
+											gap: 2,
+										}}
+									>
+										<span style={{ color: "var(--ms-fg-1, var(--fg-1))" }}>
+											<span className={`mod-action-tag mod-action-${action.type}`}>
+												{action.type === "to"
+													? "TIMEOUT"
+													: action.type.toUpperCase()}
+											</span>{" "}
+											{action.user?.username || "?"}
+										</span>
+										<span
+											className="reason"
+											style={{
+												fontSize: 10,
+												color: "var(--ms-fg-4, var(--fg-4))",
+											}}
+										>
+											by @{actor} · {tStr}
+											{action.reason ? ` · ${action.reason}` : ""}
+										</span>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				</div>
 
 				{/* Section 4: Suspended users — visible to everyone (read-only for viewers) */}
 				<div className={`mod-section${collapsed.suspended ? " is-collapsed" : ""}`}>

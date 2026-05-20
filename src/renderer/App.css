@@ -3285,6 +3285,77 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .mod-list-row-clickable:hover {
 	background: color-mix(in oklch, var(--ms-bg-hover, #22252c) 60%, transparent);
 }
+
+/* Sprint 21: selected user status pill + ban-kaldir button + action tags */
+[data-app-shell="modern"] .mod-target-status {
+	margin-left: 6px;
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--live, #ef4f5f);
+	background: color-mix(in oklch, var(--live, #ef4f5f) 18%, transparent);
+	padding: 1px 6px;
+	border-radius: 4px;
+	border: 1px solid color-mix(in oklch, var(--live, #ef4f5f) 35%, transparent);
+}
+[data-app-shell="modern"] .mod-target-unban {
+	margin-top: 6px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	background: var(--ms-ac-mint, #7adbb4);
+	color: var(--ms-bg-0, #0c0d10);
+	border: none;
+	padding: 4px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: opacity 0.12s;
+}
+[data-app-shell="modern"] .mod-target-unban:hover {
+	opacity: 0.88;
+}
+
+[data-app-shell="modern"] .mod-action-tag {
+	display: inline-block;
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	padding: 1px 5px;
+	border-radius: 3px;
+	margin-right: 4px;
+	color: var(--ms-fg-1, #ebecef);
+	background: var(--ms-bg-3, #1e2127);
+}
+[data-app-shell="modern"] .mod-action-ban {
+	background: color-mix(in oklch, var(--live, #ef4f5f) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--live, #ef4f5f);
+}
+[data-app-shell="modern"] .mod-action-to {
+	background: color-mix(in oklch, var(--ms-ac-warn, #d4a851) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--ms-ac-warn, #d4a851);
+}
+[data-app-shell="modern"] .mod-action-unban {
+	background: color-mix(in oklch, var(--ms-ac-mint, #7adbb4) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--ms-ac-mint, #7adbb4);
+}
+[data-app-shell="modern"] .mod-action-delete {
+	background: color-mix(in oklch, var(--ms-fg-3, #828690) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--ms-fg-3, #828690);
+}
+
+/* Sprint 21: UserWindow tab content layout robustness — explicit flex chain
+   so .uw-tab-body always gets remaining vertical space and renders content. */
+[data-app-shell="modern"] .uw-main > .uw-stats,
+[data-app-shell="modern"] .uw-main > .uw-tabs {
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .uw-main > .uw-tab-body {
+	flex: 1 1 auto;
+	min-height: 0;
+}
 [data-app-shell="modern"] .mod-btn {
 	display: flex;
 	flex-direction: column;
