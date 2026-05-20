@@ -185,6 +185,7 @@ export const dict: Dict = {
 	"userwindow.tab.activity": { tr: "Aktivite", en: "Activity" },
 	"userwindow.tab.modhistory": { tr: "Mod geçmişi", en: "Mod history" },
 	"userwindow.tab.notes": { tr: "Notlar", en: "Notes" },
+	"userwindow.tab.mychannel": { tr: "Kendi Kanalın", en: "My Channel" },
 	"userwindow.status.active": { tr: "Şu an aktif", en: "Active now" },
 	"userwindow.status.offline": { tr: "Çevrimdışı", en: "Offline" },
 	"userwindow.mod.heading": { tr: "MOD AKSİYONLARI", en: "MOD ACTIONS" },

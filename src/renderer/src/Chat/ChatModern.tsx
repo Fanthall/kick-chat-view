@@ -366,9 +366,36 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		(channelName && messages.channelBadgesByChannel[channelName]) ||
 		messages.channelBadges;
 
+	// Sprint 33: cross-channel subscriber emote union.
+	// Aktif kanal için TÜM emote'lar + diğer subscribed kanalların kick-subscriber
+	// ve seventv-personal set'leri. Kick API'sinde subscriber emote'lar yalnızca
+	// kullanıcı sub ise dönüyor; dolayısıyla bunların varlığı = sub demek.
 	const channelEmoteSets = useMemo(() => {
-		if (!channelName) return [];
-		return messages.emoteSetsByChannel[channelName] || [];
+		const result: any[] = [];
+		const seen = new Set<string>();
+		const pushUnique = (set: any) => {
+			const key = `${set.provider}:${set.id || set.name}`;
+			if (seen.has(key)) return;
+			seen.add(key);
+			result.push(set);
+		};
+		const activeSets =
+			(channelName && messages.emoteSetsByChannel[channelName]) || [];
+		for (const set of activeSets) pushUnique(set);
+		// Diğer kanalların subscriber/personal set'leri
+		for (const slug of Object.keys(messages.emoteSetsByChannel)) {
+			if (slug === channelName) continue;
+			const sets = messages.emoteSetsByChannel[slug] || [];
+			for (const set of sets) {
+				if (
+					set.provider === "kick-subscriber" ||
+					set.provider === "seventv-personal"
+				) {
+					pushUnique(set);
+				}
+			}
+		}
+		return result;
 	}, [channelName, messages.emoteSetsByChannel]);
 
 	const emoteIndex: EmoteIndex = useMemo(

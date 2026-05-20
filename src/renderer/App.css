@@ -5736,6 +5736,23 @@ html.modern-shell-root[data-theme="light"] {
 	overflow: hidden;
 }
 
+/* Sprint 33: My Channel tab — kart başlığı + hint metni */
+[data-app-shell="modern"] .uw-mychannel-tab .uw-card {
+	padding: 12px 14px;
+}
+[data-app-shell="modern"] .uw-card-title {
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--ms-fg-1, #ebecef);
+	margin-bottom: 4px;
+}
+[data-app-shell="modern"] .uw-card-hint {
+	margin: 0;
+	font-size: 12px;
+	color: var(--ms-fg-3, #828690);
+	line-height: 1.45;
+}
+
 [data-app-shell="modern"] .uw-card-hd {
 	display: flex;
 	align-items: baseline;

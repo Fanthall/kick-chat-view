@@ -78,7 +78,7 @@ const deriveIsBanned = (modActions: ModMessage[]): boolean => {
 	return last.type === "ban";
 };
 
-type Tab = "overview" | "messages" | "activity" | "modhistory" | "notes";
+type Tab = "overview" | "messages" | "activity" | "modhistory" | "notes" | "mychannel";
 
 const TIMEOUT_PRESETS = [
 	{ label: "1m", seconds: 60 },
@@ -123,9 +123,14 @@ const UserWindow: FunctionComponent = () => {
 		number | undefined
 	>();
 	const [oauthUserId, setOauthUserId] = useState<number | undefined>();
+	const [myChannelSlug, setMyChannelSlug] = useState<string | undefined>();
+	const [myChannelBroadcasterId, setMyChannelBroadcasterId] = useState<
+		number | undefined
+	>();
 	const [grantedScopes, setGrantedScopes] = useState<string[]>([]);
 	const [moderationLoading, setModerationLoading] = useState<string>("");
 	const [roleLoading, setRoleLoading] = useState<string>("");
+	const [myChannelRoleLoading, setMyChannelRoleLoading] = useState<string>("");
 	const [activeTab, setActiveTab] = useState<Tab>("overview");
 
 	// Timeout state
@@ -169,7 +174,15 @@ const UserWindow: FunctionComponent = () => {
 				setBroadcasterUserId(
 					channelResponse?.data?.[0]?.broadcaster_user_id
 				);
-				setOauthUserId(userResponse?.data?.[0]?.user_id);
+				const myUser = userResponse?.data?.[0];
+				setOauthUserId(myUser?.user_id);
+				const myName: string | undefined =
+					myUser?.name ||
+					myUser?.username ||
+					myUser?.slug ||
+					localStorage.getItem("username") ||
+					undefined;
+				setMyChannelSlug(myName);
 				setGrantedScopes(
 					parseKickScopes(
 						authStatus?.grantedScopes,
@@ -178,10 +191,24 @@ const UserWindow: FunctionComponent = () => {
 						authStatus?.introspection?.data?.scopes
 					)
 				);
+				// Sprint 33: kullanıcının kendi kanal broadcaster id'si — chat
+				// slash command'lar bu id ile gönderilebilsin diye fetch et.
+				if (myName) {
+					window.electron.kick
+						.getChannelBySlug(myName)
+						.then((res: any) => {
+							setMyChannelBroadcasterId(
+								res?.data?.[0]?.broadcaster_user_id
+							);
+						})
+						.catch(() => setMyChannelBroadcasterId(undefined));
+				}
 			})
 			.catch(() => {
 				setBroadcasterUserId(undefined);
 				setOauthUserId(undefined);
+				setMyChannelSlug(undefined);
+				setMyChannelBroadcasterId(undefined);
 				setGrantedScopes([]);
 			});
 	}, [payload?.channelName]);
@@ -407,18 +434,24 @@ const UserWindow: FunctionComponent = () => {
 			.finally(() => setModerationLoading(""));
 	};
 
-	// Sprint 32: rol yönetimi (owner-only) — Kick slash command'larıyla.
-	const runRoleCommand = (
+	// Sprint 32: rol yönetimi (Kick chat slash command — Kick API'sinde
+	// dedicated endpoint yok).
+	// Sprint 33: target broadcaster parametrize edildi — aktif kanal (owner-only)
+	// veya kullanıcının kendi kanalı (her zaman geçerli) için kullanılabilir.
+	const runRoleCommandFor = (
 		role: "mod" | "vip" | "og",
-		direction: "grant" | "revoke"
+		direction: "grant" | "revoke",
+		opts: {
+			targetBroadcasterId: number | undefined;
+			setLoading: (v: string) => void;
+			contextLabel: string;
+		}
 	) => {
 		if (!payload) return;
-		if (!canManageRoles) {
-			toast("Yalnızca kanal sahibi rol atayabilir.", { type: "warning" });
-			return;
-		}
-		if (!broadcasterUserId) {
-			toast("Broadcaster ID yüklenmedi.", { type: "warning" });
+		if (!opts.targetBroadcasterId) {
+			toast(`Broadcaster ID yüklenmedi (${opts.contextLabel}).`, {
+				type: "warning",
+			});
 			return;
 		}
 		if (!hasChatWriteScope) {
@@ -442,20 +475,51 @@ const UserWindow: FunctionComponent = () => {
 		const slug = payload.user.slug || payload.user.username;
 		const content = `${verb} ${slug}`;
 		const loadingKey = `${role}-${direction}`;
-		setRoleLoading(loadingKey);
+		opts.setLoading(loadingKey);
 		window.electron.kick
 			.sendChatMessage({
-				broadcaster_user_id: broadcasterUserId,
+				broadcaster_user_id: opts.targetBroadcasterId,
 				content,
 				type: "user",
 			})
 			.then(() => {
-				toast(`${content} gönderildi.`, { type: "success" });
+				toast(`${content} → ${opts.contextLabel}`, { type: "success" });
 			})
 			.catch((err: any) => {
 				toast(err?.message || `${content} gönderilemedi.`, { type: "error" });
 			})
-			.finally(() => setRoleLoading(""));
+			.finally(() => opts.setLoading(""));
+	};
+
+	const runRoleCommand = (
+		role: "mod" | "vip" | "og",
+		direction: "grant" | "revoke"
+	) => {
+		if (!canManageRoles) {
+			toast("Yalnızca kanal sahibi rol atayabilir.", { type: "warning" });
+			return;
+		}
+		runRoleCommandFor(role, direction, {
+			targetBroadcasterId: broadcasterUserId,
+			setLoading: setRoleLoading,
+			contextLabel: payload?.channelName || "kanal",
+		});
+	};
+
+	// Sprint 33: kendi kanalında rol yönetimi (UserWindow "My Channel" tab).
+	const runMyChannelRoleCommand = (
+		role: "mod" | "vip" | "og",
+		direction: "grant" | "revoke"
+	) => {
+		if (targetIsSelf) {
+			toast("Kendi kanalında kendine rol atayamazsın.", { type: "warning" });
+			return;
+		}
+		runRoleCommandFor(role, direction, {
+			targetBroadcasterId: myChannelBroadcasterId,
+			setLoading: setMyChannelRoleLoading,
+			contextLabel: myChannelSlug || "kendi kanalın",
+		});
 	};
 
 	const runDeleteMessage = (message: UserMessage) => {
@@ -546,6 +610,7 @@ const UserWindow: FunctionComponent = () => {
 		activity: 0,
 		modhistory: modActions.length,
 		notes: notes.length,
+		mychannel: null,
 	};
 
 	const TABS: { id: Tab; labelKey: string }[] = [
@@ -555,6 +620,16 @@ const UserWindow: FunctionComponent = () => {
 		{ id: "modhistory", labelKey: "userwindow.tab.modhistory" },
 		{ id: "notes", labelKey: "userwindow.tab.notes" },
 	];
+	// Sprint 33: "My Channel" tab — OAuth user'in kendi kanali varsa ve hedef
+	// kullanici kendisi degilse goster. Burada kullanici kendi kanalinda
+	// hedefin rolunu yonetebilir (Mod / VIP / OG slash commandlari).
+	const showMyChannelTab =
+		!!myChannelBroadcasterId &&
+		!!myChannelSlug &&
+		!targetIsSelf;
+	if (showMyChannelTab) {
+		TABS.push({ id: "mychannel", labelKey: "userwindow.tab.mychannel" });
+	}
 
 	// ── Save note ─────────────────────────────────────────────────────────────
 
@@ -1060,6 +1135,119 @@ const UserWindow: FunctionComponent = () => {
 								>
 									Save note
 								</button>
+							</div>
+						</div>
+					)}
+
+					{/* Sprint 33: My Channel tab — kendi kanalında rol yönetimi */}
+					{activeTab === "mychannel" && showMyChannelTab && (
+						<div className="uw-tab-content uw-mychannel-tab">
+							<div className="uw-card">
+								<div className="uw-card-title">
+									Kendi Kanalın:{" "}
+									<span style={{ color: "var(--ms-ac-mint, #2fd3a0)" }}>
+										{myChannelSlug}
+									</span>
+								</div>
+								<p className="uw-card-hint">
+									{user.username} kullanıcısına <b>kendi kanalında</b> rol
+									ver veya kaldır. Aksiyonlar chat slash command olarak
+									kendi kanalına gönderilir.
+								</p>
+								{!hasChatWriteScope ? (
+									<p
+										className="uw-empty-state"
+										style={{ color: "var(--ms-ac-warn, #e89a3c)" }}
+									>
+										chat:write scope yok — yeniden bağlanıp izin verin.
+									</p>
+								) : (
+									<div
+										className="uw-strip-roles"
+										style={{ marginTop: 10, justifyContent: "flex-start" }}
+									>
+										<button
+											type="button"
+											className={`uw-btn-ghost uw-strip-role${
+												targetIsMod ? " is-on" : ""
+											}`}
+											disabled={!!myChannelRoleLoading}
+											title={
+												targetIsMod
+													? "Kendi kanalından moderatör yetkisini kaldır (/unmod)"
+													: "Kendi kanalında moderatör yap (/mod)"
+											}
+											onClick={() =>
+												runMyChannelRoleCommand(
+													"mod",
+													targetIsMod ? "revoke" : "grant"
+												)
+											}
+										>
+											{myChannelRoleLoading.startsWith("mod-")
+												? "..."
+												: targetIsMod
+												? "Unmod"
+												: "Mod"}
+										</button>
+										<button
+											type="button"
+											className={`uw-btn-ghost uw-strip-role${
+												targetIsVip ? " is-on" : ""
+											}`}
+											disabled={!!myChannelRoleLoading}
+											title={
+												targetIsVip
+													? "Kendi kanalından VIP'i kaldır (/unvip)"
+													: "Kendi kanalında VIP yap (/vip)"
+											}
+											onClick={() =>
+												runMyChannelRoleCommand(
+													"vip",
+													targetIsVip ? "revoke" : "grant"
+												)
+											}
+										>
+											{myChannelRoleLoading.startsWith("vip-")
+												? "..."
+												: targetIsVip
+												? "Unvip"
+												: "VIP"}
+										</button>
+										<button
+											type="button"
+											className={`uw-btn-ghost uw-strip-role${
+												targetIsOg ? " is-on" : ""
+											}`}
+											disabled={!!myChannelRoleLoading}
+											title={
+												targetIsOg
+													? "Kendi kanalından OG'i kaldır (/unog)"
+													: "Kendi kanalında OG yap (/og)"
+											}
+											onClick={() =>
+												runMyChannelRoleCommand(
+													"og",
+													targetIsOg ? "revoke" : "grant"
+												)
+											}
+										>
+											{myChannelRoleLoading.startsWith("og-")
+												? "..."
+												: targetIsOg
+												? "Unog"
+												: "OG"}
+										</button>
+									</div>
+								)}
+								<p
+									className="uw-card-hint"
+									style={{ marginTop: 8, fontSize: 11 }}
+								>
+									Not: Hedef kullanıcı rozetleri aktif kanaldan okunuyor;
+									kendi kanalındaki gerçek rol durumu chat slash command
+									gönderildikten sonra güncellenir.
+								</p>
 							</div>
 						</div>
 					)}
