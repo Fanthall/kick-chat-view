@@ -436,6 +436,24 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		};
 		loadSettings();
 
+		// Sprint 36: OAuth ile login olduysak ama localStorage.username
+		// boşsa, Kick API'sinden user adını çekip set et + localStorage'a yaz.
+		// "Not connected" footer'ı yanlış görünmesin.
+		if (!localStorage.getItem("username")) {
+			window.electron.kick
+				.getUsers()
+				.then((res: any) => {
+					const myUser = res?.data?.[0];
+					const name: string | undefined =
+						myUser?.name || myUser?.username || myUser?.slug;
+					if (name) {
+						localStorage.setItem("username", name);
+						setUsername(name);
+					}
+				})
+				.catch(() => {});
+		}
+
 		const onStorage = () => loadSettings();
 		window.addEventListener("storage", onStorage);
 		window.addEventListener("kick-channel-settings-changed", loadSettings);
