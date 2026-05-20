@@ -535,12 +535,30 @@ app.on("window-all-closed", () => {
 });
 
 app.whenReady()
-	.then(() => {
+	.then(async () => {
 		createWindow();
 		app.on("activate", () => {
 			// On macOS it's common to re-create a window in the app when the
 			// dock icon is clicked and there are no other windows open.
 			if (mainWindow === null) createWindow();
 		});
+		// Sprint 43: webhook receiver app startup'ta otomatik başlasın.
+		// Public URL kullanıcı sonradan Settings'ten girer; server boşta
+		// dinlemeye başlar ve subscribe attempt yapıldığında devreye girer.
+		try {
+			await startWebhookServer(() => mainWindow, WEBHOOK_PORT_DEFAULT);
+			webhookRunning = true;
+			webhookCurrentPort = WEBHOOK_PORT_DEFAULT;
+			console.log(
+				"[webhook] auto-started on port",
+				WEBHOOK_PORT_DEFAULT
+			);
+		} catch (err: any) {
+			webhookRunning = false;
+			console.log(
+				"[webhook] auto-start failed",
+				err?.message || err
+			);
+		}
 	})
 	.catch(console.log);
