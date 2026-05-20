@@ -27,9 +27,16 @@ import ActivityViewModern from "./ActivityViewModern";
 
 // ─── Isolated Redux store for the pop-out ────────────────────────────────────
 
+// Sprint 44: pop-out store da büyük list tutuyor; immutable/serializable
+// check'leri kapatıldı (dev warning gürültüsü).
 const createPopOutStore = () =>
 	configureStore({
 		reducer: { messages: chatMessageReducer },
+		middleware: (getDefaultMiddleware) =>
+			getDefaultMiddleware({
+				serializableCheck: false,
+				immutableCheck: false,
+			}),
 	});
 
 // ─── Shell ────────────────────────────────────────────────────────────────────
