@@ -58,6 +58,7 @@ import {
 } from "../../util/localModerationStorage";
 import { buildUserWindowPayload } from "../../util/userWindowPayload";
 import EmoteAutocompleteModern from "./EmoteAutocompleteModern";
+import EmotePickerModern from "./EmotePickerModern";
 
 // ────────── Types ──────────
 
@@ -286,8 +287,10 @@ const ChatModern: FunctionComponent<ChatModernProps> = () => {
 	const [emoteSuggestionIndex, setEmoteSuggestionIndex] = useState<number>(0);
 	const [broadcasterUserId, setBroadcasterUserId] = useState<number | undefined>(undefined);
 	const [canModerateChannel, setCanModerateChannel] = useState<boolean>(false);
+	const [pickerOpen, setPickerOpen] = useState<boolean>(false);
 
 	const composerRef = useRef<HTMLTextAreaElement>(null);
+	const smileButtonRef = useRef<HTMLButtonElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
 
 	const channelName = getActiveChannelSlug();
@@ -658,6 +661,38 @@ const ChatModern: FunctionComponent<ChatModernProps> = () => {
 		}
 	};
 
+	// ── Ctrl+E opens emote picker ──
+	useEffect(() => {
+		const handleGlobalKey = (e: globalThis.KeyboardEvent) => {
+			if (e.ctrlKey && e.key === "e") {
+				e.preventDefault();
+				setPickerOpen((v) => !v);
+			}
+		};
+		window.addEventListener("keydown", handleGlobalKey);
+		return () => window.removeEventListener("keydown", handleGlobalKey);
+	}, []);
+
+	// ── Insert emote from picker at cursor or end ──
+	const handlePickerInsert = (entry: { insertText: string }) => {
+		const insert = entry.insertText;
+		const ta = composerRef.current;
+		if (ta) {
+			const start = ta.selectionStart ?? ta.value.length;
+			const end = ta.selectionEnd ?? ta.value.length;
+			const before = ta.value.slice(0, start);
+			const after = ta.value.slice(end);
+			const needsSpace = before.length > 0 && !/\s$/.test(before);
+			const nextText = `${before}${needsSpace ? " " : ""}${insert} ${after}`;
+			setMessageText(nextText);
+			ta.value = nextText;
+			ta.focus();
+		} else {
+			const needsSpace = messageText.length > 0 && !/\s$/.test(messageText);
+			setMessageText((prev) => `${prev}${needsSpace ? " " : ""}${insert} `);
+		}
+	};
+
 	return (
 		<div
 			className="chat-panel-modern"
@@ -804,11 +839,14 @@ const ChatModern: FunctionComponent<ChatModernProps> = () => {
 
 					<div className="composer-tools">
 						<button
+							ref={smileButtonRef}
 							className="icon-btn"
-							title="Emote picker"
+							title="Emote picker (Ctrl+E)"
 							aria-label="Open emote picker"
 							type="button"
 							style={{ width: 28, height: 28 }}
+							onClick={() => setPickerOpen((v) => !v)}
+							data-testid="smile-btn"
 						>
 							<LuSmile size={15} aria-hidden />
 						</button>
@@ -837,10 +875,22 @@ const ChatModern: FunctionComponent<ChatModernProps> = () => {
 						)}
 					</span>
 					<span className="mono num" style={{ color: "var(--ms-fg-3)", fontSize: 11 }}>
-						⏎ send · ⇧⏎ newline · : emote
+						⏎ send · ⇧⏎ newline · : emote · Ctrl+E picker
 					</span>
 				</div>
 			</div>
+
+			{/* Emote picker modal */}
+			<EmotePickerModern
+				open={pickerOpen}
+				onClose={() => setPickerOpen(false)}
+				index={emoteIndex}
+				onPick={(entry) => {
+					handlePickerInsert(entry);
+				}}
+				onRefresh={handleRefresh}
+				anchorRef={smileButtonRef}
+			/>
 		</div>
 	);
 };
