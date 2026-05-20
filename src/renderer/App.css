@@ -1921,3 +1921,238 @@ body {
 @tailwind utilities;
 @tailwind variants;
 /*npx tailwindcss -i ./src/renderer/App.css -o ./dist/output.css --watch*/
+
+/* =============================================================================
+ * Sprint 2 — Modern Shell Design Tokens (Design v1 AD: NextUI x OKLCH isolation)
+ *
+ * Tum modern shell token'lari [data-app-shell="modern"] altinda scope edilir.
+ * Classic shell (default) etkilenmez. NextUI Tailwind theme variable'lari
+ * ezilmez. OKLCH yetersizse hex fallback @supports ile dusurulur.
+ * ========================================================================== */
+
+[data-app-shell="modern"] {
+	/* Typography */
+	--ms-font-sans: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	--ms-font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas,
+		monospace;
+	--ms-fs-12: 12px;
+	--ms-fs-13: 13px;
+	--ms-fs-14: 14px;
+	--ms-fs-15: 15px;
+	--ms-fs-16: 16px;
+	--ms-fs-18: 18px;
+	--ms-lh-1: 1.2;
+	--ms-lh-2: 1.4;
+	--ms-lh-3: 1.5;
+
+	/* Radius scale */
+	--ms-r-1: 4px;
+	--ms-r-2: 6px;
+	--ms-r-3: 8px;
+	--ms-r-4: 12px;
+
+	/* Spacing scale (8pt + 4pt half) */
+	--ms-sp-1: 4px;
+	--ms-sp-2: 8px;
+	--ms-sp-3: 12px;
+	--ms-sp-4: 16px;
+	--ms-sp-5: 24px;
+	--ms-sp-6: 32px;
+
+	/* Row density */
+	--ms-row-h: 30px;
+	--ms-topbar-h: 56px;
+
+	/* OKLCH color tokens (Designs/ prototype-aligned) */
+	--ms-bg-0: oklch(0.18 0.015 240);
+	--ms-bg-1: oklch(0.22 0.015 240);
+	--ms-bg-2: oklch(0.26 0.015 240);
+	--ms-fg-1: oklch(0.95 0.005 240);
+	--ms-fg-2: oklch(0.78 0.01 240);
+	--ms-fg-3: oklch(0.62 0.01 240);
+	--ms-border: oklch(0.32 0.01 240 / 0.5);
+	--ms-bg-hover: oklch(0.28 0.015 240);
+
+	/* Accent palette */
+	--ms-ac-sub: oklch(0.78 0.1 295);
+	--ms-ac-gift: oklch(0.82 0.1 80);
+	--ms-ac-kicks: oklch(0.82 0.1 200);
+	--ms-ac-reward: oklch(0.82 0.1 140);
+	--ms-ac-mod: oklch(0.75 0.1 25);
+	--ms-ac-mint: oklch(0.85 0.08 165);
+	--ms-ac-warn: oklch(0.78 0.12 60);
+	--ms-ac-live: oklch(0.72 0.18 25);
+
+	/* Z-index scale */
+	--ms-z-topbar: 10;
+	--ms-z-drawer: 100;
+	--ms-z-modal: 1000;
+	--ms-z-toast: 2000;
+}
+
+/* Hex fallback for environments without OKLCH support */
+@supports not (color: oklch(0% 0 0)) {
+	[data-app-shell="modern"] {
+		--ms-bg-0: #131820;
+		--ms-bg-1: #181d26;
+		--ms-bg-2: #1d242e;
+		--ms-fg-1: #ecedef;
+		--ms-fg-2: #b8bcc2;
+		--ms-fg-3: #8a8f97;
+		--ms-border: rgba(110, 120, 135, 0.5);
+		--ms-bg-hover: #1f2630;
+		--ms-ac-sub: #b39ddb;
+		--ms-ac-gift: #ddb377;
+		--ms-ac-kicks: #79c8d2;
+		--ms-ac-reward: #88c4a4;
+		--ms-ac-mod: #d68a82;
+		--ms-ac-mint: #7adbb4;
+		--ms-ac-warn: #d4a851;
+		--ms-ac-live: #d65c4e;
+	}
+}
+
+/* Modern shell base (font + bg) */
+[data-app-shell="modern"] {
+	font-family: var(--ms-font-sans);
+	font-size: var(--ms-fs-13);
+	line-height: var(--ms-lh-2);
+	color: var(--ms-fg-1);
+}
+
+[data-app-shell="modern"] .ms-mono {
+	font-family: var(--ms-font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Topbar */
+[data-app-shell="modern"] .ms-topbar {
+	display: flex;
+	align-items: center;
+	height: var(--ms-topbar-h);
+	padding: 0 var(--ms-sp-4);
+	gap: var(--ms-sp-4);
+	background: var(--ms-bg-1);
+	border-bottom: 1px solid var(--ms-border);
+	z-index: var(--ms-z-topbar);
+}
+
+[data-app-shell="modern"] .ms-topbar-avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: var(--ms-bg-2);
+	flex-shrink: 0;
+	position: relative;
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .ms-topbar-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+[data-app-shell="modern"] .ms-live-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ms-sp-1);
+	padding: 2px 8px;
+	border-radius: var(--ms-r-4);
+	background: var(--ms-ac-live);
+	color: var(--ms-bg-0);
+	font-size: var(--ms-fs-12);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+[data-app-shell="modern"] .ms-live-pill::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentColor;
+	animation: ms-live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ms-live-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
+}
+
+[data-app-shell="modern"] .ms-tab {
+	padding: var(--ms-sp-1) var(--ms-sp-3);
+	border-radius: var(--ms-r-2);
+	background: transparent;
+	color: var(--ms-fg-2);
+	font-size: var(--ms-fs-13);
+	border: 1px solid transparent;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .ms-tab:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+}
+
+[data-app-shell="modern"] .ms-tab.ms-tab-active {
+	background: var(--ms-bg-2);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-border);
+}
+
+[data-app-shell="modern"] .ms-stat-row {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ms-sp-3);
+	color: var(--ms-fg-2);
+	font-size: var(--ms-fs-12);
+}
+
+[data-app-shell="modern"] .ms-stat {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ms-sp-1);
+}
+
+[data-app-shell="modern"] .ms-role-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ms-sp-1);
+	padding: 2px 6px;
+	border-radius: var(--ms-r-1);
+	background: var(--ms-bg-2);
+	color: var(--ms-fg-2);
+	font-size: var(--ms-fs-12);
+	border: 1px solid var(--ms-border);
+}
+
+[data-app-shell="modern"] .ms-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--ms-r-2);
+	background: transparent;
+	color: var(--ms-fg-2);
+	border: 1px solid transparent;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .ms-icon-btn:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-border);
+}
+
+[data-app-shell="modern"] .ms-icon-btn:focus-visible {
+	outline: 2px solid var(--ms-ac-mint);
+	outline-offset: 1px;
+}
+
+[data-app-shell="modern"] .ms-spacer-flex {
+	flex: 1 1 auto;
+}
+
