@@ -4000,6 +4000,46 @@ body {
 	flex: 0 0 auto;
 }
 
+[data-app-shell="modern"] .tb-tab-body {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: none;
+	border: none;
+	padding: 0;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .tb-tab-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	margin-left: 2px;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: var(--r-1, 4px);
+	color: var(--fg-3, #828690);
+	opacity: 0;
+	cursor: pointer;
+	transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+
+[data-app-shell="modern"] .tb-tab:hover .tb-tab-close,
+[data-app-shell="modern"] .tb-tab-close:focus-visible {
+	opacity: 0.7;
+}
+
+[data-app-shell="modern"] .tb-tab-close:hover {
+	opacity: 1;
+	background: color-mix(in oklch, var(--live, #ef4f5f) 25%, transparent);
+	color: var(--live, #ef4f5f);
+}
+
 /* Fix 2: + add button in tab row */
 [data-app-shell="modern"] .tb-add {
 	width: 22px;

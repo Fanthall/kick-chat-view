@@ -28,6 +28,7 @@ import {
 	ChatViewChannel,
 	getActiveChannelSlug,
 	getChannelList,
+	removeChannel,
 	setActiveChannelSlug,
 } from "../../util/channelSettings";
 import { chatListener } from "../../util/chatConnection";
@@ -208,6 +209,24 @@ const LayoutModern: FunctionComponent = () => {
 		[activeSlug, dispatch]
 	);
 
+	const onCloseChannel = useCallback(
+		(slug: string) => {
+			if (!slug) return;
+			removeChannel(slug);
+			unreadMap.delete(slug);
+			const remaining = getChannelList();
+			if (slug === activeSlug) {
+				const next = remaining[0]?.slug ?? "";
+				setActiveChannelSlug(next);
+				setActiveSlug(next);
+				if (next) dispatch(chatListener(next));
+			}
+			setChannels(remaining);
+			window.dispatchEvent(new Event("kick-channel-settings-changed"));
+		},
+		[activeSlug, dispatch]
+	);
+
 	// Fix 4 avatar letter
 	const avatarLetter = activeSlug ? activeSlug[0].toUpperCase() : "?";
 
@@ -247,32 +266,44 @@ const LayoutModern: FunctionComponent = () => {
 							{secondaryChannels.map((ch) => {
 								const unread = unreadCounts[ch.slug] ?? 0;
 								return (
-									<button
-										key={ch.slug}
-										role="tab"
-										aria-selected={false}
-										className="tb-tab"
-										title={ch.slug}
-										onClick={() => onSelectChannel(ch.slug)}
-									>
-										<span
-											className="dot"
-											style={
-												messages.connectionStatusByChannel?.[ch.slug] === "connected"
-													? {}
-													: { background: "var(--fg-4, #5a5e68)" }
-											}
-										/>
-										{ch.slug}
-										{unread > 0 && (
+									<div key={ch.slug} className="tb-tab" role="tab" aria-selected={false}>
+										<button
+											type="button"
+											className="tb-tab-body"
+											title={`Switch to ${ch.slug}`}
+											onClick={() => onSelectChannel(ch.slug)}
+										>
 											<span
-												className="mono num"
-												style={{ fontSize: 9.5, color: "var(--fg-4, #5a5e68)", marginLeft: 2 }}
-											>
-												{unread}
-											</span>
-										)}
-									</button>
+												className="dot"
+												style={
+													messages.connectionStatusByChannel?.[ch.slug] === "connected"
+														? {}
+														: { background: "var(--fg-4, #5a5e68)" }
+												}
+											/>
+											{ch.slug}
+											{unread > 0 && (
+												<span
+													className="mono num"
+													style={{ fontSize: 9.5, color: "var(--fg-4, #5a5e68)", marginLeft: 2 }}
+												>
+													{unread}
+												</span>
+											)}
+										</button>
+										<button
+											type="button"
+											className="tb-tab-close"
+											title={`Close ${ch.slug}`}
+											aria-label={`Close ${ch.slug}`}
+											onClick={(e) => {
+												e.stopPropagation();
+												onCloseChannel(ch.slug);
+											}}
+										>
+											<Icon name="x" size={10} />
+										</button>
+									</div>
 								);
 							})}
 							{/* Fix 2: + button */}
