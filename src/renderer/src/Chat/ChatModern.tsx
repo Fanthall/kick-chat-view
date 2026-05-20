@@ -573,10 +573,10 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	}, [canModerateChannel, messages.messageList, username, channelName]);
 
 	// ── Emote autocomplete ──
+	// Sprint 33b: yalnız `:` ile başlayan token tetikler. Word-based
+	// auto-trigger (her 2+ harf yazınca dropdown açılıyordu) kullanıcı
+	// isteğiyle kaldırıldı — istemediği halde dropdown açılıyordu.
 	const emoteSearchMatch = useMemo(() => {
-		const m = messageText.match(/(^|\s)(:([A-Za-z0-9_]{1,})$|([A-Za-z]{2,})$)/);
-		if (!m) return undefined;
-		// Prefer colon-triggered query
 		const colonMatch = messageText.match(/(^|\s):([A-Za-z0-9_]{1,})$/);
 		if (colonMatch) {
 			return {
@@ -586,15 +586,6 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				colonTriggered: true,
 			};
 		}
-		const wordMatch = messageText.match(/(^|\s)([A-Za-z]{2,})$/);
-		if (wordMatch) {
-			return {
-				query: wordMatch[2],
-				leadIndex: wordMatch.index! + wordMatch[1].length,
-				length: wordMatch[2].length,
-				colonTriggered: false,
-			};
-		}
 		return undefined;
 	}, [messageText]);
 
@@ -602,6 +593,43 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		if (!emoteSearchMatch || emoteIndex.all.length === 0) return [];
 		return searchEmotes(emoteIndex, emoteSearchMatch.query, 6);
 	}, [emoteSearchMatch, emoteIndex]);
+
+	// Sprint 33b: @ mention autocomplete — chat'teki kullanıcıların unique
+	// listesinden eşleşme öneriyor. (Classic Chat.tsx'ten port edildi —
+	// ChatModern'a Sprint 3'te taşınmamıştı.)
+	const mentionSearch = useMemo(() => {
+		const match = messageText.match(/(^|\s)@([a-zA-Z0-9_]*)$/);
+		return match ? match[2].toLowerCase() : undefined;
+	}, [messageText]);
+	const mentionSuggestions = useMemo(() => {
+		if (mentionSearch === undefined) return [] as string[];
+		const uniqueUsers = Array.from(
+			new Set(
+				messageList
+					.map((item) => item.sender?.username)
+					.filter((item): item is string => !!item)
+			)
+		);
+		return uniqueUsers
+			.filter((u) => u.toLowerCase().includes(mentionSearch))
+			.slice(0, 8);
+	}, [mentionSearch, messageList]);
+	const [mentionIndex, setMentionIndex] = useState<number>(0);
+	useEffect(() => {
+		setMentionIndex(0);
+	}, [mentionSearch]);
+	const applyMention = (selectedUsername: string) => {
+		const nextText = messageText.replace(
+			/(^|\s)@([a-zA-Z0-9_]*)$/,
+			`$1@${selectedUsername} `
+		);
+		setMessageText(nextText);
+		if (composerRef.current) {
+			composerRef.current.value = nextText;
+			composerRef.current.focus();
+		}
+		setMentionIndex(0);
+	};
 
 	// Sprint 14: slash command autocomplete — yalniz mesaj basinda /word formatinda
 	const slashMatch = useMemo(() => {
@@ -622,6 +650,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 
 	const acOpen = emoteSuggestions.length > 0;
 	const slashOpen = slashSuggestions.length > 0;
+	const mentionOpen = mentionSuggestions.length > 0;
 
 	const applySlashSuggestion = (def: typeof chatCommandDefinitions[number]) => {
 		const next = def.template;
@@ -985,6 +1014,31 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 
 	// ── Keyboard handler ──
 	const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+		// Sprint 33b: @ mention autocomplete keyboard nav
+		if (mentionOpen) {
+			if (event.key === "ArrowDown") {
+				event.preventDefault();
+				setMentionIndex((prev) => (prev + 1) % mentionSuggestions.length);
+				return;
+			}
+			if (event.key === "ArrowUp") {
+				event.preventDefault();
+				setMentionIndex(
+					(prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length
+				);
+				return;
+			}
+			if (event.key === "Tab" || event.key === "Enter") {
+				event.preventDefault();
+				applyMention(mentionSuggestions[mentionIndex]);
+				return;
+			}
+			if (event.key === "Escape") {
+				event.preventDefault();
+				setMentionIndex(0);
+				return;
+			}
+		}
 		if (slashOpen) {
 			if (event.key === "ArrowDown") {
 				event.preventDefault();
@@ -1333,6 +1387,45 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							onPick={applyEmoteSuggestion}
 							onHover={(index) => setEmoteSuggestionIndex(index)}
 						/>
+					)}
+
+					{/* Sprint 33b: @ mention suggestions */}
+					{mentionOpen && (
+						<div
+							className="autocomplete chat-suggestion-menu"
+							role="listbox"
+							aria-label="Mention suggestions"
+						>
+							{mentionSuggestions.map((uname, i) => (
+								<div
+									key={uname}
+									role="option"
+									aria-selected={i === mentionIndex}
+									className={`ac-row ${i === mentionIndex ? "is-active" : ""}`}
+									onMouseEnter={() => setMentionIndex(i)}
+									onMouseDown={(e) => {
+										e.preventDefault();
+										applyMention(uname);
+									}}
+								>
+									<div
+										className="ac-emote"
+										style={{
+											width: 22,
+											fontFamily: "var(--ms-font-mono)",
+											color: "var(--ms-ac-mint, #2fd3a0)",
+										}}
+									>
+										@
+									</div>
+									<div className="ac-name">
+										<span style={{ color: "var(--ms-fg-1, #ebecef)" }}>
+											{uname}
+										</span>
+									</div>
+								</div>
+							))}
+						</div>
 					)}
 
 					{/* Sprint 14: slash command suggestions */}

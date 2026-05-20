@@ -5642,13 +5642,27 @@ html.modern-shell-root[data-theme="light"] {
 	color: var(--ms-fg-4, #5a5e68);
 }
 
-/* ── Tabs ── */
+/* ── Tabs ──
+   Sprint 33b: tab listesine "Kendi Kanalın" eklenince taşıyordu;
+   overflow-x: auto + flex-wrap kapalı tutuluyor (tabların orjinal sırası
+   korunsun), gerekirse yatay scroll. Scrollbar gizli (gerek kalmadan
+   horizontal swipe / wheel). */
 [data-app-shell="modern"] .uw-tabs {
 	display: flex;
 	gap: 0;
 	padding: 0 16px;
 	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
 	flex: 0 0 auto;
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: thin;
+}
+[data-app-shell="modern"] .uw-tabs::-webkit-scrollbar {
+	height: 4px;
+}
+[data-app-shell="modern"] .uw-tabs::-webkit-scrollbar-thumb {
+	background: var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 2px;
 }
 
 [data-app-shell="modern"] .uw-tab {
