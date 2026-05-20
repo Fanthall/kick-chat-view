@@ -391,6 +391,9 @@ const ChatMessageReducers = (
 			username: action.message.username,
 			months: action.message.months,
 			streak: action.message.streak,
+			// WI-1.5: legacy Pusher bridge enrichment (CONSTRAINT-3; alanlar optional)
+			eventType: action.message.eventType,
+			expiresAt: action.message.expiresAt,
 			createdAt: action.message.create_at,
 			create_at: action.message.create_at,
 			raw: action.message,
@@ -413,6 +416,10 @@ const ChatMessageReducers = (
 			amount: action.message.gifted_usernames.length,
 			username: action.message.gifter_username,
 			giftedList: action.message.gifted_usernames,
+			// WI-1.5: legacy Pusher bridge enrichment
+			eventType: action.message.eventType,
+			expiresAt: action.message.expiresAt,
+			anonymous: action.message.anonymous,
 			createdAt: action.message.create_at,
 			create_at: action.message.create_at,
 			raw: action.message,
