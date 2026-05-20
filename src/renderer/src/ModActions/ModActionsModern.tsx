@@ -865,19 +865,8 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 							</span>
 							<span className="hint">{t("mod.ban.permanent")}</span>
 						</button>
-						<button
-							className="mod-btn"
-							disabled={!selectedUser}
-							onClick={handleClearMsgs}
-							type="button"
-							aria-label="Clear messages"
-						>
-							<span className="label">
-								<Icon name="trash" size={12} />
-								{" "}{t("mod.clear")}
-							</span>
-							<span className="hint">{t("mod.clear.hint")}</span>
-						</button>
+						{/* Sprint 27: Clear msgs butonu kaldirildi (toplu API yok;
+						    tek mesaj silmek icin chat satirinda Trash ikonu var). */}
 						<button
 							className="mod-btn"
 							disabled={!selectedUser}

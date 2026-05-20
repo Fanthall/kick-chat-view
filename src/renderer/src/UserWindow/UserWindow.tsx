@@ -646,16 +646,10 @@ const UserWindow: FunctionComponent = () => {
 
 							<span className="uw-strip-divider" aria-hidden />
 
+							{/* Sprint 27: Clear msgs butonu kaldirildi. Kick API'sinde
+							    toplu silme yok; tek-mesaj silme zaten Messages tab'inda
+							    her satirda mevcut. */}
 							<div className="uw-strip-group">
-								<button
-									type="button"
-									className="uw-btn-secondary uw-strip-clear"
-									disabled
-									title="Toplu silme API'si henuz yok"
-								>
-									Clear msgs
-									<span className="uw-muted" style={{ marginLeft: 6 }}>30 dk</span>
-								</button>
 								{isBanned ? (
 									<button
 										type="button"

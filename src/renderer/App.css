@@ -2327,6 +2327,309 @@ html.modern-shell-root[data-theme="light"] {
 	color: var(--ms-fg-2);
 }
 
+/* =============================================================================
+ * Sprint 25 — Light Theme Audit II
+ * A) Settings + Topbar full audit.
+ * B) Global thin scrollbar for all modern-shell scroll surfaces.
+ * ========================================================================== */
+
+/* ── A1: Alias token flip ────────────────────────────────────────────────────
+   The .topbar and some shared components use shorthand aliases (--bg-1, --fg-1,
+   --bd-2, --ac-mint, etc.) defined once as dark hex under [data-app-shell="modern"].
+   They are NOT overridden in the Sprint 20 light block, so topbar stays dark.
+   Fix: flip alias tokens to the already-correct --ms-* light values. */
+[data-app-shell="modern"][data-theme="light"] {
+	--bg-0: var(--ms-bg-0);
+	--bg-1: var(--ms-bg-1);
+	--bg-2: var(--ms-bg-2);
+	--bg-3: var(--ms-bg-3);
+	--bg-hover: var(--ms-bg-hover);
+	--bd-1: var(--ms-bd-1);
+	--bd-2: var(--ms-bd-2);
+	--bd-3: var(--ms-bd-3);
+	--fg-1: var(--ms-fg-1);
+	--fg-2: var(--ms-fg-2);
+	--fg-3: var(--ms-fg-3);
+	--fg-4: var(--ms-fg-4);
+	--ac-mint: var(--ms-ac-mint);
+	--ac-warn: var(--ms-ac-warn);
+	/* --live stays red (--ms-ac-live already darkened for light bg) */
+	--live: var(--ms-ac-live);
+}
+
+/* ── A2: Topbar — hardcoded dark gradients / non-token surfaces ──────────── */
+
+/* Topbar background + border: both now resolve via alias tokens above,
+   but the tb-ava has a gradient with raw dark hex — fix it */
+[data-app-shell="modern"][data-theme="light"] .topbar {
+	background: var(--ms-bg-1);
+	border-bottom-color: var(--ms-bd-1);
+}
+
+/* Avatar gradient: dark #3b3f4a / #1e2128 → light surface */
+[data-app-shell="modern"][data-theme="light"] .tb-ava {
+	background: linear-gradient(135deg, var(--ms-bg-3), var(--ms-bg-2));
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+
+/* Channel name + meta text */
+[data-app-shell="modern"][data-theme="light"] .tb-name {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-meta {
+	color: var(--ms-fg-2);
+}
+
+/* LIVE pill — keep red, ensure readable on light */
+[data-app-shell="modern"][data-theme="light"] .tb-live {
+	background: color-mix(in oklch, var(--ms-ac-live) 14%, transparent);
+	color: var(--ms-ac-live);
+	border-color: color-mix(in oklch, var(--ms-ac-live) 35%, transparent);
+}
+
+/* Tab strip */
+[data-app-shell="modern"][data-theme="light"] .tb-tabs {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab.is-active {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab-close {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab-close:hover {
+	background: color-mix(in oklch, var(--ms-ac-live) 20%, transparent);
+	color: var(--ms-ac-live);
+}
+
+/* Add-channel button */
+[data-app-shell="modern"][data-theme="light"] .tb-add {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-add:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+}
+
+/* Stats */
+[data-app-shell="modern"][data-theme="light"] .tb-stats {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-stat .num {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-stat-sep {
+	background: var(--ms-bd-2);
+}
+
+/* Role badge */
+[data-app-shell="modern"][data-theme="light"] .tb-role {
+	background: var(--ms-bg-3);
+	border-color: var(--ms-bd-2);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-role-badge {
+	background: color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
+	color: var(--ms-ac-mint);
+}
+
+/* Icon buttons in topbar */
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn.is-on {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+	box-shadow: inset 0 -2px 0 0 var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn .pip {
+	border-color: var(--ms-bg-1);
+	background: var(--ms-ac-live);
+}
+
+/* ── A3: Settings — hardcoded dark values that survive token flip ──────────── */
+
+/* Shell container explicit bg */
+[data-app-shell="modern"][data-theme="light"] .set-shell {
+	background: var(--ms-bg-1);
+	color: var(--ms-fg-1);
+}
+
+/* Nav panel bg */
+[data-app-shell="modern"][data-theme="light"] .set-nav {
+	background: var(--ms-bg-0);
+	border-right-color: var(--ms-bd-1);
+}
+
+/* Nav active item: ac-mint text stays, bg needs mint tint */
+[data-app-shell="modern"][data-theme="light"] .set-nav-item.is-active {
+	background: color-mix(in oklch, var(--ms-ac-mint) 14%, transparent);
+	color: var(--ms-ac-mint);
+}
+
+/* Nav item default text */
+[data-app-shell="modern"][data-theme="light"] .set-nav-item {
+	color: var(--ms-fg-2);
+}
+
+/* Content area */
+[data-app-shell="modern"][data-theme="light"] .set-content {
+	background: var(--ms-bg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-content h3 {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-content .sub {
+	color: var(--ms-fg-3);
+}
+
+/* Block surface + section label */
+[data-app-shell="modern"][data-theme="light"] .set-block {
+	background: var(--ms-bg-0);
+	border-color: var(--ms-bd-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-block-section-label {
+	color: var(--ms-fg-3);
+	border-bottom-color: var(--ms-bd-1);
+}
+
+/* Block rows */
+[data-app-shell="modern"][data-theme="light"] .set-block-row {
+	border-bottom-color: var(--ms-bd-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-block-row .l b {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-block-row .l span {
+	color: var(--ms-fg-3);
+}
+
+/* Empty / help text */
+[data-app-shell="modern"][data-theme="light"] .set-block-empty {
+	color: var(--ms-fg-3);
+}
+
+/* Stepper: bg and text */
+[data-app-shell="modern"][data-theme="light"] .set-stepper {
+	background: var(--ms-bg-2);
+	border-color: var(--ms-bd-2);
+}
+[data-app-shell="modern"][data-theme="light"] .set-stepper button {
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"][data-theme="light"] .set-stepper-val {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-stepper-unit {
+	color: var(--ms-fg-3);
+	border-left-color: var(--ms-bd-2);
+}
+
+/* Ghost button */
+[data-app-shell="modern"][data-theme="light"] .set-btn.ghost {
+	border-color: var(--ms-bd-2);
+	color: var(--ms-fg-2);
+}
+
+/* Default button text + border */
+[data-app-shell="modern"][data-theme="light"] .set-btn {
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+
+/* Input */
+[data-app-shell="modern"][data-theme="light"] .set-input {
+	background: var(--ms-bg-2);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+
+/* Topic mono (mint tint readable on light) */
+[data-app-shell="modern"][data-theme="light"] .set-topic-mono {
+	color: var(--ms-ac-mint);
+}
+
+/* Scope rows */
+[data-app-shell="modern"][data-theme="light"] .scope-row {
+	border-bottom-color: var(--ms-bd-1);
+}
+[data-app-shell="modern"][data-theme="light"] .scope-name {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .scope-affects {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .scope-ic.ok {
+	background: color-mix(in oklch, var(--ms-ac-mint) 20%, transparent);
+	color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .scope-ic.miss {
+	background: color-mix(in oklch, var(--ms-ac-warn) 20%, transparent);
+	color: var(--ms-ac-warn);
+}
+
+/* Scope warn banner */
+[data-app-shell="modern"][data-theme="light"] .set-scope-warn-banner {
+	color: var(--ms-fg-1);
+	background: color-mix(in oklch, var(--ms-ac-warn) 10%, transparent);
+	border-color: color-mix(in oklch, var(--ms-ac-warn) 30%, transparent);
+}
+
+/* Toggle OFF thumb: dark bg → match light surface */
+[data-app-shell="modern"][data-theme="light"] .set-toggle-thumb {
+	background: var(--ms-fg-4);
+}
+[data-app-shell="modern"][data-theme="light"] .set-toggle {
+	background: var(--ms-bd-2);
+}
+
+/* Settings header border */
+[data-app-shell="modern"][data-theme="light"] .set-header {
+	border-bottom-color: var(--ms-bd-1);
+}
+
+/* ── B: Global thin scrollbar — all modern-shell scroll surfaces ─────────── */
+[data-app-shell="modern"] *::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+[data-app-shell="modern"] *::-webkit-scrollbar-track {
+	background: transparent;
+}
+[data-app-shell="modern"] *::-webkit-scrollbar-thumb {
+	background: var(--ms-bd-2, rgba(100,112,128,0.6));
+	border-radius: 4px;
+}
+[data-app-shell="modern"] *::-webkit-scrollbar-thumb:hover {
+	background: var(--ms-bd-3, rgba(110,125,140,0.7));
+}
+[data-app-shell="modern"] *::-webkit-scrollbar-corner {
+	background: transparent;
+}
+[data-app-shell="modern"] * {
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bd-2, rgba(100,112,128,0.6)) transparent;
+}
+/* Preserve .main horizontal scrollbar height (8px, Sprint 13) */
+[data-app-shell="modern"] .main::-webkit-scrollbar {
+	height: 8px;
+	width: 8px;
+}
+
 [data-app-shell="modern"] .ms-mono {
 	font-family: var(--ms-font-mono);
 	font-variant-numeric: tabular-nums;

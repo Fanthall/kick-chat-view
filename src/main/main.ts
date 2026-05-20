@@ -110,6 +110,10 @@ const createUserWindow = (payload: UserWindowPayload) => {
 	userWindow.on("closed", () => {
 		userWindows.delete(payload.key);
 		userWindowPayloads.delete(payload.key);
+		// Sprint 27: child window kapaninca ana pencere fokusu kaybetmesin.
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			mainWindow.focus();
+		}
 	});
 };
 
@@ -144,6 +148,10 @@ const createKickConnectionWindow = () => {
 
 	kickConnectionWindow.on("closed", () => {
 		kickConnectionWindow = null;
+		// Sprint 27: kapaninca ana pencereyi one cikar
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			mainWindow.focus();
+		}
 	});
 };
 
@@ -342,6 +350,10 @@ const createPanelWindow = (panel: PanelKind) => {
 
 	panelWindow.on("closed", () => {
 		panelWindows.delete(panel);
+		// Sprint 27: kapaninca ana pencereyi one cikar.
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			mainWindow.focus();
+		}
 	});
 };
 
