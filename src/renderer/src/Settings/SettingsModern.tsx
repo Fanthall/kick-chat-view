@@ -160,10 +160,18 @@ interface ChannelSectionProps {
 
 const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus }) => {
 	const dispatch = useFanthalDispatch();
+	const messages = useFanthalSelector((state) => state.messages);
 	const [channels, setChannels] = useState<ChatViewChannel[]>(() => getChannelList());
 	const [newChannelInput, setNewChannelInput] = useState("");
 	const [ownChannels, setOwnChannels] = useState<any[]>([]);
 	const activeSlug = getActiveChannelSlug();
+
+	// Fix 10: get category from streamMeta
+	const getChannelMeta = (slug: string): string => {
+		const meta = messages.streamMetaByChannel?.[slug];
+		const cat = meta?.category?.name || "Just Chatting";
+		return cat;
+	};
 
 	useEffect(() => {
 		if (!kickAuthStatus?.isConnected) return;
@@ -245,7 +253,14 @@ const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus
 									<span className="pbadge sub" style={{ fontSize: 9, background: "color-mix(in oklch, var(--ac-mint) 18%, transparent)", color: "var(--ac-mint)" }}>ACTIVE</span>
 								)}
 							</b>
-							<span>{ch.autoConnect ? "auto-connect on launch" : "manual connect"}</span>
+							{/* Fix 10: meta line with category */}
+							<span>
+								{activeSlug === ch.slug
+									? `${getChannelMeta(ch.slug)} · auto-connect on launch · default reply channel`
+									: ch.autoConnect
+										? `${getChannelMeta(ch.slug)} · auto-connect`
+										: "Manual connect · last visited recently"}
+							</span>
 						</div>
 						<div style={{ display: "flex", gap: 6 }}>
 							<Toggle
@@ -958,15 +973,7 @@ const SettingsModern: FunctionComponent = () => {
 
 	return (
 		<div className="set-shell" data-testid="settings-modern-shell">
-			{/* Header */}
-			<div className="set-header">
-				<Icon name="settings" size={15} ariaLabel="Settings" />
-				<h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--ms-fg-1, #f2f7f5)" }}>
-					Settings
-				</h2>
-			</div>
-
-			{/* Body: side-nav + content */}
+			{/* Body: side-nav + content (header is provided by modal-hd in LayoutModern) */}
 			<div className="set-main">
 				{/* Side nav */}
 				<nav className="set-nav" aria-label="Settings sections">

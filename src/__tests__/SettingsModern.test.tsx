@@ -313,3 +313,39 @@ describe("SettingsClassic — regression", () => {
 		expect(typeof mod.default).toBe("function");
 	});
 });
+
+// ─── Test 10: Modal wrapping — Fix 8 ─────────────────────────────────────────
+// Settings is rendered inside .modal-body; the set-shell fills that space.
+
+describe("SettingsModern — modal wrapping (Fix 8)", () => {
+	it("set-shell renders without its own header (modal-hd comes from LayoutModern)", () => {
+		renderSettings();
+		// set-shell should exist
+		expect(document.querySelector("[data-testid='settings-modern-shell']")).toBeInTheDocument();
+		// No standalone .set-header inside settings itself (removed in fidelity sprint)
+		expect(document.querySelector(".set-header")).not.toBeInTheDocument();
+	});
+
+	it("set-main is present and contains side nav + content area", () => {
+		renderSettings();
+		const shell = document.querySelector("[data-testid='settings-modern-shell']");
+		expect(shell?.querySelector(".set-main")).toBeInTheDocument();
+		expect(shell?.querySelector(".set-nav")).toBeInTheDocument();
+		expect(shell?.querySelector(".set-content")).toBeInTheDocument();
+	});
+});
+
+// ─── Test 11: Side-nav icon mapping — Fix 9 ──────────────────────────────────
+
+describe("SettingsModern — side nav icons (Fix 9)", () => {
+	it("each nav item has an icon span", () => {
+		renderSettings();
+		const nav = screen.getByRole("navigation", { name: /settings sections/i });
+		const items = nav.querySelectorAll(".set-nav-item");
+		items.forEach((item) => {
+			// Each item should have an icon child (span with inline-flex style)
+			const icon = item.querySelector("span[style]");
+			expect(icon).not.toBeNull();
+		});
+	});
+});

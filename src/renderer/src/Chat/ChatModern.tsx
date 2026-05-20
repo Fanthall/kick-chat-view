@@ -700,7 +700,13 @@ const ChatModern: FunctionComponent<ChatModernProps> = () => {
 		>
 			{/* Panel header */}
 			<div className="panel-hd">
-				<h2>Chat</h2>
+				<h2>
+					Chat
+					{/* Fix 12: message count badge */}
+					<span className="count num" style={{ fontFamily: "var(--ms-font-mono, ui-monospace, monospace)", fontVariantNumeric: "tabular-nums", fontSize: 11, color: "var(--ms-fg-3, #828690)", fontWeight: 400 }}>
+						{messageList.length}
+					</span>
+				</h2>
 				<div className="panel-hd-actions">
 					<button
 						className="icon-btn"
