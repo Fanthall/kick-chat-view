@@ -46,6 +46,7 @@ import {
 	getSuspendedUsers,
 	LOCAL_MODERATION_SETTINGS_CHANGED,
 } from "../../util/localModerationStorage";
+import { useTranslation } from "../../util/i18n";
 
 const SHELL_ATTR = "modern";
 
@@ -105,6 +106,7 @@ const seenIdsByChannel = new Map<string, Set<string>>();
 // ─── LayoutModern ─────────────────────────────────────────────────────────────
 
 const LayoutModern: FunctionComponent = () => {
+	const { t } = useTranslation();
 	const dispatch = useFanthalDispatch();
 	const messages = useFanthalSelector((state) => state.messages);
 
@@ -204,7 +206,7 @@ const LayoutModern: FunctionComponent = () => {
 		return v.toLocaleString("en-US");
 	}, [streamMeta?.viewerCount]);
 	// Fix 6 category
-	const categoryName = streamMeta?.category?.name ?? (isLive ? "—" : "Offline");
+	const categoryName = streamMeta?.category?.name ?? (isLive ? "—" : t("topbar.offline"));
 
 	// Fix 6 role
 	const kickAuthStatus = useRef<any>(null);
@@ -459,7 +461,7 @@ const LayoutModern: FunctionComponent = () => {
 					</div>
 					<div className="tb-meta">
 						<div className="tb-meta-top">
-							<span className="tb-name">{activeSlug || "No channel"}</span>
+							<span className="tb-name">{activeSlug || t("topbar.no-channel")}</span>
 							{/* Fix 3: LIVE badge */}
 							{isLive && (
 								<span
@@ -468,7 +470,7 @@ const LayoutModern: FunctionComponent = () => {
 									aria-label="Stream is live"
 									data-testid="tb-live-badge"
 								>
-									LIVE
+									{t("topbar.live")}
 								</span>
 							)}
 						</div>
@@ -522,8 +524,8 @@ const LayoutModern: FunctionComponent = () => {
 								<button
 									ref={addBtnRef}
 									className="tb-add"
-									title="Add channel"
-									aria-label="Add channel"
+									title={t("topbar.add-channel")}
+									aria-label={t("topbar.add-channel")}
 									type="button"
 									data-testid="tb-add-btn"
 									onClick={() => setAddPopoverOpen((v) => !v)}
@@ -584,7 +586,7 @@ const LayoutModern: FunctionComponent = () => {
 								? "is-on"
 								: ""
 						}`}
-						title="Activity"
+						title={t("topbar.activity")}
 						aria-label="Toggle activity panel"
 						type="button"
 						data-testid="tb-btn-activity"
@@ -608,7 +610,7 @@ const LayoutModern: FunctionComponent = () => {
 								? "is-on"
 								: ""
 						}`}
-						title="Moderation"
+						title={t("topbar.moderation")}
 						aria-label="Toggle moderation panel"
 						type="button"
 						data-testid="tb-btn-moderation"
@@ -626,7 +628,7 @@ const LayoutModern: FunctionComponent = () => {
 					</button>
 					<button
 						className="icon-btn"
-						title="Emote picker (Ctrl+E)"
+						title={`${t("topbar.emote-picker")} (Ctrl+E)`}
 						aria-label="Open emote picker"
 						type="button"
 						data-testid="tb-btn-emotes"
@@ -635,7 +637,7 @@ const LayoutModern: FunctionComponent = () => {
 					</button>
 					<button
 						className="icon-btn"
-						title="Refresh"
+						title={t("topbar.refresh")}
 						aria-label="Refresh channel data"
 						type="button"
 						data-testid="tb-btn-refresh"
@@ -650,7 +652,7 @@ const LayoutModern: FunctionComponent = () => {
 					{canEditStream && (
 						<button
 							className={`icon-btn ${streamEditOpen ? "is-on" : ""}`}
-							title="Edit stream title & category"
+							title={t("topbar.edit-stream")}
 							aria-label="Edit stream"
 							type="button"
 							data-testid="tb-btn-edit-stream"
@@ -661,7 +663,7 @@ const LayoutModern: FunctionComponent = () => {
 					)}
 					<button
 						className={`icon-btn ${settingsOpen ? "is-on" : ""}`}
-						title="Settings"
+						title={t("topbar.settings")}
 						aria-label="Open settings"
 						type="button"
 						data-testid="tb-btn-settings"
@@ -723,14 +725,14 @@ const LayoutModern: FunctionComponent = () => {
 						className="drawer-panel"
 						role="dialog"
 						aria-modal="true"
-						aria-label={drawerPanel === "activity" ? "Activity" : "Moderation"}
+						aria-label={drawerPanel === "activity" ? t("topbar.activity") : t("topbar.moderation")}
 					>
 						<button
 							type="button"
 							className="drawer-close icon-btn"
 							onClick={() => setDrawerPanel(undefined)}
-							aria-label="Close panel"
-							title="Close (Esc)"
+							aria-label={t("topbar.drawer-close")}
+							title={`${t("topbar.close")} (Esc)`}
 						>
 							<Icon name="x" size={14} />
 						</button>
@@ -761,20 +763,20 @@ const LayoutModern: FunctionComponent = () => {
 						className="modal"
 						role="dialog"
 						aria-modal="true"
-						aria-label="Settings"
+						aria-label={t("settings.title")}
 						style={{ maxWidth: 980, height: 640 }}
 						data-testid="settings-modal"
 					>
 						<div className="modal-hd">
 							<h2 style={{ display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
 								<Icon name="settings" size={15} />
-								Settings
+								{t("settings.title")}
 							</h2>
 							<button
 								className="icon-btn"
 								type="button"
-								aria-label="Close settings"
-								title="Close"
+								aria-label={`${t("topbar.close")} ${t("settings.title").toLowerCase()}`}
+								title={t("topbar.close")}
 								onClick={() => setSettingsOpen(false)}
 							>
 								<Icon name="x" size={14} />

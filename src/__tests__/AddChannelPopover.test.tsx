@@ -38,6 +38,7 @@ function buildStore() {
 }
 
 beforeEach(() => {
+	localStorage.setItem("chatViewLanguage", "en");
 	Object.defineProperty(window, "electron", {
 		configurable: true,
 		value: {

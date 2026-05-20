@@ -14,6 +14,7 @@ import React, {
 } from "react";
 import { toast } from "react-toastify";
 import Icon, { IconName } from "../Component/Icon/Icon";
+import { useTranslation } from "../../util/i18n";
 import {
 	useFanthalDispatch,
 	useFanthalSelector,
@@ -86,12 +87,12 @@ interface NavItem {
 type SectionId = "channel" | "account" | "permissions" | "moderation" | "emotes" | "advanced";
 
 const SETTINGS_NAV: NavItem[] = [
-	{ id: "channel",     label: "Channel",     icon: "code" },
-	{ id: "account",     label: "Account",     icon: "user" },
-	{ id: "permissions", label: "Permissions", icon: "shield" },
-	{ id: "moderation",  label: "Moderation",  icon: "ban" },
-	{ id: "emotes",      label: "Emotes",      icon: "smile" },
-	{ id: "advanced",    label: "Advanced",    icon: "settings" },
+	{ id: "channel",     label: "settings.nav.channel",     icon: "code" },
+	{ id: "account",     label: "settings.nav.account",     icon: "user" },
+	{ id: "permissions", label: "settings.nav.permissions", icon: "shield" },
+	{ id: "moderation",  label: "settings.nav.moderation",  icon: "ban" },
+	{ id: "emotes",      label: "settings.nav.emotes",      icon: "smile" },
+	{ id: "advanced",    label: "settings.nav.advanced",    icon: "settings" },
 ];
 
 // ─── Shared widgets ───────────────────────────────────────────────────────────
@@ -983,6 +984,7 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 // ─── Root: SettingsModern ─────────────────────────────────────────────────────
 
 const SettingsModern: FunctionComponent = () => {
+	const { t } = useTranslation();
 	const dispatch = useFanthalDispatch();
 	const messages = useFanthalSelector((state) => state.messages);
 
@@ -1067,7 +1069,7 @@ const SettingsModern: FunctionComponent = () => {
 								aria-current={activeSection === n.id ? "page" : undefined}
 							>
 								<Icon name={n.icon} size={14} />
-								{n.label}
+								{t(n.label)}
 								{warn && <span className="set-nav-warn-dot" aria-label="Action needed" title="Action needed" />}
 							</button>
 						);

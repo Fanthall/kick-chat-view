@@ -35,6 +35,7 @@ import {
 } from "../../util/localModerationStorage";
 import { useProfilePic } from "../../util/useProfilePic";
 import { buildUserWindowPayload } from "../../util/userWindowPayload";
+import { useTranslation } from "../../util/i18n";
 import Icon from "../Component/Icon/Icon";
 
 // ─── Chat control keys ────────────────────────────────────────────────────────
@@ -46,11 +47,11 @@ interface ChatControl {
 }
 
 const CHAT_CONTROLS: ChatControl[] = [
-	{ key: "slow",       label: "Slow mode",        storageKey: "chatViewChatControl_slow" },
-	{ key: "sub",        label: "Subscriber only",   storageKey: "chatViewChatControl_sub" },
-	{ key: "follower",   label: "Follower only",     storageKey: "chatViewChatControl_follower" },
-	{ key: "emote",      label: "Emote only",        storageKey: "chatViewChatControl_emote" },
-	{ key: "r9k",        label: "R9K",               storageKey: "chatViewChatControl_r9k" },
+	{ key: "slow",       label: "mod.controls.slow",        storageKey: "chatViewChatControl_slow" },
+	{ key: "sub",        label: "mod.controls.sub",         storageKey: "chatViewChatControl_sub" },
+	{ key: "follower",   label: "mod.controls.follower",    storageKey: "chatViewChatControl_follower" },
+	{ key: "emote",      label: "mod.controls.emote",       storageKey: "chatViewChatControl_emote" },
+	{ key: "r9k",        label: "mod.controls.r9k",         storageKey: "chatViewChatControl_r9k" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -91,6 +92,7 @@ function parseSuspended(raw: string): SuspendedEntry {
 // ─── ChatToggle sub-component ─────────────────────────────────────────────────
 
 const ChatToggle: FunctionComponent<{ ctrl: ChatControl }> = ({ ctrl }) => {
+	const { t } = useTranslation();
 	const [isOn, setIsOn] = useState(() => {
 		return localStorage.getItem(ctrl.storageKey) === "on";
 	});
@@ -106,7 +108,7 @@ const ChatToggle: FunctionComponent<{ ctrl: ChatControl }> = ({ ctrl }) => {
 
 	return (
 		<div className="mod-list-row" style={{ cursor: "default" }}>
-			<span>{ctrl.label}</span>
+			<span>{t(ctrl.label)}</span>
 			<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 				<span
 					className="mono num"
@@ -120,7 +122,7 @@ const ChatToggle: FunctionComponent<{ ctrl: ChatControl }> = ({ ctrl }) => {
 				<button
 					className={`mod-toggle${isOn ? " is-on" : ""}`}
 					onClick={toggle}
-					aria-label={`Toggle ${ctrl.label}`}
+					aria-label={`Toggle ${t(ctrl.label)}`}
 					aria-pressed={isOn}
 					type="button"
 				/>
@@ -154,6 +156,7 @@ const TimeoutPicker: FunctionComponent<{
 	defaultSeconds: number;
 	onApply: (seconds: number) => void;
 }> = ({ disabled, defaultSeconds, onApply }) => {
+	const { t } = useTranslation();
 	const [selectedPreset, setSelectedPreset] = useState<number>(defaultSeconds);
 	const [customSec, setCustomSec] = useState<string>("");
 	const effective = customSec ? parseInt(customSec, 10) : selectedPreset;
@@ -161,7 +164,7 @@ const TimeoutPicker: FunctionComponent<{
 		<div className="mod-timeout-picker">
 			<div className="mod-timeout-picker-row">
 				<span className="mod-timeout-picker-label">
-					<Icon name="timeout" size={12} /> Timeout
+					<Icon name="timeout" size={12} /> {t("mod.timeout")}
 				</span>
 				<span className="mod-timeout-picker-current mono">
 					{formatSeconds(effective)}
@@ -189,20 +192,20 @@ const TimeoutPicker: FunctionComponent<{
 				<input
 					type="number"
 					min={1}
-					placeholder="custom"
+					placeholder={t("mod.timeout.custom")}
 					value={customSec}
 					onChange={(e) => setCustomSec(e.target.value)}
 					disabled={disabled}
 					aria-label="Custom timeout seconds"
 				/>
-				<span className="mod-timeout-custom-unit">sec</span>
+				<span className="mod-timeout-custom-unit">{t("mod.timeout.seconds")}</span>
 				<button
 					type="button"
 					className="mod-timeout-apply"
 					onClick={() => effective > 0 && onApply(effective)}
 					disabled={disabled || !effective || effective <= 0}
 				>
-					Apply
+					{t("mod.timeout.apply")}
 				</button>
 			</div>
 			<div className="mod-timeout-hint">
@@ -296,6 +299,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	onClearSelected,
 	isPopOut = false,
 }) => {
+	const { t } = useTranslation();
 	const canModerate = isOwner || isMod;
 	const [collapsed, setCollapsed] = useState<Record<SectionId, boolean>>(loadCollapsed);
 	const toggleSection = (id: SectionId) => {
@@ -428,11 +432,50 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 			? messages.streamMetaByChannel[activeChannelSlug]?.broadcasterUserId
 			: undefined;
 
+	// ─── Sprint 26: Protected target guard ─────────────────────────────────────
+	// Self / channel owner / mod / admin / staff -> reject early.
+	function protectedTargetReason(target: User | undefined): string | null {
+		if (!target) return null;
+		const ownName = (localStorage.getItem("username") || "").toLowerCase();
+		if (ownName && target.username.toLowerCase() === ownName) {
+			return "Kendine mod aksiyonu yapamazsin.";
+		}
+		const streamMeta = activeChannelSlug
+			? messages.streamMetaByChannel[activeChannelSlug]
+			: undefined;
+		if (
+			streamMeta?.broadcasterUserId &&
+			target.id === streamMeta.broadcasterUserId
+		) {
+			return "Kanal sahibine mod aksiyonu yapilamaz.";
+		}
+		const badges = target.identity?.badges || [];
+		const protectedRoles = [
+			"broadcaster",
+			"moderator",
+			"admin",
+			"staff",
+			"global_mod",
+		];
+		const hasProtected = badges.some((b) =>
+			protectedRoles.includes((b.type || "").toLowerCase())
+		);
+		if (hasProtected) {
+			return "Bu kullanicinin rolu mod aksiyonlarina karsi korumali.";
+		}
+		return null;
+	}
+
 	// ─── Action handlers ─────────────────────────────────────────────────────────
 
 	function runTimeout(seconds: number) {
 		if (!selectedUser || !broadcasterUserId) {
 			toast.warn("No user or channel selected for timeout.");
+			return;
+		}
+		const guard = protectedTargetReason(selectedUser);
+		if (guard) {
+			toast.warn(guard);
 			return;
 		}
 		if (!Number.isFinite(seconds) || seconds <= 0) {
@@ -459,6 +502,11 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 			toast.warn("No user or channel selected for ban.");
 			return;
 		}
+		const guard = protectedTargetReason(selectedUser);
+		if (guard) {
+			toast.warn(guard);
+			return;
+		}
 		window.electron.kick.banUser({
 			broadcaster_user_id: broadcasterUserId,
 			user_id: selectedUser.id,
@@ -466,9 +514,14 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	}
 
 	function handleClearMsgs() {
-		// TODO: No existing IPC for clearing messages by user in last 30 min.
-		// Deferred: requires a batch delete endpoint from Kick API (not yet in preload).
-		toast.info("Clear msgs — not yet implemented (no batch delete IPC).");
+		// Sprint 26: Kick public API'sinde toplu (user-bazli son N dakika)
+		// delete endpoint'i mevcut degil. Tek IPC bulundu: deleteChatMessage
+		// (mesaj id'si ile). Mevcut kullanicinin son N mesajini iterate edip
+		// tek tek silmek mumkun ama spam-prone. Acik bir not gosterip uyaralim
+		// ve gercek implementasyonu defer edelim.
+		toast.warn(
+			"Clear msgs: Kick API'sinde toplu silme yok. Mesaj uzerinde sag tik -> Sil ile tek tek silebilirsin."
+		);
 	}
 
 	function handleAddNote() {
@@ -624,8 +677,8 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 			{/* Header */}
 			<div className="panel-hd">
 				<h2 style={{ display: "flex", alignItems: "center", gap: 6 }}>
-					<Icon name="shield" size={14} ariaLabel="Moderation" />
-					Moderation
+					<Icon name="shield" size={14} ariaLabel={t("mod.title")} />
+					{t("mod.title")}
 				</h2>
 				<div className="panel-hd-actions">
 					{!isPopOut && (
@@ -671,7 +724,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 							onClick={() => toggleSection("selected")}
 						>
 							<Icon name={collapsed.selected ? "chevron" : "chevd"} size={10} />
-							Selected user
+							{t("mod.section.selected")}
 						</button>
 					</h3>
 					<div
@@ -735,7 +788,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 										}}
 										aria-label={`Open detail for ${selectedUser.username}`}
 									>
-										<Icon name="user" size={11} /> Detay
+										<Icon name="user" size={11} /> {t("mod.detail")}
 									</button>
 									{canModerate && selectedUserIsBanned && (
 										<button
@@ -744,7 +797,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 											onClick={handleSelectedUnban}
 											aria-label={`Unban ${selectedUser.username}`}
 										>
-											<Icon name="check" size={11} /> Bani kaldir
+											<Icon name="check" size={11} /> {t("mod.unban")}
 										</button>
 									)}
 								</div>
@@ -753,8 +806,8 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					) : (
 						<div className="mod-target-empty" data-testid="mod-target-empty">
 							{canModerate
-								? "Click a chat row to select a user"
-								: "Viewer mode — moderation actions hidden"}
+								? t("mod.empty.click-row")
+								: t("mod.empty.viewer")}
 						</div>
 					)}
 					</div>
@@ -772,7 +825,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 							onClick={() => toggleSection("actions")}
 						>
 							<Icon name={collapsed.actions ? "chevron" : "chevd"} size={10} />
-							Quick actions
+							{t("mod.section.actions")}
 						</button>
 						{selectedUser && (
 							<span
@@ -808,9 +861,9 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 						>
 							<span className="label">
 								<Icon name="ban" size={12} />
-								{" "}Ban
+								{" "}{t("mod.ban")}
 							</span>
-							<span className="hint">permanent</span>
+							<span className="hint">{t("mod.ban.permanent")}</span>
 						</button>
 						<button
 							className="mod-btn"
@@ -821,9 +874,9 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 						>
 							<span className="label">
 								<Icon name="trash" size={12} />
-								{" "}Clear msgs
+								{" "}{t("mod.clear")}
 							</span>
-							<span className="hint">last 30 min</span>
+							<span className="hint">{t("mod.clear.hint")}</span>
 						</button>
 						<button
 							className="mod-btn"
@@ -834,9 +887,9 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 						>
 							<span className="label">
 								<Icon name="pin" size={12} />
-								{" "}Add note
+								{" "}{t("mod.note")}
 							</span>
-							<span className="hint">visible to mods</span>
+							<span className="hint">{t("mod.note.hint")}</span>
 						</button>
 						<button
 							className="mod-btn"
@@ -847,9 +900,9 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 						>
 							<span className="label">
 								<Icon name="shield" size={12} />
-								{" "}Promote
+								{" "}{t("mod.promote")}
 							</span>
-							<span className="hint">→ VIP</span>
+							<span className="hint">{t("mod.promote.hint")}</span>
 						</button>
 					</div>
 					</div>
@@ -868,7 +921,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 							onClick={() => toggleSection("controls")}
 						>
 							<Icon name={collapsed.controls ? "chevron" : "chevd"} size={10} />
-							Chat controls
+							{t("mod.section.controls")}
 						</button>
 					</h3>
 					<div
@@ -895,7 +948,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 							onClick={() => toggleSection("history")}
 						>
 							<Icon name={collapsed.history ? "chevron" : "chevd"} size={10} />
-							Son aksiyonlar
+							{t("mod.section.history")}
 						</button>
 						<span
 							className="mono num"
@@ -924,7 +977,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 									padding: "8px 0",
 								}}
 							>
-								Hicbir mod aksiyonu kaydedilmedi.
+								{t("mod.history.empty")}
 							</div>
 						)}
 						{recentActions.map((action) => {
@@ -992,7 +1045,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 							onClick={() => toggleSection("suspended")}
 						>
 							<Icon name={collapsed.suspended ? "chevron" : "chevd"} size={10} />
-							Suspended users
+							{t("mod.section.suspended")}
 						</button>
 						<span
 							className="mono num"
@@ -1022,7 +1075,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 									padding: "8px 0",
 								}}
 							>
-								No suspended users
+								{t("mod.no-suspended")}
 							</div>
 						)}
 						{suspendedList.map((entry) => (
@@ -1073,7 +1126,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 											type="button"
 											aria-label={`Unban ${entry.username}`}
 										>
-											Unban
+											{t("mod.unban.btn")}
 										</button>
 									)}
 								</div>

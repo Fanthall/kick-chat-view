@@ -28,6 +28,7 @@ import {
 	formatTimeoutDuration,
 	parseTimeoutSeconds,
 } from "../../util/timeoutDuration";
+import { useTranslation } from "../../util/i18n";
 
 // ─── Local notes ─────────────────────────────────────────────────────────────
 
@@ -59,12 +60,12 @@ const saveNotes = (username: string, notes: UserNote[]) => {
 const getInitials = (username: string) =>
 	username.slice(0, 2).toUpperCase();
 
-/** Returns "active now" if last message was within 5 minutes. */
-const getStatusLabel = (messages: UserMessage[]): "active now" | "offline" => {
-	if (!messages.length) return "offline";
+/** Returns i18n key for user status based on last message time. */
+const getStatusKey = (messages: UserMessage[]): "userwindow.status.active" | "userwindow.status.offline" => {
+	if (!messages.length) return "userwindow.status.offline";
 	const last = messages[messages.length - 1];
 	const diff = Date.now() - new Date(last.created_at).getTime();
-	return diff < 5 * 60 * 1000 ? "active now" : "offline";
+	return diff < 5 * 60 * 1000 ? "userwindow.status.active" : "userwindow.status.offline";
 };
 
 /** Derive current ban state: look for latest ban/unban action. */
@@ -115,6 +116,7 @@ const UserAvatar: FunctionComponent<{ slug: string; initials: string }> = ({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const UserWindow: FunctionComponent = () => {
+	const { t } = useTranslation();
 	const [payload, setPayload] = useState<UserWindowPayload | undefined>();
 	const [copyStatus, setCopyStatus] = useState<string>("");
 	const [broadcasterUserId, setBroadcasterUserId] = useState<
@@ -440,8 +442,9 @@ const UserWindow: FunctionComponent = () => {
 	// ── Derived display values ────────────────────────────────────────────────
 
 	const { user, messages, modActions, channelName } = payload;
-	const statusLabel = getStatusLabel(messages);
-	const isActive = statusLabel === "active now";
+	const statusKey = getStatusKey(messages);
+	const statusLabel = t(statusKey);
+	const isActive = statusKey === "userwindow.status.active";
 
 	const subBadge = user.identity?.badges?.find(
 		(b) =>
@@ -460,12 +463,12 @@ const UserWindow: FunctionComponent = () => {
 		notes: notes.length,
 	};
 
-	const TABS: { id: Tab; label: string }[] = [
-		{ id: "overview", label: "Overview" },
-		{ id: "messages", label: "Messages" },
-		{ id: "activity", label: "Activity" },
-		{ id: "modhistory", label: "Mod history" },
-		{ id: "notes", label: "Notes" },
+	const TABS: { id: Tab; labelKey: string }[] = [
+		{ id: "overview", labelKey: "userwindow.tab.overview" },
+		{ id: "messages", labelKey: "userwindow.tab.messages" },
+		{ id: "activity", labelKey: "userwindow.tab.activity" },
+		{ id: "modhistory", labelKey: "userwindow.tab.modhistory" },
+		{ id: "notes", labelKey: "userwindow.tab.notes" },
 	];
 
 	// ── Save note ─────────────────────────────────────────────────────────────
@@ -595,6 +598,98 @@ const UserWindow: FunctionComponent = () => {
 					</div>
 				</div>
 
+				{/* ─ Mod actions strip (Sprint 25 — was vertical right panel, now
+				    horizontal between stats and tabs per user request) ─ */}
+				<div className="uw-mod-strip">
+					{canUseModerationUi && hasBanScope ? (
+						<>
+							<div className="uw-strip-group uw-strip-timeout">
+								<span className="uw-strip-heading">TIMEOUT</span>
+								<span className="uw-strip-current">{timeoutLabel}</span>
+								<div className="uw-strip-chips">
+									{TIMEOUT_PRESETS.map((p) => (
+										<button
+											key={p.label}
+											type="button"
+											className={`uw-preset-chip${
+												!customSeconds.trim() && selectedPreset === p.seconds
+													? " active"
+													: ""
+											}`}
+											onClick={() => {
+												setSelectedPreset(p.seconds);
+												setCustomSeconds("");
+											}}
+										>
+											{p.label}
+										</button>
+									))}
+								</div>
+								<input
+									type="number"
+									min="1"
+									placeholder={t("mod.timeout.custom")}
+									className="uw-custom-sec-input uw-strip-input"
+									value={customSeconds}
+									onChange={(e) => setCustomSeconds(e.target.value)}
+								/>
+								<span className="uw-muted uw-strip-unit">{t("mod.timeout.seconds")}</span>
+								<button
+									type="button"
+									className="uw-btn-primary uw-strip-apply"
+									disabled={!canModerateUser || timeoutSeconds <= 0 || moderationLoading === "timeout"}
+									onClick={() => runUserModeration("timeout")}
+								>
+									{t("mod.timeout.apply")}
+								</button>
+							</div>
+
+							<span className="uw-strip-divider" aria-hidden />
+
+							<div className="uw-strip-group">
+								<button
+									type="button"
+									className="uw-btn-secondary uw-strip-clear"
+									disabled
+									title="Toplu silme API'si henuz yok"
+								>
+									Clear msgs
+									<span className="uw-muted" style={{ marginLeft: 6 }}>30 dk</span>
+								</button>
+								{isBanned ? (
+									<button
+										type="button"
+										className="uw-btn-primary uw-strip-unban"
+										disabled={!canModerateUser || moderationLoading === "unban"}
+										onClick={() => runUserModeration("unban")}
+									>
+										{moderationLoading === "unban" ? "..." : t("userwindow.mod.unban")}
+									</button>
+								) : (
+									<button
+										type="button"
+										className="uw-btn-danger uw-strip-ban"
+										disabled={!canModerateUser || moderationLoading === "ban"}
+										onClick={() => runUserModeration("ban")}
+									>
+										{moderationLoading === "ban" ? "..." : t("userwindow.mod.ban")}
+									</button>
+								)}
+							</div>
+
+							{/* Sprint 26: Account section removed — joined dates not
+							    available from current IPC, so placeholder "—" was
+							    just noise. */}
+						</>
+					) : (
+						<div className="uw-strip-empty">
+							<span className="uw-muted">
+								Mod aksiyonlari icin moderator yetkisi gerekli.
+							</span>
+						</div>
+					)}
+				</div>
+
 				{/* ─ Tabs ─ */}
 				<nav className="uw-tabs" role="tablist">
 					{TABS.map((tab) => (
@@ -606,7 +701,7 @@ const UserWindow: FunctionComponent = () => {
 							className={`uw-tab${activeTab === tab.id ? " active" : ""}`}
 							onClick={() => setActiveTab(tab.id)}
 						>
-							{tab.label}
+							{t(tab.labelKey)}
 							{tabCounts[tab.id] !== null && (
 								<span className="uw-tab-count">{tabCounts[tab.id]}</span>
 							)}
@@ -808,117 +903,6 @@ const UserWindow: FunctionComponent = () => {
 				</div>
 			</div>
 
-			{/* ── MOD PANEL ───────────────────────────────────────────── */}
-			<aside className="uw-mod-panel">
-				{canUseModerationUi && hasBanScope ? (
-					<>
-						<div className="uw-panel-section">
-							<p className="uw-panel-heading">MOD ACTIONS</p>
-
-							{/* Timeout */}
-							<div className="uw-panel-group">
-								<div className="uw-panel-row">
-									<span className="uw-panel-label">Timeout</span>
-									<span className="uw-duration-display">{timeoutLabel}</span>
-								</div>
-								<div className="uw-presets">
-									{TIMEOUT_PRESETS.map((p) => (
-										<button
-											key={p.label}
-											type="button"
-											className={`uw-preset-chip${
-												!customSeconds.trim() && selectedPreset === p.seconds
-													? " active"
-													: ""
-											}`}
-											onClick={() => {
-												setSelectedPreset(p.seconds);
-												setCustomSeconds("");
-											}}
-										>
-											{p.label}
-										</button>
-									))}
-								</div>
-								<div className="uw-custom-input-row">
-									<input
-										type="number"
-										min="1"
-										placeholder="custom (sec)"
-										className="uw-custom-sec-input"
-										value={customSeconds}
-										onChange={(e) => setCustomSeconds(e.target.value)}
-									/>
-									<span className="uw-muted">seconds</span>
-								</div>
-								<button
-									type="button"
-									className="uw-btn-primary"
-									disabled={!canModerateUser || timeoutSeconds <= 0 || moderationLoading === "timeout"}
-									onClick={() => runUserModeration("timeout")}
-								>
-									{moderationLoading === "timeout" ? "Applying..." : "Apply timeout"}
-								</button>
-							</div>
-
-							{/* Clear messages stub */}
-							<div className="uw-panel-group">
-								<button
-									type="button"
-									className="uw-btn-secondary"
-									disabled
-									title="No bulk-delete API available yet"
-								>
-									Clear messages
-									<span className="uw-muted" style={{ marginLeft: 6 }}>30 min</span>
-								</button>
-							</div>
-
-							{/* Ban / Unban */}
-							<div className="uw-panel-group">
-								{isBanned ? (
-									<button
-										type="button"
-										className="uw-btn-primary"
-										disabled={!canModerateUser || moderationLoading === "unban"}
-										onClick={() => runUserModeration("unban")}
-									>
-										{moderationLoading === "unban" ? "Unbanning..." : "Unban"}
-									</button>
-								) : (
-									<button
-										type="button"
-										className="uw-btn-danger"
-										disabled={!canModerateUser || moderationLoading === "ban"}
-										onClick={() => runUserModeration("ban")}
-									>
-										{moderationLoading === "ban" ? "Banning..." : "Ban permanently"}
-									</button>
-								)}
-							</div>
-						</div>
-
-						{/* Account section */}
-						<div className="uw-panel-section uw-account-section">
-							<p className="uw-panel-heading">ACCOUNT</p>
-							<div className="uw-account-row">
-								<span className="uw-panel-label">Joined channel</span>
-								<span className="uw-muted">—</span>
-							</div>
-							<div className="uw-account-row">
-								<span className="uw-panel-label">Joined Kick</span>
-								<span className="uw-muted">—</span>
-							</div>
-						</div>
-					</>
-				) : (
-					<div className="uw-panel-empty">
-						<p className="uw-muted">
-							Mod actions require moderator permission.
-						</p>
-					</div>
-				)}
-			</aside>
 		</div>
 	);
 };

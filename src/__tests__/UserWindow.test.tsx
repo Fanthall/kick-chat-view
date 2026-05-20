@@ -135,6 +135,8 @@ describe("UserWindow (Sprint 12)", () => {
 	beforeEach(() => {
 		// Clear localStorage notes between tests
 		localStorage.clear();
+		// Sprint 23 fix: pin language to "en" so test assertions match.
+		localStorage.setItem("chatViewLanguage", "en");
 	});
 
 	afterEach(() => {
@@ -201,10 +203,10 @@ describe("UserWindow (Sprint 12)", () => {
 			expect(mock.kick.getChannelBySlug).toHaveBeenCalled();
 		});
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("custom (sec)")).toBeInTheDocument();
+			expect(screen.getByPlaceholderText("custom")).toBeInTheDocument();
 		});
 
-		const input = screen.getByPlaceholderText("custom (sec)") as HTMLInputElement;
+		const input = screen.getByPlaceholderText("custom") as HTMLInputElement;
 		fireEvent.change(input, { target: { value: "90" } });
 
 		// Duration display should now show "90s"
@@ -222,14 +224,14 @@ describe("UserWindow (Sprint 12)", () => {
 			expect(mock.kick.getChannelBySlug).toHaveBeenCalled();
 		});
 		await waitFor(() => {
-			expect(screen.getByText("Apply timeout")).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: /^Apply$/i })).toBeInTheDocument();
 		});
 
 		// Set custom duration
-		const input = screen.getByPlaceholderText("custom (sec)") as HTMLInputElement;
+		const input = screen.getByPlaceholderText("custom") as HTMLInputElement;
 		fireEvent.change(input, { target: { value: "120" } });
 
-		const applyBtn = screen.getByText("Apply timeout");
+		const applyBtn = screen.getByRole("button", { name: /^Apply$/i });
 		await act(async () => {
 			fireEvent.click(applyBtn);
 		});

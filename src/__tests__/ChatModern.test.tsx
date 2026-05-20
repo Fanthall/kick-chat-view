@@ -123,6 +123,7 @@ beforeEach(() => {
 		value: makeElectronMock(),
 	});
 	localStorage.clear();
+	localStorage.setItem("chatViewLanguage", "en");
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

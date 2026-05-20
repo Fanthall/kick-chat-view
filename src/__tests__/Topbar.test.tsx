@@ -63,6 +63,7 @@ beforeEach(() => {
 	});
 
 	// Mock localStorage with active channel
+	localStorage.setItem("chatViewLanguage", "en");
 	localStorage.setItem("channelName", "testchannel");
 
 	jest.spyOn(

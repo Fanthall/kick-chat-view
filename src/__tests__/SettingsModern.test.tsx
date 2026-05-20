@@ -80,6 +80,7 @@ beforeEach(() => {
 	}));
 
 	localStorage.clear();
+	localStorage.setItem("chatViewLanguage", "en");
 });
 
 afterEach(() => {

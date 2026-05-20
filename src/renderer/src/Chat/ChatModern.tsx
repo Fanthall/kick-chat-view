@@ -64,6 +64,7 @@ import {
 import { buildUserWindowPayload } from "../../util/userWindowPayload";
 import EmoteAutocompleteModern from "./EmoteAutocompleteModern";
 import EmotePickerModern from "./EmotePickerModern";
+import { useTranslation } from "../../util/i18n";
 
 // ────────── Types ──────────
 
@@ -162,6 +163,7 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 	onContextMenu,
 	canModerate,
 }) => {
+	const { t } = useTranslation();
 	const sender = message.sender;
 	const senderUsername = sender?.username || "";
 	const senderColor = safeColor(sender?.identity?.color || "white");
@@ -254,8 +256,8 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 			</div>
 			<div className="chat-tools" role="toolbar" aria-label="Message actions">
 				<button
-					title="Reply"
-					aria-label="Reply"
+					title={t("chat.tools.reply")}
+					aria-label={t("chat.tools.reply")}
 					onClick={() => onReply(message)}
 				>
 					<LuCornerUpLeft size={12} aria-hidden />
@@ -263,23 +265,23 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 				{canModerate && (
 					<>
 						<button
-							title="Pin"
-							aria-label="Pin message"
+							title={t("chat.tools.pin")}
+							aria-label={t("chat.tools.pin")}
 							onClick={() => onPin(message)}
 						>
 							<LuPin size={12} aria-hidden />
 						</button>
 						<button
-							title="Timeout"
-							aria-label="Timeout user"
+							title={t("chat.tools.timeout")}
+							aria-label={t("chat.tools.timeout")}
 							onClick={() => onTimeout(message)}
 						>
 							<LuClock size={12} aria-hidden />
 						</button>
 						<button
 							className="danger"
-							title="Remove"
-							aria-label="Remove message"
+							title={t("chat.tools.remove")}
+							aria-label={t("chat.tools.remove")}
 							onClick={() => onRemove(message)}
 						>
 							<LuTrash2 size={12} aria-hidden />
@@ -302,6 +304,7 @@ interface ChatModernProps {
 }
 
 const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => {
+	const { t } = useTranslation();
 	const messages = useFanthalSelector((state) => state.messages);
 	const dispatch = useFanthalDispatch();
 
@@ -675,15 +678,51 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				const targetUserId = targetMsg?.sender?.id;
 
 				if (parsed.command === "user") {
-					if (!targetMsg) {
-						toast(
-							`User "${parsed.targetUsername}" not found in current chat.`,
-							{ type: "warning" }
-						);
+					setMessageText("");
+					if (targetMsg) {
+						openUserWindow(targetMsg);
 						return;
 					}
-					openUserWindow(targetMsg);
-					setMessageText("");
+					// Sprint 26: chat'te olmasa da Kick API'den fetch et.
+					// getChannelData(slug) -> data.user.id + profile_pic
+					if (!parsed.targetUsername) return;
+					(async () => {
+						try {
+							const res = await import("../../services/kick").then((m) =>
+								m.getChannelData(parsed.targetUsername!)
+							);
+							const u = res?.data?.user;
+							const channelDataUserId = res?.data?.user_id;
+							if (!u || !channelDataUserId) {
+								toast(
+									`Kullanici "${parsed.targetUsername}" bulunamadi.`,
+									{ type: "warning" }
+								);
+								return;
+							}
+							const syntheticUser = {
+								id: channelDataUserId,
+								username: u.username || parsed.targetUsername!,
+								slug: parsed.targetUsername!.toLowerCase(),
+								identity: { color: "#cccccc", badges: [] },
+							} as UserMessage["sender"];
+							const stubMessage: UserMessage = {
+								id: `synthetic-${Date.now()}`,
+								channelSlug: channelName,
+								chatroom_id: 0,
+								content: "",
+								type: "message",
+								created_at: new Date().toISOString(),
+								sender: syntheticUser,
+							};
+							openUserWindow(stubMessage);
+						} catch (err: any) {
+							toast(
+								err?.message || `Kullanici "${parsed.targetUsername}" cekilemedi.`,
+								{ type: "error" }
+							);
+						}
+					})();
 					return;
 				}
 
@@ -699,6 +738,51 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						{ type: "warning" }
 					);
 					return;
+				}
+
+				// Sprint 26: Protected target guard — slash komutlari da kendine /
+				// kanal sahibine / mod-admin-staff role'lerine karsi calismasin.
+				const ownName = (username || "").toLowerCase();
+				const targetLower = parsed.targetUsername?.toLowerCase() || "";
+				if (ownName && targetLower === ownName) {
+					toast("Kendine mod aksiyonu yapamazsin.", { type: "warning" });
+					setMessageText("");
+					return;
+				}
+				if (targetMsg) {
+					const channelStreamMeta = channelName
+						? messages.streamMetaByChannel?.[channelName]
+						: undefined;
+					if (
+						channelStreamMeta?.broadcasterUserId &&
+						targetUserId === channelStreamMeta.broadcasterUserId
+					) {
+						toast("Kanal sahibine mod aksiyonu yapilamaz.", {
+							type: "warning",
+						});
+						setMessageText("");
+						return;
+					}
+					const badges = targetMsg.sender?.identity?.badges || [];
+					const protectedRoles = [
+						"broadcaster",
+						"moderator",
+						"admin",
+						"staff",
+						"global_mod",
+					];
+					if (
+						badges.some((b: any) =>
+							protectedRoles.includes((b.type || "").toLowerCase())
+						)
+					) {
+						toast(
+							"Bu kullanicinin rolu mod aksiyonlarina karsi korumali.",
+							{ type: "warning" }
+						);
+						setMessageText("");
+						return;
+					}
 				}
 
 				if (parsed.command === "ban") {
@@ -1030,7 +1114,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							setUserMenu(undefined);
 						}}
 					>
-						Set as mod target
+						{t("chat.menu.set-mod-target")}
 					</button>
 					<button
 						type="button"
@@ -1040,7 +1124,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							setUserMenu(undefined);
 						}}
 					>
-						Open user detail
+						{t("chat.menu.open-user")}
 					</button>
 					<button
 						type="button"
@@ -1058,7 +1142,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							setUserMenu(undefined);
 						}}
 					>
-						Mention @{userMenu.message.sender?.username}
+						{t("chat.menu.mention")} @{userMenu.message.sender?.username}
 					</button>
 					<button
 						type="button"
@@ -1070,7 +1154,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							setUserMenu(undefined);
 						}}
 					>
-						Copy username
+						{t("chat.menu.copy-username")}
 					</button>
 					{canModerateChannel && (
 						<>
@@ -1083,7 +1167,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 									setUserMenu(undefined);
 								}}
 							>
-								Timeout (default)
+								{t("chat.menu.timeout")}
 							</button>
 							<button
 								type="button"
@@ -1094,7 +1178,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 									setUserMenu(undefined);
 								}}
 							>
-								Delete message
+								{t("chat.menu.delete")}
 							</button>
 						</>
 					)}
@@ -1114,7 +1198,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 					}}
 				>
 					<span className="chat-pause-dot" aria-hidden />
-					Auto-scroll paused · jump to live
+					{t("chat.paused")}
 				</button>
 			)}
 
@@ -1123,7 +1207,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				{replyTarget && (
 					<div className="composer-reply">
 						<span>
-							Replying to{" "}
+							{t("chat.reply-prefix")}{" "}
 							<b style={{ color: "var(--ms-fg-1)" }}>
 								@{replyTarget.sender.username}
 							</b>
@@ -1193,8 +1277,8 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						className="composer-input"
 						placeholder={
 							replyTarget
-								? `Reply to @${replyTarget.sender.username}…`
-								: "Send a message"
+								? `${t("chat.reply-to")} @${replyTarget.sender.username}…`
+								: t("chat.placeholder")
 						}
 						value={messageText}
 						rows={1}

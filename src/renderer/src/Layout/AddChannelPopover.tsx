@@ -16,6 +16,7 @@ import Icon from "../Component/Icon/Icon";
 import { addChannel, setActiveChannelSlug } from "../../util/channelSettings";
 import { chatListener } from "../../util/chatConnection";
 import { useFanthalDispatch } from "../../store/hooks/hooks";
+import { useTranslation } from "../../util/i18n";
 
 interface AddChannelPopoverProps {
 	open: boolean;
@@ -27,6 +28,7 @@ const AddChannelPopover: FunctionComponent<AddChannelPopoverProps> = ({
 	open,
 	onClose,
 }) => {
+	const { t } = useTranslation();
 	const dispatch = useFanthalDispatch();
 	const [value, setValue] = useState("");
 	const [error, setError] = useState("");
@@ -82,15 +84,15 @@ const AddChannelPopover: FunctionComponent<AddChannelPopoverProps> = ({
 			<div
 				className="add-ch-popover"
 				role="dialog"
-				aria-label="Add a channel"
+				aria-label={t("addchannel.title")}
 				aria-modal="true"
 			>
-				<div className="add-ch-title">Add a channel</div>
+				<div className="add-ch-title">{t("addchannel.title")}</div>
 				<div className="add-ch-body">
 					<input
 						ref={inputRef}
 						className="set-input add-ch-input"
-						placeholder="@channelname or URL"
+						placeholder={t("addchannel.placeholder")}
 						value={value}
 						onChange={(e) => { setValue(e.target.value); setError(""); }}
 						onKeyDown={handleKey}
@@ -109,7 +111,7 @@ const AddChannelPopover: FunctionComponent<AddChannelPopoverProps> = ({
 						type="button"
 						onClick={onClose}
 					>
-						Cancel
+						{t("addchannel.cancel")}
 					</button>
 					<button
 						className="set-btn primary"
@@ -117,7 +119,7 @@ const AddChannelPopover: FunctionComponent<AddChannelPopoverProps> = ({
 						onClick={handleAdd}
 					>
 						<Icon name="plus" size={12} />
-						Add
+						{t("addchannel.add")}
 					</button>
 				</div>
 			</div>

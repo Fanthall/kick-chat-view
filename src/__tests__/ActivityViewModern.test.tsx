@@ -44,6 +44,8 @@ const mockAcceptRedemptions = jest.fn();
 const mockRejectRedemptions = jest.fn();
 
 beforeEach(() => {
+	// Sprint 23 fix: pin language to "en" for assertions against English strings.
+	localStorage.setItem("chatViewLanguage", "en");
 	mockGetKicksLeaderboard.mockResolvedValue({
 		data: {
 			week: [

@@ -31,7 +31,10 @@ const baseUser = {
 	slug: "testuser",
 	identity: {
 		color: "#ff0000",
-		badges: [{ type: "moderator", text: "Mod" }],
+		// Sprint 26: badges boş; protectedTargetReason guard "moderator" /
+		// "broadcaster" gibi rolleri reddediyor — bu testlerde normal kullanıcı
+		// timeout senaryosunu test ediyoruz, mod-on-mod değil.
+		badges: [],
 	},
 };
 
@@ -111,6 +114,9 @@ beforeEach(() => {
 
 	// Clear suspended users storage
 	localStorage.clear();
+	// Sprint 23 fix: pin language to "en" so test assertions against English
+	// strings continue to match after i18n migration.
+	localStorage.setItem("chatViewLanguage", "en");
 });
 
 afterEach(() => {

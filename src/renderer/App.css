@@ -2117,6 +2117,216 @@ html.modern-shell-root[data-theme="light"] {
 	background: var(--ms-bg-0, #fafbfd) !important;
 }
 
+/* =============================================================================
+ * Sprint 24 — Light Theme Audit
+ * Overrides for selectors that have hardcoded dark hex/rgba values that do not
+ * respond to the token flip done in the Sprint 20 light-token block above.
+ * Dark theme appearance is UNCHANGED. Only light (data-theme="light") affected.
+ * ========================================================================== */
+
+/* ── Modal scrims: dark rgba scrim → lighter overlay ── */
+[data-app-shell="modern"][data-theme="light"] .modal-scrim {
+	background: color-mix(in oklch, var(--ms-fg-1) 30%, transparent);
+	backdrop-filter: blur(4px);
+}
+
+/* ── Drawer backdrop ── */
+[data-app-shell="modern"][data-theme="light"] .drawer-backdrop {
+	background: color-mix(in oklch, var(--ms-fg-1) 25%, transparent);
+}
+
+/* ── Autocomplete popup shadow ── */
+[data-app-shell="modern"][data-theme="light"] .autocomplete {
+	box-shadow: 0 -4px 20px color-mix(in oklch, var(--ms-fg-1) 12%, transparent);
+}
+
+/* ── Chat user right-click menu shadow ── */
+[data-app-shell="modern"][data-theme="light"] .chat-user-menu {
+	box-shadow: 0 12px 32px color-mix(in oklch, var(--ms-fg-1) 15%, transparent);
+}
+
+/* ── Emote picker modal shadow ── */
+[data-app-shell="modern"][data-theme="light"] .modal.epicker {
+	box-shadow: 0 30px 80px color-mix(in oklch, var(--ms-fg-1) 18%, transparent);
+}
+
+/* ── Generic modal shadow ── */
+[data-app-shell="modern"][data-theme="light"] .modal:not(.epicker) {
+	box-shadow: 0 30px 80px color-mix(in oklch, var(--ms-fg-1) 18%, transparent);
+}
+
+/* ── Drawer panel shadow ── */
+[data-app-shell="modern"][data-theme="light"] .drawer-panel {
+	box-shadow: -16px 0 40px color-mix(in oklch, var(--ms-fg-1) 12%, transparent);
+}
+
+/* ── Add-channel popover shadow ── */
+[data-app-shell="modern"][data-theme="light"] .add-ch-popover {
+	box-shadow: 0 18px 42px color-mix(in oklch, var(--ms-fg-1) 12%, transparent);
+}
+
+/* ── Toggle thumbs: dark-green #052420 → white on light bg ── */
+[data-app-shell="modern"][data-theme="light"] .mod-toggle.is-on::after {
+	background: #fff;
+}
+[data-app-shell="modern"][data-theme="light"] .set-toggle[aria-checked="true"] .set-toggle-thumb {
+	background: #fff;
+}
+
+/* ── Topbar avatar gradient (dark-only gradient) ── */
+[data-app-shell="modern"][data-theme="light"] .tb-ava {
+	background: linear-gradient(135deg, var(--ms-bg-3), var(--ms-bg-2));
+}
+
+/* ── Settings nav hover (white rgba overlay → token-based) ── */
+[data-app-shell="modern"][data-theme="light"] .set-nav-item:hover {
+	background: color-mix(in oklch, var(--ms-ac-mint) 12%, transparent);
+}
+
+/* ── Settings stepper button hover ── */
+[data-app-shell="modern"][data-theme="light"] .set-stepper button:hover {
+	background: color-mix(in oklch, var(--ms-fg-1) 6%, transparent);
+}
+
+/* ── Settings buttons ── */
+[data-app-shell="modern"][data-theme="light"] .set-btn:hover {
+	background: color-mix(in oklch, var(--ms-fg-1) 6%, transparent);
+	border-color: var(--ms-bd-3);
+}
+[data-app-shell="modern"][data-theme="light"] .set-btn.primary {
+	color: #fff;
+}
+[data-app-shell="modern"][data-theme="light"] .set-btn.primary:hover {
+	filter: brightness(1.06);
+	background: var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .set-btn.danger {
+	color: var(--ms-ac-mod);
+	border-color: color-mix(in oklch, var(--ms-ac-mod) 45%, transparent);
+}
+[data-app-shell="modern"][data-theme="light"] .set-btn.danger:hover {
+	background: color-mix(in oklch, var(--ms-ac-mod) 12%, transparent);
+}
+
+/* ── Settings input focus ring ── */
+[data-app-shell="modern"][data-theme="light"] .set-input:focus {
+	border-color: var(--ms-ac-mint);
+	box-shadow: 0 0 0 2px color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
+}
+
+/* ── Danger row tint ── */
+[data-app-shell="modern"][data-theme="light"] .set-block-row.danger {
+	background: color-mix(in oklch, var(--ms-ac-mod) 6%, transparent);
+}
+
+/* ── Emote picker cell index indicator ── */
+[data-app-shell="modern"][data-theme="light"] .ep-cell .ind {
+	background: color-mix(in oklch, var(--ms-fg-1) 18%, transparent);
+	color: var(--ms-fg-1);
+}
+
+/* ── UserWindow copy button ── */
+[data-app-shell="modern"][data-theme="light"] .uw-copy {
+	background: color-mix(in oklch, var(--ms-fg-1) 5%, transparent);
+}
+
+/* ── UserWindow status pills ── */
+[data-app-shell="modern"][data-theme="light"] .uw-status.active-now {
+	background: color-mix(in oklch, var(--ms-ac-reward) 18%, transparent);
+	color: var(--ms-ac-reward);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status.active-now .uw-status-dot {
+	background: var(--ms-ac-reward);
+	box-shadow: 0 0 0 3px color-mix(in oklch, var(--ms-ac-reward) 22%, transparent);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status.offline {
+	background: color-mix(in oklch, var(--ms-fg-3) 14%, transparent);
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status.offline .uw-status-dot {
+	background: var(--ms-fg-3);
+}
+
+/* ── UserWindow inline delete button ── */
+[data-app-shell="modern"][data-theme="light"] .uw-inline-del {
+	border-color: color-mix(in oklch, var(--ms-ac-live) 35%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-live) 10%, transparent);
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-inline-del:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ms-ac-live) 20%, transparent);
+}
+
+/* ── UserWindow close button hover ── */
+[data-app-shell="modern"][data-theme="light"] .uw-close-btn:hover {
+	background: color-mix(in oklch, var(--ms-ac-live) 14%, transparent) !important;
+	color: var(--ms-ac-live) !important;
+	border-color: color-mix(in oklch, var(--ms-ac-live) 28%, transparent) !important;
+}
+
+/* ── UserWindow action / status pills ── */
+[data-app-shell="modern"][data-theme="light"] .uw-action-ban {
+	background: color-mix(in oklch, var(--ms-ac-live) 15%, transparent);
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-action-to {
+	background: color-mix(in oklch, var(--ms-ac-warn) 15%, transparent);
+	color: var(--ms-ac-warn);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-action-delete {
+	background: color-mix(in oklch, var(--ms-fg-3) 12%, transparent);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-action-unban {
+	background: color-mix(in oklch, var(--ms-ac-reward) 15%, transparent);
+	color: var(--ms-ac-reward);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status-success {
+	background: color-mix(in oklch, var(--ms-ac-reward) 15%, transparent);
+	color: var(--ms-ac-reward);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status-pending {
+	background: color-mix(in oklch, var(--ms-ac-warn) 15%, transparent);
+	color: var(--ms-ac-warn);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status-failed {
+	background: color-mix(in oklch, var(--ms-ac-live) 12%, transparent);
+	color: var(--ms-ac-live);
+}
+
+/* ── UserWindow danger button ── */
+[data-app-shell="modern"][data-theme="light"] .uw-btn-danger {
+	border-color: color-mix(in oklch, var(--ms-ac-live) 35%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-live) 10%, transparent);
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-btn-danger:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ms-ac-live) 20%, transparent);
+}
+
+/* ── UserWindow primary button text ── */
+[data-app-shell="modern"][data-theme="light"] .uw-btn-primary {
+	color: #fff;
+}
+
+/* ── pbadges: rgba overlays need more opacity on light surfaces ── */
+[data-app-shell="modern"][data-theme="light"] .pbadge.kick {
+	background: color-mix(in oklch, var(--ms-ac-mint) 22%, transparent);
+	color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .pbadge.s7tv {
+	background: color-mix(in oklch, var(--ms-ac-sub) 22%, transparent);
+	color: var(--ms-ac-sub);
+}
+[data-app-shell="modern"][data-theme="light"] .pbadge.bttv {
+	background: color-mix(in oklch, var(--ms-ac-live) 18%, transparent);
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"][data-theme="light"] .pbadge.ffz {
+	background: color-mix(in oklch, var(--ms-fg-3) 18%, transparent);
+	color: var(--ms-fg-2);
+}
+
 [data-app-shell="modern"] .ms-mono {
 	font-family: var(--ms-font-mono);
 	font-variant-numeric: tabular-nums;
@@ -5581,3 +5791,130 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 
+
+
+/* Sprint 25: UserWindow MOD STRIP — yatay strip (eski sag dikey panel yerine) */
+[data-app-shell="modern"] .uw-mod-panel { display: none !important; }
+
+[data-app-shell="modern"] .uw-mod-strip {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	padding: 10px 16px;
+	background: var(--ms-bg-1, #131418);
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .uw-strip-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+[data-app-shell="modern"] .uw-strip-heading {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	color: var(--ms-fg-3, #828690);
+	margin-right: 4px;
+}
+[data-app-shell="modern"] .uw-strip-current {
+	font-family: var(--ms-font-mono, monospace);
+	font-size: 12px;
+	color: var(--ms-ac-mint, #7adbb4);
+	font-variant-numeric: tabular-nums;
+	min-width: 28px;
+}
+[data-app-shell="modern"] .uw-strip-chips {
+	display: inline-flex;
+	gap: 3px;
+}
+[data-app-shell="modern"] .uw-strip-input {
+	width: 70px;
+	padding: 4px 8px;
+	font-size: 12px;
+}
+[data-app-shell="modern"] .uw-strip-unit {
+	font-size: 11px;
+	color: var(--ms-fg-4, var(--fg-4));
+}
+[data-app-shell="modern"] .uw-strip-apply,
+[data-app-shell="modern"] .uw-strip-clear,
+[data-app-shell="modern"] .uw-strip-ban,
+[data-app-shell="modern"] .uw-strip-unban {
+	padding: 5px 12px;
+	font-size: 12px;
+	font-weight: 600;
+	border-radius: var(--ms-r-2, 6px);
+	cursor: pointer;
+	transition: opacity 0.12s, background 0.12s;
+}
+[data-app-shell="modern"] .uw-strip-apply:disabled,
+[data-app-shell="modern"] .uw-strip-clear:disabled,
+[data-app-shell="modern"] .uw-strip-ban:disabled,
+[data-app-shell="modern"] .uw-strip-unban:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .uw-strip-divider {
+	width: 1px;
+	height: 28px;
+	background: var(--ms-border, rgba(110,120,135,0.4));
+	flex-shrink: 0;
+}
+[data-app-shell="modern"] .uw-strip-account {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+	gap: 12px;
+	margin-left: auto;
+}
+[data-app-shell="modern"] .uw-strip-empty {
+	flex: 1;
+	text-align: center;
+	padding: 4px 0;
+}
+
+
+/* Sprint 26 (UI polish):
+   1. ActivityViewModern filter chip row: gizli scroll yerine flex-wrap
+      kullan -> dar ekranda chipler ikinci satıra düşer, Ödüller görünür.
+   2. ModActionsModern TimeoutPicker alt hint satırı (Ctrl+T / Ctrl+Shift+T)
+      kullanıcı isteği üzerine gizlendi.
+   3. UserWindow .uw-mod-strip Apply butonunu kompakt sığdır + chips genişlik
+      sınırı + custom input dar kalsın diye layout fine-tune. */
+[data-app-shell="modern"] .filter-row {
+	flex-wrap: wrap;
+	overflow-x: visible;
+}
+
+[data-app-shell="modern"] .mod-timeout-hint {
+	display: none !important;
+}
+
+[data-app-shell="modern"] .uw-mod-strip {
+	gap: 8px;
+	padding: 8px 12px;
+}
+[data-app-shell="modern"] .uw-strip-timeout {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+[data-app-shell="modern"] .uw-strip-apply {
+	padding: 6px 16px !important;
+	max-width: 100px;
+	white-space: nowrap;
+}
+[data-app-shell="modern"] .uw-strip-clear,
+[data-app-shell="modern"] .uw-strip-ban,
+[data-app-shell="modern"] .uw-strip-unban {
+	padding: 6px 12px !important;
+	white-space: nowrap;
+}
+[data-app-shell="modern"] .uw-strip-chips .uw-preset-chip {
+	padding: 4px 8px;
+	font-size: 11px;
+}
+[data-app-shell="modern"] .uw-strip-input {
+	width: 64px !important;
+}

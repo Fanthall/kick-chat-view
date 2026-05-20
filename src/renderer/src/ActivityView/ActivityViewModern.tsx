@@ -23,6 +23,7 @@ import {
 import { ActivityItem, ActivityKind, ActivityStatus } from "../../util/chatInterface";
 import { getActiveChannelSlug } from "../../util/channelSettings";
 import { hasKickScope, parseKickScopes } from "../../util/kickScopes";
+import { useTranslation } from "../../util/i18n";
 import Icon from "../Component/Icon/Icon";
 
 // ─── Token-aware JSON masker ────────────────────────────────────────────────
@@ -68,12 +69,12 @@ function fmtDate(ts?: number): string {
 // ─── Filter definitions ──────────────────────────────────────────────────────
 type FilterId = "all" | "sub" | "gift" | "kicks" | "reward";
 
-const ACT_FILTERS: { id: FilterId; label: string }[] = [
-	{ id: "all", label: "All" },
-	{ id: "sub", label: "Subs" },
-	{ id: "gift", label: "Gifts" },
-	{ id: "kicks", label: "KICKs" },
-	{ id: "reward", label: "Rewards" },
+const ACT_FILTERS: { id: FilterId; labelKey: string }[] = [
+	{ id: "all", labelKey: "activity.filter.all" },
+	{ id: "sub", labelKey: "activity.filter.subs" },
+	{ id: "gift", labelKey: "activity.filter.gifts" },
+	{ id: "kicks", labelKey: "activity.filter.kicks" },
+	{ id: "reward", labelKey: "activity.filter.rewards" },
 ];
 
 const KIND_TO_FILTER: Record<ActivityKind, FilterId> = {
@@ -116,6 +117,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 	canManageRewards,
 	onRewardAction,
 }) => {
+	const { t } = useTranslation();
 	const [showJson, setShowJson] = useState(false);
 	const meta = KIND_META[activity.kind];
 
@@ -250,30 +252,30 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 					onKeyDown={(e) => e.stopPropagation()}
 				>
 					<div className="act-kv">
-						<div className="act-kv-k">Event ID</div>
+						<div className="act-kv-k">{t("activity.expand.event-id")}</div>
 						<div className="act-kv-v">{activity.id ?? "-"}</div>
 					</div>
 					<div className="act-kv">
-						<div className="act-kv-k">Actor</div>
+						<div className="act-kv-k">{t("activity.expand.actor")}</div>
 						<div className="act-kv-v">
 							{actorName}
 							{activity.actor?.id ? ` · #${activity.actor.id}` : ""}
 						</div>
 					</div>
 					<div className="act-kv">
-						<div className="act-kv-k">Created</div>
+						<div className="act-kv-k">{t("activity.expand.created")}</div>
 						<div className="act-kv-v">{fmtDate(activity.createdAt)}</div>
 					</div>
 					{activity.expiresAt ? (
 						<div className="act-kv">
-							<div className="act-kv-k">Expires</div>
+							<div className="act-kv-k">{t("activity.expand.expires")}</div>
 							<div className="act-kv-v">{fmtDate(activity.expiresAt)}</div>
 						</div>
 					) : null}
 					{activity.kind === "kicks_gifted" && activity.giftName ? (
 						<>
 							<div className="act-kv">
-								<div className="act-kv-k">Gift</div>
+								<div className="act-kv-k">{t("activity.expand.gift")}</div>
 								<div className="act-kv-v">
 									{activity.giftName}
 									{activity.giftTier != null ? ` · tier ${activity.giftTier}` : ""}
@@ -281,7 +283,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 							</div>
 							{activity.pinnedTimeSeconds != null && (
 								<div className="act-kv">
-									<div className="act-kv-k">Pinned</div>
+									<div className="act-kv-k">{t("activity.expand.pinned")}</div>
 									<div className="act-kv-v">{activity.pinnedTimeSeconds}s</div>
 								</div>
 							)}
@@ -290,7 +292,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 					{activity.kind === "subscription_gift" && targetUsernames.length > 0 ? (
 						<div className="act-kv" style={{ gridTemplateColumns: "90px 1fr" }}>
 							<div className="act-kv-k">
-								Recipients{" "}
+								{t("activity.expand.recipients")}{" "}
 								<span style={{ color: "var(--ms-fg-4)" }}>
 									({targetUsernames.length})
 								</span>
@@ -306,7 +308,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 					) : null}
 					{activity.kind === "reward_redemption" && activity.message ? (
 						<div className="act-kv">
-							<div className="act-kv-k">User input</div>
+							<div className="act-kv-k">{t("activity.expand.user-input")}</div>
 							<div
 								className="act-kv-v"
 								style={{ whiteSpace: "normal", fontFamily: "inherit", fontSize: 12 }}
@@ -328,7 +330,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 									}}
 									aria-label="Accept reward redemption"
 								>
-									<Icon name="check" size={12} /> Accept
+									<Icon name="check" size={12} /> {t("activity.accept")}
 								</button>
 								<button
 									className="btn danger"
@@ -339,7 +341,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 									}}
 									aria-label="Reject reward redemption"
 								>
-									<Icon name="x" size={12} /> Reject
+									<Icon name="x" size={12} /> {t("activity.reject")}
 								</button>
 							</div>
 						)}
@@ -350,10 +352,10 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 							setShowJson((v) => !v);
 						}}
 						aria-expanded={showJson}
-						aria-label={showJson ? "Hide raw JSON" : "Show raw JSON"}
+						aria-label={showJson ? t("activity.json.hide") : t("activity.json.show")}
 					>
 						<Icon name={showJson ? "chevd" : "chevron"} size={10} />
-						{showJson ? "Hide" : "Show"} raw JSON
+						{showJson ? t("activity.json.hide") : t("activity.json.show")}
 					</button>
 					{showJson && (
 						<pre className="act-json">{maskedRaw}</pre>
@@ -550,6 +552,7 @@ interface ActivityViewModernProps {
 }
 
 const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClose, isPopOut = false }) => {
+	const { t } = useTranslation();
 	const dispatch = useFanthalDispatch();
 	const messages = useFanthalSelector((state) => state.messages);
 	const [filter, setFilter] = useState<FilterId>("all");
@@ -673,8 +676,8 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 			{/* Panel header */}
 			<div className="panel-hd">
 				<h2>
-					<Icon name="activity" size={14} ariaLabel="Activity" />
-					Activity
+					<Icon name="activity" size={14} ariaLabel={t("activity.title")} />
+					{t("activity.title")}
 					<span className="count num">{filteredEvents.length}</span>
 				</h2>
 				<div className="panel-hd-actions">
@@ -716,7 +719,7 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 					onClick={() => setSubTab("events")}
 					aria-selected={subTab === "events"}
 				>
-					Events
+					{t("activity.tab.events")}
 				</button>
 				<button
 					role="tab"
@@ -725,7 +728,7 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 					aria-selected={subTab === "leaderboard"}
 				>
 					<Icon name="bolt" size={11} />
-					KICKs Leaderboard
+					{t("activity.tab.leaderboard-full")}
 				</button>
 			</div>
 
@@ -740,7 +743,7 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 								onClick={() => setFilter(f.id)}
 								aria-pressed={filter === f.id}
 							>
-								{f.label}
+								{t(f.labelKey)}
 								<span className="chip-count num">{counts[f.id] ?? 0}</span>
 							</button>
 						))}
