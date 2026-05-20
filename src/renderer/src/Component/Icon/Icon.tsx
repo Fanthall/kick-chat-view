@@ -10,59 +10,109 @@
 
 import React from "react";
 import {
+	LuActivity,
 	LuBan,
+	LuBell,
 	LuCheck,
 	LuChevronDown,
 	LuChevronRight,
+	LuChevronUp,
 	LuCoins,
 	LuCrown,
+	LuEye,
+	LuEyeOff,
 	LuGift,
+	LuInfo,
+	LuMic,
 	LuPin,
 	LuPlus,
+	LuRefreshCw,
+	LuReply,
+	LuSearch,
+	LuSend,
 	LuSettings,
 	LuShield,
 	LuSmile,
+	LuStar,
 	LuTerminal,
+	LuTimer,
+	LuTrash2,
+	LuAlertTriangle,
 	LuUser,
 	LuX,
 	LuZap,
+	LuSparkles,
 } from "react-icons/lu";
 
 export type IconName =
-	| "crown"
-	| "gift"
-	| "bolt"
-	| "coin"
-	| "pin"
-	| "x"
-	| "settings"
-	| "user"
-	| "shield"
+	| "activity"
 	| "ban"
-	| "smile"
-	| "code"
-	| "plus"
+	| "bell"
+	| "bolt"
 	| "check"
+	| "chevd"
+	| "chevu"
 	| "chevron"
-	| "chevd";
+	| "code"
+	| "coin"
+	| "crown"
+	| "eye"
+	| "eyeOff"
+	| "gift"
+	| "info"
+	| "mic"
+	| "pin"
+	| "plus"
+	| "refresh"
+	| "reply"
+	| "search"
+	| "send"
+	| "settings"
+	| "shield"
+	| "smile"
+	| "sparkle"
+	| "star"
+	| "starF"
+	| "timeout"
+	| "trash"
+	| "user"
+	| "warn"
+	| "x";
 
 const ICON_MAP: Record<IconName, React.ComponentType<{ size?: number }>> = {
-	crown: LuCrown,
-	gift: LuGift,
-	bolt: LuZap,
-	coin: LuCoins,
-	pin: LuPin,
-	x: LuX,
-	settings: LuSettings,
-	user: LuUser,
-	shield: LuShield,
+	activity: LuActivity,
 	ban: LuBan,
-	smile: LuSmile,
-	code: LuTerminal,
-	plus: LuPlus,
+	bell: LuBell,
+	bolt: LuZap,
 	check: LuCheck,
-	chevron: LuChevronRight,
 	chevd: LuChevronDown,
+	chevu: LuChevronUp,
+	chevron: LuChevronRight,
+	code: LuTerminal,
+	coin: LuCoins,
+	crown: LuCrown,
+	eye: LuEye,
+	eyeOff: LuEyeOff,
+	gift: LuGift,
+	info: LuInfo,
+	mic: LuMic,
+	pin: LuPin,
+	plus: LuPlus,
+	refresh: LuRefreshCw,
+	reply: LuReply,
+	search: LuSearch,
+	send: LuSend,
+	settings: LuSettings,
+	shield: LuShield,
+	smile: LuSmile,
+	sparkle: LuSparkles,
+	star: LuStar,
+	starF: LuStar,
+	timeout: LuTimer,
+	trash: LuTrash2,
+	user: LuUser,
+	warn: LuAlertTriangle,
+	x: LuX,
 };
 
 export interface IconProps {

@@ -1988,6 +1988,13 @@ body {
 	--ms-z-drawer: 100;
 	--ms-z-modal: 1000;
 	--ms-z-toast: 2000;
+
+	/* Sprint 4: additional bg/border/fg aliases for activity panel */
+	--ms-bg-3: oklch(0.30 0.015 240);
+	--ms-bd-1: oklch(0.28 0.01 240 / 0.5);
+	--ms-bd-2: oklch(0.34 0.01 240 / 0.6);
+	--ms-bd-3: oklch(0.38 0.01 240 / 0.7);
+	--ms-fg-4: oklch(0.45 0.01 240);
 }
 
 /* Hex fallback for environments without OKLCH support */
@@ -2009,6 +2016,12 @@ body {
 		--ms-ac-mint: #7adbb4;
 		--ms-ac-warn: #d4a851;
 		--ms-ac-live: #d65c4e;
+		/* Sprint 4 aliases */
+		--ms-bg-3: #222930;
+		--ms-bd-1: rgba(90, 100, 115, 0.5);
+		--ms-bd-2: rgba(100, 112, 128, 0.6);
+		--ms-bd-3: rgba(110, 125, 140, 0.7);
+		--ms-fg-4: #606870;
 	}
 }
 
@@ -2552,5 +2565,377 @@ body {
 	display: flex;
 	align-items: center;
 	gap: 4px;
+}
+
+/* ─── Sprint 4: Activity Modern — all selectors scoped under modern shell ─── */
+
+/* Sub-tab strip */
+[data-app-shell="modern"] .act-subtab-strip {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 6px 10px 0;
+	border-bottom: 1px solid var(--ms-bd-1);
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .act-subtab {
+	padding: 5px 10px;
+	font-size: 11.5px;
+	border-radius: var(--ms-r-2) var(--ms-r-2) 0 0;
+	color: var(--ms-fg-3);
+	border: 1px solid transparent;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+[data-app-shell="modern"] .act-subtab:hover {
+	color: var(--ms-fg-1);
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .act-subtab.is-active {
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+	border-bottom-color: var(--ms-ac-mint);
+	background: var(--ms-bg-2);
+}
+
+/* Filter chip row */
+[data-app-shell="modern"] .filter-row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--ms-bd-1);
+	flex: 0 0 auto;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+[data-app-shell="modern"] .filter-row::-webkit-scrollbar {
+	display: none;
+}
+[data-app-shell="modern"] .chip {
+	padding: 4px 9px;
+	font-size: 11.5px;
+	border-radius: var(--ms-r-2);
+	color: var(--ms-fg-3);
+	border: 1px solid transparent;
+	white-space: nowrap;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .chip:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"] .chip.is-active {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+[data-app-shell="modern"] .chip-count {
+	font-size: 10px;
+	color: var(--ms-fg-4);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+[data-app-shell="modern"] .chip.is-active .chip-count {
+	color: var(--ms-fg-2);
+}
+
+/* Activity list */
+[data-app-shell="modern"] .act-list {
+	flex: 1 1 auto;
+	padding: 4px 0;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bd-3) transparent;
+}
+
+/* Activity row */
+[data-app-shell="modern"] .act-row {
+	display: grid;
+	grid-template-columns: 28px 1fr auto;
+	gap: 10px;
+	padding: 10px 14px 10px 12px;
+	border-bottom: 1px solid color-mix(in oklch, var(--ms-bd-1) 50%, transparent);
+	align-items: start;
+	position: relative;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .act-row:hover {
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .act-row:last-child {
+	border-bottom: 0;
+}
+[data-app-shell="modern"] .act-row.is-expanded {
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .act-row:focus-visible {
+	outline: 2px solid var(--ms-ac-mint);
+	outline-offset: -2px;
+}
+
+/* Activity icon */
+[data-app-shell="modern"] .act-icon {
+	width: 28px;
+	height: 28px;
+	border-radius: var(--ms-r-2);
+	display: grid;
+	place-items: center;
+	font-size: 13px;
+	color: var(--ms-fg-1);
+	margin-top: 1px;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .act-icon.sub {
+	background: color-mix(in oklch, var(--ms-ac-sub) 18%, var(--ms-bg-3));
+	color: var(--ms-ac-sub);
+}
+[data-app-shell="modern"] .act-icon.gift {
+	background: color-mix(in oklch, var(--ms-ac-gift) 18%, var(--ms-bg-3));
+	color: var(--ms-ac-gift);
+}
+[data-app-shell="modern"] .act-icon.kicks {
+	background: color-mix(in oklch, var(--ms-ac-kicks) 18%, var(--ms-bg-3));
+	color: var(--ms-ac-kicks);
+}
+[data-app-shell="modern"] .act-icon.reward {
+	background: color-mix(in oklch, var(--ms-ac-reward) 18%, var(--ms-bg-3));
+	color: var(--ms-ac-reward);
+}
+
+/* Activity body */
+[data-app-shell="modern"] .act-body {
+	min-width: 0;
+}
+[data-app-shell="modern"] .act-line {
+	font-size: 12.5px;
+	color: var(--ms-fg-1);
+	line-height: 1.45;
+}
+[data-app-shell="modern"] .act-line b {
+	font-weight: 600;
+}
+[data-app-shell="modern"] .act-meta {
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	margin-top: 3px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+[data-app-shell="modern"] .act-meta .sep {
+	color: var(--ms-fg-4);
+}
+
+/* Activity tags */
+[data-app-shell="modern"] .act-tag {
+	font-size: 10px;
+	padding: 1px 6px;
+	border-radius: 3px;
+	background: var(--ms-bg-3);
+	border: 1px solid var(--ms-bd-2);
+	color: var(--ms-fg-2);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+/* Activity right column */
+[data-app-shell="modern"] .act-right {
+	text-align: right;
+	min-width: 60px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+}
+[data-app-shell="modern"] .act-amount {
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .act-amount.kicks {
+	color: var(--ms-ac-kicks);
+}
+[data-app-shell="modern"] .act-amount.gift {
+	color: var(--ms-ac-gift);
+}
+[data-app-shell="modern"] .act-time {
+	font-size: 10.5px;
+	color: var(--ms-fg-4);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+[data-app-shell="modern"] .act-status {
+	font-size: 10px;
+	padding: 1px 6px;
+	border-radius: 3px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+[data-app-shell="modern"] .act-status.pending {
+	background: color-mix(in oklch, var(--ms-ac-warn) 18%, transparent);
+	color: var(--ms-ac-warn);
+}
+[data-app-shell="modern"] .act-status.accepted {
+	background: color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
+	color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"] .act-status.rejected {
+	background: color-mix(in oklch, var(--ms-ac-live) 15%, transparent);
+	color: var(--ms-ac-live);
+}
+
+/* Activity expand drawer */
+[data-app-shell="modern"] .act-expand {
+	grid-column: 2 / 4;
+	margin-top: 8px;
+	padding: 10px 12px;
+	background: var(--ms-bg-3);
+	border: 1px solid var(--ms-bd-2);
+	border-radius: var(--ms-r-2);
+	font-size: 11.5px;
+	color: var(--ms-fg-2);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+[data-app-shell="modern"] .act-kv {
+	display: grid;
+	grid-template-columns: 90px 1fr;
+	gap: 8px;
+	align-items: baseline;
+}
+[data-app-shell="modern"] .act-kv-k {
+	color: var(--ms-fg-3);
+	font-size: 11px;
+}
+[data-app-shell="modern"] .act-kv-v {
+	color: var(--ms-fg-1);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 11.5px;
+}
+
+/* Recipients pill list */
+[data-app-shell="modern"] .act-recipients {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	max-height: 100px;
+	overflow: auto;
+}
+[data-app-shell="modern"] .pill {
+	background: var(--ms-bg-1);
+	border: 1px solid var(--ms-bd-2);
+	padding: 2px 7px;
+	border-radius: 999px;
+	font-size: 11px;
+	color: var(--ms-fg-2);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+/* Raw JSON toggle + block */
+[data-app-shell="modern"] .act-json-toggle {
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	padding: 2px 0;
+	align-self: flex-start;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .act-json-toggle:hover {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .act-json {
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 10.5px;
+	background: var(--ms-bg-0);
+	border: 1px solid var(--ms-bd-1);
+	border-radius: 4px;
+	padding: 8px 10px;
+	white-space: pre;
+	overflow: auto;
+	max-height: 200px;
+	color: var(--ms-fg-2);
+	margin: 0;
+}
+
+/* KICKs Leaderboard */
+[data-app-shell="modern"] .lb-tabs {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 8px 10px 6px;
+	border-bottom: 1px solid var(--ms-bd-1);
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .lb-tab {
+	padding: 4px 10px;
+	font-size: 11.5px;
+	border-radius: var(--ms-r-2);
+	color: var(--ms-fg-3);
+	border: 1px solid transparent;
+}
+[data-app-shell="modern"] .lb-tab:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"] .lb-tab.is-active {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+[data-app-shell="modern"] .lb-list {
+	display: flex;
+	flex-direction: column;
+	padding: 4px 0;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bd-3) transparent;
+}
+[data-app-shell="modern"] .lb-row {
+	display: grid;
+	grid-template-columns: 32px 1fr auto;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 14px;
+	border-bottom: 1px solid color-mix(in oklch, var(--ms-bd-1) 50%, transparent);
+}
+[data-app-shell="modern"] .lb-row:hover {
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .lb-row:last-child {
+	border-bottom: 0;
+}
+[data-app-shell="modern"] .lb-rank {
+	font-size: 11px;
+	font-family: "Geist Mono", ui-monospace, monospace;
+	color: var(--ms-fg-4);
+	font-weight: 600;
+}
+[data-app-shell="modern"] .lb-user {
+	min-width: 0;
+}
+[data-app-shell="modern"] .lb-username {
+	font-size: 12.5px;
+	color: var(--ms-fg-1);
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+[data-app-shell="modern"] .lb-amount {
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ms-ac-kicks);
 }
 

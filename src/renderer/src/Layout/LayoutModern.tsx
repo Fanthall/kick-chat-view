@@ -35,7 +35,7 @@ import {
 import { chatListener } from "../../util/chatConnection";
 import Icon from "../Component/Icon/Icon";
 import ChatModern from "../Chat/ChatModern";
-import ActivityView from "../ActivityView/ActivityView";
+import ActivityViewModern from "../ActivityView/ActivityViewModern";
 import ModActions from "../ModActions/ModActions";
 
 const SHELL_ATTR = "modern";
@@ -247,7 +247,7 @@ const LayoutModern: FunctionComponent = () => {
 					}}
 					aria-label="Aktivite"
 				>
-					<ActivityView />
+					<ActivityViewModern />
 				</aside>
 				<aside
 					style={{
