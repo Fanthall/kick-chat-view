@@ -35,6 +35,11 @@ export interface GiftSubMessage {
 	gifted_usernames: string[];
 	gifter_username: string;
 	create_at: number;
+	// WI-1.5 webhook bridge: legacy Pusher payload normalize edilirken doldurulan opsiyonel
+	// alanlar (CONSTRAINT-3 backward compat — eski payload tuketici varsa zarar gormez).
+	eventType?: string;
+	expiresAt?: number;
+	anonymous?: boolean;
 }
 
 export interface SubMessage {
@@ -45,6 +50,9 @@ export interface SubMessage {
 	months: number;
 	streak?: number;
 	create_at: number;
+	// WI-1.5 webhook bridge: optional enrichment fields.
+	eventType?: string;
+	expiresAt?: number;
 }
 
 export interface BanToMessage {
@@ -117,6 +125,17 @@ export interface ActivityItem {
 	status?: ActivityStatus;
 	createdAt: number;
 	raw?: unknown;
+	// Webhook eventType (e.g. "channel.subscription.new", "kicks.gifted") — REQ-3/5
+	eventType?: string;
+	// Subscription expiry timestamp (epoch ms) — REQ-3
+	expiresAt?: number;
+	// Anonymous gifter marker — REQ-4
+	anonymous?: boolean;
+	// KICKs gift metadata — REQ-5
+	giftName?: string;
+	giftType?: string;
+	giftTier?: number | string;
+	pinnedTimeSeconds?: number;
 	// Legacy subscription fields kept for old Pusher payload compatibility.
 	username?: string;
 	giftedList?: string[];

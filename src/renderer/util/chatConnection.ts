@@ -16,6 +16,12 @@ import {
 } from "./chatInterface";
 import { getActiveChannelSlug } from "./channelSettings";
 import { extractSevenTvSetsFromKickUser, normalizeKickGroups } from "./emoteIndex";
+import {
+	enrichLegacyGiftedSubscriptionsPayload,
+	enrichLegacySubscriptionPayload,
+	LegacyGiftedSubscriptionsPayload,
+	LegacySubscriptionPayload,
+} from "./legacyPusherBridge";
 interface EventType {
 	channel: string;
 	data: string;
@@ -340,27 +346,31 @@ export const chatListener = (slug?: string) => {
 						);
 						break;
 				case "App\\Events\\SubscriptionEvent":
-					const parsedSubMessage: SubMessage = JSON.parse(
+					const parsedSubMessage: LegacySubscriptionPayload = JSON.parse(
 						parsedEvent.data
 					);
 					dispatch(
-							MessageActionsFunc.subMessage({
-								...parsedSubMessage,
-								channelSlug: channelName,
-								create_at: new Date().getTime(),
-							})
+							MessageActionsFunc.subMessage(
+								enrichLegacySubscriptionPayload({
+									...parsedSubMessage,
+									channelSlug: channelName,
+									create_at: new Date().getTime(),
+								})
+							)
 					);
 					break;
 				case "App\\Events\\GiftedSubscriptionsEvent":
-					const parsedGiftSubMessage: GiftSubMessage = JSON.parse(
+					const parsedGiftSubMessage: LegacyGiftedSubscriptionsPayload = JSON.parse(
 						parsedEvent.data
 					);
 					dispatch(
-							MessageActionsFunc.gifSubMessage({
-								...parsedGiftSubMessage,
-								channelSlug: channelName,
-								create_at: new Date().getTime(),
-							})
+							MessageActionsFunc.gifSubMessage(
+								enrichLegacyGiftedSubscriptionsPayload({
+									...parsedGiftSubMessage,
+									channelSlug: channelName,
+									create_at: new Date().getTime(),
+								})
+							)
 					);
 					break;
 				case "App\\Events\\MessageDeletedEvent":

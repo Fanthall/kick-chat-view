@@ -522,7 +522,13 @@ export const timeoutKickUser = (request: KickModerationBanRequest) => {
 		throw new Error("Kick timeout requires duration in seconds.");
 	}
 
-	return banKickUser(request);
+	// Sprint 20 fix: Kick'in public moderation/bans endpoint'i `duration`
+	// alanini DAKIKA olarak yorumluyor. Tum cagiranlar UI'da saniye
+	// gonderiyor (insanin kafasinda saniye), burada tek noktada dakikaya
+	// ceviriyoruz. Math.max(1, ...) garantisi: 1sn altinda istek bile en
+	// az 1 dakika olarak gider (Kick zaten daha kisa surede reddediyordu).
+	const minutes = Math.max(1, Math.ceil(request.duration / 60));
+	return banKickUser({ ...request, duration: minutes });
 };
 
 export const unbanKickUser = (request: KickModerationUnbanRequest) => {

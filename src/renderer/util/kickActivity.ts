@@ -12,6 +12,36 @@ const toActivityUser = (value: any): ActivityUser => ({
 	profilePicture: value?.profile_picture,
 });
 
+// Anonymous gifter fallback — REQ-4 acceptance:
+// "Given anonymous gifter payload'i geldiginde Then 'Anonymous' gibi guvenli fallback gosterilir."
+const ANON_USERNAME = "Anonymous";
+
+const toGifterUser = (value: any): { user: ActivityUser; anonymous: boolean } => {
+	const isAnon =
+		value == null ||
+		value?.is_anonymous === true ||
+		value?.anonymous === true ||
+		(typeof value?.username === "string" && value.username.toLowerCase() === "anonymous");
+	if (isAnon) {
+		return {
+			user: { username: ANON_USERNAME },
+			anonymous: true,
+		};
+	}
+	return { user: toActivityUser(value), anonymous: false };
+};
+
+// Parse ISO/epoch expires_at to epoch ms; null-safe.
+const parseExpiresAt = (value: any): number | undefined => {
+	if (value == null) return undefined;
+	if (typeof value === "number" && Number.isFinite(value)) return value;
+	if (typeof value === "string") {
+		const t = new Date(value).getTime();
+		return Number.isFinite(t) ? t : undefined;
+	}
+	return undefined;
+};
+
 export const normalizeKickWebhookActivity = (
 	eventType: string,
 	payload: any
@@ -25,6 +55,16 @@ export const normalizeKickWebhookActivity = (
 		case "channel.subscription.new":
 		case "channel.subscription.renewal": {
 			const subscriber = toActivityUser(payload?.subscriber || payload?.user);
+			const months =
+				payload?.subscription?.duration ??
+				payload?.months ??
+				payload?.duration;
+			const streak =
+				payload?.subscription?.streak ??
+				payload?.streak;
+			const expiresAt = parseExpiresAt(
+				payload?.subscription?.expires_at ?? payload?.expires_at
+			);
 			return {
 				id: payload?.subscription?.id || payload?.id,
 				channelSlug: broadcasterSlug,
@@ -32,33 +72,44 @@ export const normalizeKickWebhookActivity = (
 					eventType === "channel.subscription.renewal"
 						? "subscription_renewal"
 						: "subscription_new",
+				eventType,
 				actor: subscriber,
 				username: subscriber.username,
-				months: payload?.subscription?.duration || payload?.months,
-				streak: payload?.subscription?.streak,
+				months,
+				streak,
+				expiresAt,
 				createdAt,
 				create_at: createdAt,
 				raw: payload,
 			};
 		}
 		case "channel.subscription.gifts": {
-			const gifter = toActivityUser(payload?.gifter || payload?.sender);
-			const giftedUsers: ActivityUser[] = (
+			const { user: gifter, anonymous } = toGifterUser(
+				payload?.gifter || payload?.sender
+			);
+			// Docs say `giftees`; legacy code path used `gifted_users`/`recipients`.
+			// Accept all three for CONSTRAINT-3 (Pusher legacy compat) + docs alignment.
+			const rawGiftees =
+				payload?.giftees ||
 				payload?.gifted_users ||
 				payload?.recipients ||
-				[]
-			).map(
-				toActivityUser
+				[];
+			const giftedUsers: ActivityUser[] = rawGiftees.map(toActivityUser);
+			const expiresAt = parseExpiresAt(
+				payload?.subscription?.expires_at ?? payload?.expires_at
 			);
 			return {
 				id: payload?.gift?.id || payload?.id,
 				channelSlug: broadcasterSlug,
 				kind: "subscription_gift",
+				eventType,
 				actor: gifter,
+				anonymous: anonymous || undefined,
 				targetUsers: giftedUsers,
 				amount: payload?.gift?.amount || giftedUsers.length,
 				username: gifter.username,
 				giftedList: giftedUsers.map((user) => user.username),
+				expiresAt,
 				createdAt,
 				create_at: createdAt,
 				raw: payload,
@@ -70,6 +121,7 @@ export const normalizeKickWebhookActivity = (
 				id: payload?.redemption?.id || payload?.id,
 				channelSlug: broadcasterSlug,
 				kind: "reward_redemption",
+				eventType,
 				actor: redeemer,
 				amount: payload?.reward?.cost,
 				title: payload?.reward?.title,
@@ -82,14 +134,20 @@ export const normalizeKickWebhookActivity = (
 		}
 		case "kicks.gifted": {
 			const sender = toActivityUser(payload?.sender);
+			const gift = payload?.gift ?? {};
 			return {
-				id: payload?.gift?.id || payload?.id,
+				id: gift.id || payload?.id,
 				channelSlug: broadcasterSlug,
 				kind: "kicks_gifted",
+				eventType,
 				actor: sender,
-				amount: payload?.gift?.amount,
-				title: payload?.gift?.name,
-				message: payload?.gift?.message,
+				amount: gift.amount,
+				title: gift.name,
+				giftName: gift.name,
+				giftType: gift.type,
+				giftTier: gift.tier,
+				pinnedTimeSeconds: gift.pinned_time_seconds,
+				message: gift.message,
 				createdAt,
 				create_at: createdAt,
 				raw: payload,

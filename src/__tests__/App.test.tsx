@@ -16,6 +16,7 @@ beforeEach(() => {
       kick: {
         getAuthStatus: jest.fn().mockResolvedValue({}),
         getUsers: jest.fn().mockResolvedValue({ data: [] }),
+        getOwnChannels: jest.fn().mockResolvedValue({ data: [] }),
         getChannelRewardRedemptions: jest.fn().mockResolvedValue({ data: [] }),
       },
       userWindow: {

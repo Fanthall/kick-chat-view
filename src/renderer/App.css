@@ -26,6 +26,26 @@ body {
 	justify-content: flex-start;
 	align-items: stretch;
 }
+
+/* Sprint 9 + 16: modern shell — full-bleed, no body padding/gradient frame.
+   `:has` works in modern Electron, but App.tsx also sets `.modern-shell-root`
+   on <html>+<body> when modern shell mounts so the rule applies even when
+   the popup windows reuse the same stylesheet without `:has` support. */
+html.modern-shell-root,
+body.modern-shell-root,
+body:has([data-app-shell="modern"]) {
+	padding: 0 !important;
+	margin: 0 !important;
+	background: var(--ms-bg-0, #0c0d10) !important;
+}
+html.modern-shell-root,
+body.modern-shell-root {
+	overflow: hidden;
+}
+body.modern-shell-root #root {
+	padding: 0;
+	margin: 0;
+}
 #root {
 	width: 100% !important;
 	height: 100% !important;
@@ -1921,3 +1941,4483 @@ body {
 @tailwind utilities;
 @tailwind variants;
 /*npx tailwindcss -i ./src/renderer/App.css -o ./dist/output.css --watch*/
+
+/* =============================================================================
+ * Sprint 2 — Modern Shell Design Tokens (Design v1 AD: NextUI x OKLCH isolation)
+ *
+ * Tum modern shell token'lari [data-app-shell="modern"] altinda scope edilir.
+ * Classic shell (default) etkilenmez. NextUI Tailwind theme variable'lari
+ * ezilmez. OKLCH yetersizse hex fallback @supports ile dusurulur.
+ * ========================================================================== */
+
+[data-app-shell="modern"] {
+	/* Typography */
+	--ms-font-sans: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	--ms-font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas,
+		monospace;
+	--ms-fs-12: 12px;
+	--ms-fs-13: 13px;
+	--ms-fs-14: 14px;
+	--ms-fs-15: 15px;
+	--ms-fs-16: 16px;
+	--ms-fs-18: 18px;
+	--ms-lh-1: 1.2;
+	--ms-lh-2: 1.4;
+	--ms-lh-3: 1.5;
+
+	/* Radius scale */
+	--ms-r-1: 4px;
+	--ms-r-2: 6px;
+	--ms-r-3: 8px;
+	--ms-r-4: 12px;
+
+	/* Spacing scale (8pt + 4pt half) */
+	--ms-sp-1: 4px;
+	--ms-sp-2: 8px;
+	--ms-sp-3: 12px;
+	--ms-sp-4: 16px;
+	--ms-sp-5: 24px;
+	--ms-sp-6: 32px;
+
+	/* Row density */
+	--ms-row-h: 30px;
+	--ms-topbar-h: 68px;
+
+	/* OKLCH color tokens (Designs/ prototype-aligned) */
+	--ms-bg-0: oklch(0.18 0.015 240);
+	--ms-bg-1: oklch(0.22 0.015 240);
+	--ms-bg-2: oklch(0.26 0.015 240);
+	--ms-fg-1: oklch(0.95 0.005 240);
+	--ms-fg-2: oklch(0.78 0.01 240);
+	--ms-fg-3: oklch(0.62 0.01 240);
+	--ms-border: oklch(0.32 0.01 240 / 0.5);
+	--ms-bg-hover: oklch(0.28 0.015 240);
+
+	/* Accent palette */
+	--ms-ac-sub: oklch(0.78 0.1 295);
+	--ms-ac-gift: oklch(0.82 0.1 80);
+	--ms-ac-kicks: oklch(0.82 0.1 200);
+	--ms-ac-reward: oklch(0.82 0.1 140);
+	--ms-ac-mod: oklch(0.75 0.1 25);
+	--ms-ac-mint: oklch(0.85 0.08 165);
+	--ms-ac-warn: oklch(0.78 0.12 60);
+	--ms-ac-live: oklch(0.72 0.18 25);
+
+	/* Z-index scale */
+	--ms-z-topbar: 10;
+	--ms-z-drawer: 100;
+	--ms-z-modal: 1000;
+	--ms-z-toast: 2000;
+
+	/* Sprint 4: additional bg/border/fg aliases for activity panel */
+	--ms-bg-3: oklch(0.30 0.015 240);
+	--ms-bd-1: oklch(0.28 0.01 240 / 0.5);
+	--ms-bd-2: oklch(0.34 0.01 240 / 0.6);
+	--ms-bd-3: oklch(0.38 0.01 240 / 0.7);
+	--ms-fg-4: oklch(0.45 0.01 240);
+}
+
+/* Hex fallback for environments without OKLCH support */
+@supports not (color: oklch(0% 0 0)) {
+	[data-app-shell="modern"] {
+		--ms-bg-0: #131820;
+		--ms-bg-1: #181d26;
+		--ms-bg-2: #1d242e;
+		--ms-fg-1: #ecedef;
+		--ms-fg-2: #b8bcc2;
+		--ms-fg-3: #8a8f97;
+		--ms-border: rgba(110, 120, 135, 0.5);
+		--ms-bg-hover: #1f2630;
+		--ms-ac-sub: #b39ddb;
+		--ms-ac-gift: #ddb377;
+		--ms-ac-kicks: #79c8d2;
+		--ms-ac-reward: #88c4a4;
+		--ms-ac-mod: #d68a82;
+		--ms-ac-mint: #7adbb4;
+		--ms-ac-warn: #d4a851;
+		--ms-ac-live: #d65c4e;
+		/* Sprint 4 aliases */
+		--ms-bg-3: #222930;
+		--ms-bd-1: rgba(90, 100, 115, 0.5);
+		--ms-bd-2: rgba(100, 112, 128, 0.6);
+		--ms-bd-3: rgba(110, 125, 140, 0.7);
+		--ms-fg-4: #606870;
+	}
+}
+
+/* Modern shell base (font + bg) */
+[data-app-shell="modern"] {
+	font-family: var(--ms-font-sans);
+	font-size: var(--ms-fs-13);
+	line-height: var(--ms-lh-2);
+	color: var(--ms-fg-1);
+}
+
+/* Sprint 20: Light theme — modern shell tokens flipped to a light palette.
+   Activated when root carries data-theme="light". Default = dark (no
+   attribute or "dark"). User toggles via Settings → Account/Advanced. */
+[data-app-shell="modern"][data-theme="light"] {
+	/* Backgrounds */
+	--ms-bg-0: oklch(0.98 0.005 240);
+	--ms-bg-1: oklch(0.95 0.008 240);
+	--ms-bg-2: oklch(0.92 0.01 240);
+	--ms-bg-3: oklch(0.88 0.012 240);
+	--ms-bg-hover: oklch(0.90 0.015 240);
+	/* Foregrounds */
+	--ms-fg-1: oklch(0.20 0.015 240);
+	--ms-fg-2: oklch(0.38 0.015 240);
+	--ms-fg-3: oklch(0.52 0.012 240);
+	--ms-fg-4: oklch(0.65 0.01 240);
+	/* Borders */
+	--ms-border: oklch(0.82 0.01 240 / 0.7);
+	--ms-bd-1: oklch(0.84 0.01 240 / 0.6);
+	--ms-bd-2: oklch(0.78 0.01 240 / 0.7);
+	--ms-bd-3: oklch(0.72 0.01 240 / 0.8);
+	/* Accents need slight darkening for contrast on light bg */
+	--ms-ac-sub: oklch(0.58 0.13 295);
+	--ms-ac-gift: oklch(0.65 0.13 60);
+	--ms-ac-kicks: oklch(0.55 0.13 220);
+	--ms-ac-reward: oklch(0.55 0.13 145);
+	--ms-ac-mod: oklch(0.58 0.14 25);
+	--ms-ac-mint: oklch(0.55 0.13 165);
+	--ms-ac-warn: oklch(0.62 0.15 55);
+	--ms-ac-live: oklch(0.58 0.18 25);
+}
+
+/* Hex fallback for light theme */
+@supports not (color: oklch(0% 0 0)) {
+	[data-app-shell="modern"][data-theme="light"] {
+		--ms-bg-0: #fafbfd;
+		--ms-bg-1: #f3f5f9;
+		--ms-bg-2: #e8ecf2;
+		--ms-bg-3: #dde2ea;
+		--ms-bg-hover: #e3e8ee;
+		--ms-fg-1: #1c2230;
+		--ms-fg-2: #495063;
+		--ms-fg-3: #6b7283;
+		--ms-fg-4: #98a0b0;
+		--ms-border: rgba(180, 188, 200, 0.7);
+		--ms-bd-1: rgba(200, 207, 218, 0.6);
+		--ms-bd-2: rgba(170, 178, 192, 0.7);
+		--ms-bd-3: rgba(150, 160, 175, 0.8);
+		--ms-ac-sub: #6a4cb8;
+		--ms-ac-gift: #c08a3c;
+		--ms-ac-kicks: #2e7eb0;
+		--ms-ac-reward: #3c9268;
+		--ms-ac-mod: #b8543a;
+		--ms-ac-mint: #2f9d7c;
+		--ms-ac-warn: #c08930;
+		--ms-ac-live: #c84035;
+	}
+}
+
+/* Light theme: modern-shell-root body bg + classic frame remove */
+body.modern-shell-root[data-theme="light"],
+html.modern-shell-root[data-theme="light"] {
+	background: var(--ms-bg-0, #fafbfd) !important;
+}
+
+/* =============================================================================
+ * Sprint 24 — Light Theme Audit
+ * Overrides for selectors that have hardcoded dark hex/rgba values that do not
+ * respond to the token flip done in the Sprint 20 light-token block above.
+ * Dark theme appearance is UNCHANGED. Only light (data-theme="light") affected.
+ * ========================================================================== */
+
+/* ── Modal scrims: dark rgba scrim → lighter overlay ── */
+[data-app-shell="modern"][data-theme="light"] .modal-scrim {
+	background: color-mix(in oklch, var(--ms-fg-1) 30%, transparent);
+	backdrop-filter: blur(4px);
+}
+
+/* ── Drawer backdrop ── */
+[data-app-shell="modern"][data-theme="light"] .drawer-backdrop {
+	background: color-mix(in oklch, var(--ms-fg-1) 25%, transparent);
+}
+
+/* ── Autocomplete popup shadow ── */
+[data-app-shell="modern"][data-theme="light"] .autocomplete {
+	box-shadow: 0 -4px 20px color-mix(in oklch, var(--ms-fg-1) 12%, transparent);
+}
+
+/* ── Chat user right-click menu shadow ── */
+[data-app-shell="modern"][data-theme="light"] .chat-user-menu {
+	box-shadow: 0 12px 32px color-mix(in oklch, var(--ms-fg-1) 15%, transparent);
+}
+
+/* ── Emote picker modal shadow ── */
+[data-app-shell="modern"][data-theme="light"] .modal.epicker {
+	box-shadow: 0 30px 80px color-mix(in oklch, var(--ms-fg-1) 18%, transparent);
+}
+
+/* ── Generic modal shadow ── */
+[data-app-shell="modern"][data-theme="light"] .modal:not(.epicker) {
+	box-shadow: 0 30px 80px color-mix(in oklch, var(--ms-fg-1) 18%, transparent);
+}
+
+/* ── Drawer panel shadow ── */
+[data-app-shell="modern"][data-theme="light"] .drawer-panel {
+	box-shadow: -16px 0 40px color-mix(in oklch, var(--ms-fg-1) 12%, transparent);
+}
+
+/* ── Add-channel popover shadow ── */
+[data-app-shell="modern"][data-theme="light"] .add-ch-popover {
+	box-shadow: 0 18px 42px color-mix(in oklch, var(--ms-fg-1) 12%, transparent);
+}
+
+/* ── Toggle thumbs: dark-green #052420 → white on light bg ── */
+[data-app-shell="modern"][data-theme="light"] .mod-toggle.is-on::after {
+	background: #fff;
+}
+[data-app-shell="modern"][data-theme="light"] .set-toggle[aria-checked="true"] .set-toggle-thumb {
+	background: #fff;
+}
+
+/* ── Topbar avatar gradient (dark-only gradient) ── */
+[data-app-shell="modern"][data-theme="light"] .tb-ava {
+	background: linear-gradient(135deg, var(--ms-bg-3), var(--ms-bg-2));
+}
+
+/* ── Settings nav hover (white rgba overlay → token-based) ── */
+[data-app-shell="modern"][data-theme="light"] .set-nav-item:hover {
+	background: color-mix(in oklch, var(--ms-ac-mint) 12%, transparent);
+}
+
+/* ── Settings stepper button hover ── */
+[data-app-shell="modern"][data-theme="light"] .set-stepper button:hover {
+	background: color-mix(in oklch, var(--ms-fg-1) 6%, transparent);
+}
+
+/* ── Settings buttons ── */
+[data-app-shell="modern"][data-theme="light"] .set-btn:hover {
+	background: color-mix(in oklch, var(--ms-fg-1) 6%, transparent);
+	border-color: var(--ms-bd-3);
+}
+[data-app-shell="modern"][data-theme="light"] .set-btn.primary {
+	color: #fff;
+}
+[data-app-shell="modern"][data-theme="light"] .set-btn.primary:hover {
+	filter: brightness(1.06);
+	background: var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .set-btn.danger {
+	color: var(--ms-ac-mod);
+	border-color: color-mix(in oklch, var(--ms-ac-mod) 45%, transparent);
+}
+[data-app-shell="modern"][data-theme="light"] .set-btn.danger:hover {
+	background: color-mix(in oklch, var(--ms-ac-mod) 12%, transparent);
+}
+
+/* ── Settings input focus ring ── */
+[data-app-shell="modern"][data-theme="light"] .set-input:focus {
+	border-color: var(--ms-ac-mint);
+	box-shadow: 0 0 0 2px color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
+}
+
+/* ── Danger row tint ── */
+[data-app-shell="modern"][data-theme="light"] .set-block-row.danger {
+	background: color-mix(in oklch, var(--ms-ac-mod) 6%, transparent);
+}
+
+/* ── Emote picker cell index indicator ── */
+[data-app-shell="modern"][data-theme="light"] .ep-cell .ind {
+	background: color-mix(in oklch, var(--ms-fg-1) 18%, transparent);
+	color: var(--ms-fg-1);
+}
+
+/* ── UserWindow copy button ── */
+[data-app-shell="modern"][data-theme="light"] .uw-copy {
+	background: color-mix(in oklch, var(--ms-fg-1) 5%, transparent);
+}
+
+/* ── UserWindow status pills ── */
+[data-app-shell="modern"][data-theme="light"] .uw-status.active-now {
+	background: color-mix(in oklch, var(--ms-ac-reward) 18%, transparent);
+	color: var(--ms-ac-reward);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status.active-now .uw-status-dot {
+	background: var(--ms-ac-reward);
+	box-shadow: 0 0 0 3px color-mix(in oklch, var(--ms-ac-reward) 22%, transparent);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status.offline {
+	background: color-mix(in oklch, var(--ms-fg-3) 14%, transparent);
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status.offline .uw-status-dot {
+	background: var(--ms-fg-3);
+}
+
+/* ── UserWindow inline delete button ── */
+[data-app-shell="modern"][data-theme="light"] .uw-inline-del {
+	border-color: color-mix(in oklch, var(--ms-ac-live) 35%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-live) 10%, transparent);
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-inline-del:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ms-ac-live) 20%, transparent);
+}
+
+/* ── UserWindow close button hover ── */
+[data-app-shell="modern"][data-theme="light"] .uw-close-btn:hover {
+	background: color-mix(in oklch, var(--ms-ac-live) 14%, transparent) !important;
+	color: var(--ms-ac-live) !important;
+	border-color: color-mix(in oklch, var(--ms-ac-live) 28%, transparent) !important;
+}
+
+/* ── UserWindow action / status pills ── */
+[data-app-shell="modern"][data-theme="light"] .uw-action-ban {
+	background: color-mix(in oklch, var(--ms-ac-live) 15%, transparent);
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-action-to {
+	background: color-mix(in oklch, var(--ms-ac-warn) 15%, transparent);
+	color: var(--ms-ac-warn);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-action-delete {
+	background: color-mix(in oklch, var(--ms-fg-3) 12%, transparent);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-action-unban {
+	background: color-mix(in oklch, var(--ms-ac-reward) 15%, transparent);
+	color: var(--ms-ac-reward);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status-success {
+	background: color-mix(in oklch, var(--ms-ac-reward) 15%, transparent);
+	color: var(--ms-ac-reward);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status-pending {
+	background: color-mix(in oklch, var(--ms-ac-warn) 15%, transparent);
+	color: var(--ms-ac-warn);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-status-failed {
+	background: color-mix(in oklch, var(--ms-ac-live) 12%, transparent);
+	color: var(--ms-ac-live);
+}
+
+/* ── UserWindow danger button ── */
+[data-app-shell="modern"][data-theme="light"] .uw-btn-danger {
+	border-color: color-mix(in oklch, var(--ms-ac-live) 35%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-live) 10%, transparent);
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"][data-theme="light"] .uw-btn-danger:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ms-ac-live) 20%, transparent);
+}
+
+/* ── UserWindow primary button text ── */
+[data-app-shell="modern"][data-theme="light"] .uw-btn-primary {
+	color: #fff;
+}
+
+/* ── pbadges: rgba overlays need more opacity on light surfaces ── */
+[data-app-shell="modern"][data-theme="light"] .pbadge.kick {
+	background: color-mix(in oklch, var(--ms-ac-mint) 22%, transparent);
+	color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .pbadge.s7tv {
+	background: color-mix(in oklch, var(--ms-ac-sub) 22%, transparent);
+	color: var(--ms-ac-sub);
+}
+[data-app-shell="modern"][data-theme="light"] .pbadge.bttv {
+	background: color-mix(in oklch, var(--ms-ac-live) 18%, transparent);
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"][data-theme="light"] .pbadge.ffz {
+	background: color-mix(in oklch, var(--ms-fg-3) 18%, transparent);
+	color: var(--ms-fg-2);
+}
+
+/* =============================================================================
+ * Sprint 25 — Light Theme Audit II
+ * A) Settings + Topbar full audit.
+ * B) Global thin scrollbar for all modern-shell scroll surfaces.
+ * ========================================================================== */
+
+/* ── A1: Alias token flip ────────────────────────────────────────────────────
+   The .topbar and some shared components use shorthand aliases (--bg-1, --fg-1,
+   --bd-2, --ac-mint, etc.) defined once as dark hex under [data-app-shell="modern"].
+   They are NOT overridden in the Sprint 20 light block, so topbar stays dark.
+   Fix: flip alias tokens to the already-correct --ms-* light values. */
+[data-app-shell="modern"][data-theme="light"] {
+	--bg-0: var(--ms-bg-0);
+	--bg-1: var(--ms-bg-1);
+	--bg-2: var(--ms-bg-2);
+	--bg-3: var(--ms-bg-3);
+	--bg-hover: var(--ms-bg-hover);
+	--bd-1: var(--ms-bd-1);
+	--bd-2: var(--ms-bd-2);
+	--bd-3: var(--ms-bd-3);
+	--fg-1: var(--ms-fg-1);
+	--fg-2: var(--ms-fg-2);
+	--fg-3: var(--ms-fg-3);
+	--fg-4: var(--ms-fg-4);
+	--ac-mint: var(--ms-ac-mint);
+	--ac-warn: var(--ms-ac-warn);
+	/* --live stays red (--ms-ac-live already darkened for light bg) */
+	--live: var(--ms-ac-live);
+}
+
+/* ── A2: Topbar — hardcoded dark gradients / non-token surfaces ──────────── */
+
+/* Topbar background + border: both now resolve via alias tokens above,
+   but the tb-ava has a gradient with raw dark hex — fix it */
+[data-app-shell="modern"][data-theme="light"] .topbar {
+	background: var(--ms-bg-1);
+	border-bottom-color: var(--ms-bd-1);
+}
+
+/* Avatar gradient: dark #3b3f4a / #1e2128 → light surface */
+[data-app-shell="modern"][data-theme="light"] .tb-ava {
+	background: linear-gradient(135deg, var(--ms-bg-3), var(--ms-bg-2));
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+
+/* Channel name + meta text */
+[data-app-shell="modern"][data-theme="light"] .tb-name {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-meta {
+	color: var(--ms-fg-2);
+}
+
+/* LIVE pill — keep red, ensure readable on light */
+[data-app-shell="modern"][data-theme="light"] .tb-live {
+	background: color-mix(in oklch, var(--ms-ac-live) 14%, transparent);
+	color: var(--ms-ac-live);
+	border-color: color-mix(in oklch, var(--ms-ac-live) 35%, transparent);
+}
+
+/* Sprint 31: stream meta light theme */
+[data-app-shell="modern"][data-theme="light"] .tb-meta-stream {
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-stream-sep {
+	color: var(--ms-fg-4);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-stream-category {
+	color: var(--ms-ac-mint);
+}
+
+/* Tab strip */
+[data-app-shell="modern"][data-theme="light"] .tb-tabs {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab {
+	color: var(--ms-fg-2);
+	background: color-mix(in oklch, var(--ms-bg-3) 70%, transparent);
+	border-color: var(--ms-bd-2);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+	border-color: color-mix(in oklch, var(--ms-ac-mint) 55%, var(--ms-bd-2));
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab.is-active {
+	background: color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab-close {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab-close:hover {
+	background: color-mix(in oklch, var(--ms-ac-live) 20%, transparent);
+	color: var(--ms-ac-live);
+}
+
+/* Add-channel button */
+[data-app-shell="modern"][data-theme="light"] .tb-add {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-add:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+}
+
+/* Stats */
+[data-app-shell="modern"][data-theme="light"] .tb-stats {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-stat .num {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-stat-sep {
+	background: var(--ms-bd-2);
+}
+
+/* Role badge */
+[data-app-shell="modern"][data-theme="light"] .tb-role {
+	background: var(--ms-bg-3);
+	border-color: var(--ms-bd-2);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-role-badge {
+	background: color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
+	color: var(--ms-ac-mint);
+}
+
+/* Icon buttons in topbar */
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn.is-on {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+	box-shadow: inset 0 -2px 0 0 var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn .pip {
+	border-color: var(--ms-bg-1);
+	background: var(--ms-ac-live);
+}
+
+/* ── A3: Settings — hardcoded dark values that survive token flip ──────────── */
+
+/* Shell container explicit bg */
+[data-app-shell="modern"][data-theme="light"] .set-shell {
+	background: var(--ms-bg-1);
+	color: var(--ms-fg-1);
+}
+
+/* Nav panel bg */
+[data-app-shell="modern"][data-theme="light"] .set-nav {
+	background: var(--ms-bg-0);
+	border-right-color: var(--ms-bd-1);
+}
+
+/* Nav active item: ac-mint text stays, bg needs mint tint */
+[data-app-shell="modern"][data-theme="light"] .set-nav-item.is-active {
+	background: color-mix(in oklch, var(--ms-ac-mint) 14%, transparent);
+	color: var(--ms-ac-mint);
+}
+
+/* Nav item default text */
+[data-app-shell="modern"][data-theme="light"] .set-nav-item {
+	color: var(--ms-fg-2);
+}
+
+/* Content area */
+[data-app-shell="modern"][data-theme="light"] .set-content {
+	background: var(--ms-bg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-content h3 {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-content .sub {
+	color: var(--ms-fg-3);
+}
+
+/* Block surface + section label */
+[data-app-shell="modern"][data-theme="light"] .set-block {
+	background: var(--ms-bg-0);
+	border-color: var(--ms-bd-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-block-section-label {
+	color: var(--ms-fg-3);
+	border-bottom-color: var(--ms-bd-1);
+}
+
+/* Block rows */
+[data-app-shell="modern"][data-theme="light"] .set-block-row {
+	border-bottom-color: var(--ms-bd-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-block-row .l b {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-block-row .l span {
+	color: var(--ms-fg-3);
+}
+
+/* Empty / help text */
+[data-app-shell="modern"][data-theme="light"] .set-block-empty {
+	color: var(--ms-fg-3);
+}
+
+/* Stepper: bg and text */
+[data-app-shell="modern"][data-theme="light"] .set-stepper {
+	background: var(--ms-bg-2);
+	border-color: var(--ms-bd-2);
+}
+[data-app-shell="modern"][data-theme="light"] .set-stepper button {
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"][data-theme="light"] .set-stepper-val {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .set-stepper-unit {
+	color: var(--ms-fg-3);
+	border-left-color: var(--ms-bd-2);
+}
+
+/* Ghost button */
+[data-app-shell="modern"][data-theme="light"] .set-btn.ghost {
+	border-color: var(--ms-bd-2);
+	color: var(--ms-fg-2);
+}
+
+/* Default button text + border */
+[data-app-shell="modern"][data-theme="light"] .set-btn {
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+
+/* Input */
+[data-app-shell="modern"][data-theme="light"] .set-input {
+	background: var(--ms-bg-2);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+
+/* Topic mono (mint tint readable on light) */
+[data-app-shell="modern"][data-theme="light"] .set-topic-mono {
+	color: var(--ms-ac-mint);
+}
+
+/* Scope rows */
+[data-app-shell="modern"][data-theme="light"] .scope-row {
+	border-bottom-color: var(--ms-bd-1);
+}
+[data-app-shell="modern"][data-theme="light"] .scope-name {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"][data-theme="light"] .scope-affects {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"][data-theme="light"] .scope-ic.ok {
+	background: color-mix(in oklch, var(--ms-ac-mint) 20%, transparent);
+	color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"][data-theme="light"] .scope-ic.miss {
+	background: color-mix(in oklch, var(--ms-ac-warn) 20%, transparent);
+	color: var(--ms-ac-warn);
+}
+
+/* Scope warn banner */
+[data-app-shell="modern"][data-theme="light"] .set-scope-warn-banner {
+	color: var(--ms-fg-1);
+	background: color-mix(in oklch, var(--ms-ac-warn) 10%, transparent);
+	border-color: color-mix(in oklch, var(--ms-ac-warn) 30%, transparent);
+}
+
+/* Toggle OFF thumb: dark bg → match light surface */
+[data-app-shell="modern"][data-theme="light"] .set-toggle-thumb {
+	background: var(--ms-fg-4);
+}
+[data-app-shell="modern"][data-theme="light"] .set-toggle {
+	background: var(--ms-bd-2);
+}
+
+/* Settings header border */
+[data-app-shell="modern"][data-theme="light"] .set-header {
+	border-bottom-color: var(--ms-bd-1);
+}
+
+/* ── B: Global thin scrollbar — all modern-shell scroll surfaces ─────────── */
+[data-app-shell="modern"] *::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+[data-app-shell="modern"] *::-webkit-scrollbar-track {
+	background: transparent;
+}
+[data-app-shell="modern"] *::-webkit-scrollbar-thumb {
+	background: var(--ms-bd-2, rgba(100,112,128,0.6));
+	border-radius: 4px;
+}
+[data-app-shell="modern"] *::-webkit-scrollbar-thumb:hover {
+	background: var(--ms-bd-3, rgba(110,125,140,0.7));
+}
+[data-app-shell="modern"] *::-webkit-scrollbar-corner {
+	background: transparent;
+}
+[data-app-shell="modern"] * {
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bd-2, rgba(100,112,128,0.6)) transparent;
+}
+/* Preserve .main horizontal scrollbar height (8px, Sprint 13) */
+[data-app-shell="modern"] .main::-webkit-scrollbar {
+	height: 8px;
+	width: 8px;
+}
+
+[data-app-shell="modern"] .ms-mono {
+	font-family: var(--ms-font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Topbar */
+[data-app-shell="modern"] .ms-topbar {
+	display: flex;
+	align-items: center;
+	height: var(--ms-topbar-h);
+	padding: 0 var(--ms-sp-4);
+	gap: var(--ms-sp-4);
+	background: var(--ms-bg-1);
+	border-bottom: 1px solid var(--ms-border);
+	z-index: var(--ms-z-topbar);
+}
+
+[data-app-shell="modern"] .ms-topbar-avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: var(--ms-bg-2);
+	flex-shrink: 0;
+	position: relative;
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .ms-topbar-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+[data-app-shell="modern"] .ms-live-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ms-sp-1);
+	padding: 2px 8px;
+	border-radius: var(--ms-r-4);
+	background: var(--ms-ac-live);
+	color: var(--ms-bg-0);
+	font-size: var(--ms-fs-12);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+[data-app-shell="modern"] .ms-live-pill::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentColor;
+	animation: ms-live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ms-live-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
+}
+
+[data-app-shell="modern"] .ms-tab {
+	padding: var(--ms-sp-1) var(--ms-sp-3);
+	border-radius: var(--ms-r-2);
+	background: transparent;
+	color: var(--ms-fg-2);
+	font-size: var(--ms-fs-13);
+	border: 1px solid transparent;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .ms-tab:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+}
+
+[data-app-shell="modern"] .ms-tab.ms-tab-active {
+	background: var(--ms-bg-2);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-border);
+}
+
+[data-app-shell="modern"] .ms-stat-row {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ms-sp-3);
+	color: var(--ms-fg-2);
+	font-size: var(--ms-fs-12);
+}
+
+[data-app-shell="modern"] .ms-stat {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ms-sp-1);
+}
+
+[data-app-shell="modern"] .ms-role-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ms-sp-1);
+	padding: 2px 6px;
+	border-radius: var(--ms-r-1);
+	background: var(--ms-bg-2);
+	color: var(--ms-fg-2);
+	font-size: var(--ms-fs-12);
+	border: 1px solid var(--ms-border);
+}
+
+[data-app-shell="modern"] .ms-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--ms-r-2);
+	background: transparent;
+	color: var(--ms-fg-2);
+	border: 1px solid transparent;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .ms-icon-btn:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-border);
+}
+
+[data-app-shell="modern"] .ms-icon-btn:focus-visible {
+	outline: 2px solid var(--ms-ac-mint);
+	outline-offset: 1px;
+}
+
+[data-app-shell="modern"] .ms-spacer-flex {
+	flex: 1 1 auto;
+}
+
+/* =============================================================================
+ * Sprint 3 — ChatModern + EmoteAutocompleteModern selectors
+ *
+ * All selectors are scoped under [data-app-shell="modern"] so classic
+ * chat styles remain completely untouched.
+ * ========================================================================== */
+
+/* ── Panel header ── */
+[data-app-shell="modern"] .panel-hd {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px 10px 14px;
+	border-bottom: 1px solid var(--ms-border);
+	min-height: 44px;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .panel-hd h2 {
+	margin: 0;
+	font-size: var(--ms-fs-13);
+	font-weight: 600;
+	color: var(--ms-fg-1);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+[data-app-shell="modern"] .panel-hd-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+[data-app-shell="modern"] .icon-btn {
+	width: 28px;
+	height: 28px;
+	display: grid;
+	place-items: center;
+	border-radius: var(--ms-r-2);
+	color: var(--ms-fg-3);
+	background: transparent;
+	border: none;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .icon-btn:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+}
+
+/* ── Chat list ── */
+[data-app-shell="modern"] .chat-list {
+	flex: 1 1 auto;
+	padding: 6px 0 12px;
+	overflow-y: auto;
+}
+
+/* ── Chat row ── */
+[data-app-shell="modern"] .chat-row {
+	display: grid;
+	grid-template-columns: 56px minmax(0, 1fr) auto;
+	column-gap: 10px;
+	padding: 3px 8px 3px 14px;
+	align-items: baseline;
+	position: relative;
+	min-height: var(--ms-row-h, 30px);
+}
+/* Sprint 31: zebra striping — bir hafif koyu, bir hafif açık satır.
+   Mention / suspicious / removed / bot satırları kendi rengini korur
+   (zebra onların üstüne uygulanmaz). Hover her durumda kazanır. */
+[data-app-shell="modern"] .chat-row:nth-child(even):not(.is-mention):not(.is-suspicious):not(.is-bot) {
+	background: color-mix(in oklch, var(--ms-bg-2) 40%, transparent);
+}
+[data-app-shell="modern"] .chat-row:hover {
+	background: color-mix(in oklch, var(--ms-bg-hover) 50%, transparent);
+}
+[data-app-shell="modern"] .chat-row:hover .chat-tools {
+	opacity: 1;
+}
+[data-app-shell="modern"] .chat-row.is-mention {
+	border-left: 2px solid var(--ms-ac-warn);
+	padding-left: 12px;
+	background: color-mix(in oklch, var(--ms-ac-warn) 5%, transparent);
+}
+[data-app-shell="modern"] .chat-row.is-suspicious {
+	border-left: 2px solid var(--ms-ac-mod);
+	padding-left: 12px;
+	background: color-mix(in oklch, var(--ms-ac-mod) 5%, transparent);
+}
+[data-app-shell="modern"] .chat-row.is-removed .chat-text {
+	text-decoration: line-through;
+	opacity: 0.45;
+}
+[data-app-shell="modern"] .chat-row.is-bot {
+	background: color-mix(in oklch, var(--ms-bg-2) 60%, transparent);
+}
+
+/* ── Chat system row ── */
+[data-app-shell="modern"] .chat-system {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 14px;
+	font-size: var(--ms-fs-12);
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"] .sys-icon {
+	display: inline-flex;
+	align-items: center;
+	flex-shrink: 0;
+	color: var(--ms-ac-mod);
+}
+[data-app-shell="modern"] .sys-actor {
+	font-weight: 600;
+	color: var(--ms-fg-2);
+}
+
+/* ── Chat time ── */
+[data-app-shell="modern"] .chat-time {
+	font-family: var(--ms-font-mono);
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	line-height: var(--ms-row-h, 30px);
+	padding-top: 1px;
+}
+
+/* ── Chat body ── */
+[data-app-shell="modern"] .chat-body {
+	word-break: break-word;
+	font-size: var(--ms-fs-13);
+	line-height: 1.45;
+}
+[data-app-shell="modern"] .chat-name {
+	font-weight: 600;
+	margin-right: 2px;
+}
+[data-app-shell="modern"] .chat-name:hover {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+[data-app-shell="modern"] .chat-text {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .chat-badges {
+	display: inline;
+	margin-right: 4px;
+	vertical-align: middle;
+}
+
+/* ── Chat reply preview ── */
+[data-app-shell="modern"] .chat-reply {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	margin-bottom: 2px;
+	padding-left: 2px;
+	border-left: 2px solid var(--ms-border);
+}
+[data-app-shell="modern"] .chat-reply-name {
+	font-weight: 600;
+	color: var(--ms-fg-2);
+	white-space: nowrap;
+}
+
+/* ── Chat tools (hover) ── */
+[data-app-shell="modern"] .chat-tools {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	opacity: 0;
+	transition: opacity 0.1s;
+	align-self: center;
+}
+[data-app-shell="modern"] .chat-tools button {
+	width: 22px;
+	height: 22px;
+	display: grid;
+	place-items: center;
+	border-radius: var(--ms-r-1);
+	color: var(--ms-fg-3);
+	background: transparent;
+	border: none;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .chat-tools button:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .chat-tools button.danger:hover {
+	background: color-mix(in oklch, var(--ms-ac-live) 15%, transparent);
+	color: var(--ms-ac-live);
+}
+
+/* ── Pause pill ── */
+[data-app-shell="modern"] .chat-pause {
+	position: sticky;
+	bottom: 8px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 12px;
+	border-radius: 99px;
+	background: var(--ms-bg-2);
+	border: 1px solid var(--ms-border);
+	color: var(--ms-fg-2);
+	font-size: 12px;
+	cursor: pointer;
+	z-index: 10;
+	white-space: nowrap;
+	margin: 0 auto;
+}
+[data-app-shell="modern"] .chat-pause:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .chat-pause-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ms-ac-live);
+	animation: ms-live-pulse 1.6s ease-in-out infinite;
+}
+
+/* ── Inline mention / emote ── */
+[data-app-shell="modern"] .mention {
+	color: var(--ms-ac-mint);
+	font-weight: 500;
+}
+[data-app-shell="modern"] .emote {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+/* ── Badge variants ── */
+[data-app-shell="modern"] .badge.b-vip {
+	color: var(--ms-ac-sub);
+}
+[data-app-shell="modern"] .badge.b-mod {
+	color: var(--ms-ac-mod);
+}
+[data-app-shell="modern"] .badge.b-sub {
+	color: var(--ms-ac-sub);
+}
+[data-app-shell="modern"] .badge.b-og {
+	color: var(--ms-ac-gift);
+}
+[data-app-shell="modern"] .badge.b-vrf {
+	color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"] .badge.b-stf {
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"] .badge.b-bot {
+	color: var(--ms-fg-3);
+}
+
+/* ── Composer area ── */
+[data-app-shell="modern"] .composer-wrap {
+	flex: 0 0 auto;
+	border-top: 1px solid var(--ms-border);
+	padding: 8px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	background: var(--ms-bg-1);
+}
+[data-app-shell="modern"] .composer-reply {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 4px 8px;
+	border-radius: var(--ms-r-2);
+	background: var(--ms-bg-2);
+	font-size: 12px;
+	color: var(--ms-fg-2);
+	border: 1px solid var(--ms-border);
+}
+[data-app-shell="modern"] .composer-reply button {
+	color: var(--ms-fg-3);
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	padding: 0 2px;
+}
+[data-app-shell="modern"] .composer {
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+	border: 1px solid var(--ms-border);
+	border-radius: var(--ms-r-3);
+	background: var(--ms-bg-2);
+	padding: 4px 6px 4px 10px;
+	transition: border-color 0.15s;
+}
+[data-app-shell="modern"] .composer:focus-within {
+	border-color: color-mix(in oklch, var(--ms-ac-mint) 60%, transparent);
+}
+[data-app-shell="modern"] .composer-input {
+	flex: 1 1 auto;
+	background: transparent;
+	border: none;
+	outline: none;
+	resize: none;
+	font: inherit;
+	color: var(--ms-fg-1);
+	font-size: var(--ms-fs-13);
+	line-height: 1.45;
+	min-height: 22px;
+	max-height: 120px;
+	overflow-y: auto;
+	padding: 0;
+}
+[data-app-shell="modern"] .composer-input::placeholder {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"] .composer-tools {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+[data-app-shell="modern"] .composer-send {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 10px;
+	border-radius: var(--ms-r-2);
+	background: var(--ms-ac-mint);
+	color: var(--ms-bg-0);
+	font-size: var(--ms-fs-12);
+	font-weight: 600;
+	border: none;
+	cursor: pointer;
+	transition: opacity 0.15s;
+}
+[data-app-shell="modern"] .composer-send:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .composer-send:not(:disabled):hover {
+	opacity: 0.88;
+}
+[data-app-shell="modern"] .composer-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	gap: 8px;
+}
+
+/* ── Autocomplete ── */
+[data-app-shell="modern"] .autocomplete {
+	background: var(--ms-bg-1);
+	border: 1px solid var(--ms-border);
+	border-radius: var(--ms-r-3);
+	box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+	overflow: hidden;
+	max-height: 220px;
+	overflow-y: auto;
+}
+[data-app-shell="modern"] .ac-row {
+	display: grid;
+	grid-template-columns: 28px 1fr auto;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 10px;
+	cursor: pointer;
+	user-select: none;
+}
+[data-app-shell="modern"] .ac-row:hover,
+[data-app-shell="modern"] .ac-row.is-active {
+	background: var(--ms-bg-hover);
+}
+[data-app-shell="modern"] .ac-emote {
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+[data-app-shell="modern"] .ac-emote img {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+}
+[data-app-shell="modern"] .ac-name {
+	font-size: var(--ms-fs-13);
+	color: var(--ms-fg-1);
+	font-weight: 500;
+}
+[data-app-shell="modern"] .ac-tags {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* ─── Sprint 4: Activity Modern — all selectors scoped under modern shell ─── */
+
+/* Sub-tab strip */
+[data-app-shell="modern"] .act-subtab-strip {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 6px 10px 0;
+	border-bottom: 1px solid var(--ms-bd-1);
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .act-subtab {
+	padding: 5px 10px;
+	font-size: 11.5px;
+	border-radius: var(--ms-r-2) var(--ms-r-2) 0 0;
+	color: var(--ms-fg-3);
+	border: 1px solid transparent;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+[data-app-shell="modern"] .act-subtab:hover {
+	color: var(--ms-fg-1);
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .act-subtab.is-active {
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+	border-bottom-color: var(--ms-ac-mint);
+	background: var(--ms-bg-2);
+}
+
+/* Filter chip row */
+[data-app-shell="modern"] .filter-row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--ms-bd-1);
+	flex: 0 0 auto;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+[data-app-shell="modern"] .filter-row::-webkit-scrollbar {
+	display: none;
+}
+[data-app-shell="modern"] .chip {
+	padding: 4px 9px;
+	font-size: 11.5px;
+	border-radius: var(--ms-r-2);
+	color: var(--ms-fg-3);
+	border: 1px solid transparent;
+	white-space: nowrap;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .chip:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"] .chip.is-active {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+[data-app-shell="modern"] .chip-count {
+	font-size: 10px;
+	color: var(--ms-fg-4);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+[data-app-shell="modern"] .chip.is-active .chip-count {
+	color: var(--ms-fg-2);
+}
+
+/* Activity list */
+[data-app-shell="modern"] .act-list {
+	flex: 1 1 auto;
+	padding: 4px 0;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bd-3) transparent;
+}
+
+/* Activity row */
+[data-app-shell="modern"] .act-row {
+	display: grid;
+	grid-template-columns: 28px 1fr auto;
+	gap: 10px;
+	padding: 10px 14px 10px 12px;
+	border-bottom: 1px solid color-mix(in oklch, var(--ms-bd-1) 50%, transparent);
+	align-items: start;
+	position: relative;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .act-row:hover {
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .act-row:last-child {
+	border-bottom: 0;
+}
+[data-app-shell="modern"] .act-row.is-expanded {
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .act-row:focus-visible {
+	outline: 2px solid var(--ms-ac-mint);
+	outline-offset: -2px;
+}
+
+/* Activity icon */
+[data-app-shell="modern"] .act-icon {
+	width: 28px;
+	height: 28px;
+	border-radius: var(--ms-r-2);
+	display: grid;
+	place-items: center;
+	font-size: 13px;
+	color: var(--ms-fg-1);
+	margin-top: 1px;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .act-icon.sub {
+	background: color-mix(in oklch, var(--ms-ac-sub) 18%, var(--ms-bg-3));
+	color: var(--ms-ac-sub);
+}
+[data-app-shell="modern"] .act-icon.gift {
+	background: color-mix(in oklch, var(--ms-ac-gift) 18%, var(--ms-bg-3));
+	color: var(--ms-ac-gift);
+}
+[data-app-shell="modern"] .act-icon.kicks {
+	background: color-mix(in oklch, var(--ms-ac-kicks) 18%, var(--ms-bg-3));
+	color: var(--ms-ac-kicks);
+}
+[data-app-shell="modern"] .act-icon.reward {
+	background: color-mix(in oklch, var(--ms-ac-reward) 18%, var(--ms-bg-3));
+	color: var(--ms-ac-reward);
+}
+
+/* Activity body */
+[data-app-shell="modern"] .act-body {
+	min-width: 0;
+}
+[data-app-shell="modern"] .act-line {
+	font-size: 12.5px;
+	color: var(--ms-fg-1);
+	line-height: 1.45;
+}
+[data-app-shell="modern"] .act-line b {
+	font-weight: 600;
+}
+[data-app-shell="modern"] .act-meta {
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	margin-top: 3px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+[data-app-shell="modern"] .act-meta .sep {
+	color: var(--ms-fg-4);
+}
+
+/* Activity tags */
+[data-app-shell="modern"] .act-tag {
+	font-size: 10px;
+	padding: 1px 6px;
+	border-radius: 3px;
+	background: var(--ms-bg-3);
+	border: 1px solid var(--ms-bd-2);
+	color: var(--ms-fg-2);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+/* Activity right column */
+[data-app-shell="modern"] .act-right {
+	text-align: right;
+	min-width: 60px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+}
+[data-app-shell="modern"] .act-amount {
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .act-amount.kicks {
+	color: var(--ms-ac-kicks);
+}
+[data-app-shell="modern"] .act-amount.gift {
+	color: var(--ms-ac-gift);
+}
+[data-app-shell="modern"] .act-time {
+	font-size: 10.5px;
+	color: var(--ms-fg-4);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+[data-app-shell="modern"] .act-status {
+	font-size: 10px;
+	padding: 1px 6px;
+	border-radius: 3px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+[data-app-shell="modern"] .act-status.pending {
+	background: color-mix(in oklch, var(--ms-ac-warn) 18%, transparent);
+	color: var(--ms-ac-warn);
+}
+[data-app-shell="modern"] .act-status.accepted {
+	background: color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
+	color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"] .act-status.rejected {
+	background: color-mix(in oklch, var(--ms-ac-live) 15%, transparent);
+	color: var(--ms-ac-live);
+}
+
+/* Activity expand drawer */
+[data-app-shell="modern"] .act-expand {
+	grid-column: 2 / 4;
+	margin-top: 8px;
+	padding: 10px 12px;
+	background: var(--ms-bg-3);
+	border: 1px solid var(--ms-bd-2);
+	border-radius: var(--ms-r-2);
+	font-size: 11.5px;
+	color: var(--ms-fg-2);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+[data-app-shell="modern"] .act-kv {
+	display: grid;
+	grid-template-columns: 90px 1fr;
+	gap: 8px;
+	align-items: baseline;
+}
+[data-app-shell="modern"] .act-kv-k {
+	color: var(--ms-fg-3);
+	font-size: 11px;
+}
+[data-app-shell="modern"] .act-kv-v {
+	color: var(--ms-fg-1);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 11.5px;
+}
+
+/* Recipients pill list */
+[data-app-shell="modern"] .act-recipients {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	max-height: 100px;
+	overflow: auto;
+}
+[data-app-shell="modern"] .pill {
+	background: var(--ms-bg-1);
+	border: 1px solid var(--ms-bd-2);
+	padding: 2px 7px;
+	border-radius: 999px;
+	font-size: 11px;
+	color: var(--ms-fg-2);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+/* Raw JSON toggle + block */
+[data-app-shell="modern"] .act-json-toggle {
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	padding: 2px 0;
+	align-self: flex-start;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .act-json-toggle:hover {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .act-json {
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 10.5px;
+	background: var(--ms-bg-0);
+	border: 1px solid var(--ms-bd-1);
+	border-radius: 4px;
+	padding: 8px 10px;
+	white-space: pre;
+	overflow: auto;
+	max-height: 200px;
+	color: var(--ms-fg-2);
+	margin: 0;
+}
+
+/* KICKs Leaderboard */
+[data-app-shell="modern"] .lb-tabs {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 8px 10px 6px;
+	border-bottom: 1px solid var(--ms-bd-1);
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .lb-tab {
+	padding: 4px 10px;
+	font-size: 11.5px;
+	border-radius: var(--ms-r-2);
+	color: var(--ms-fg-3);
+	border: 1px solid transparent;
+}
+[data-app-shell="modern"] .lb-tab:hover {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"] .lb-tab.is-active {
+	background: var(--ms-bg-3);
+	color: var(--ms-fg-1);
+	border-color: var(--ms-bd-2);
+}
+[data-app-shell="modern"] .lb-list {
+	display: flex;
+	flex-direction: column;
+	padding: 4px 0;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bd-3) transparent;
+}
+[data-app-shell="modern"] .lb-row {
+	display: grid;
+	grid-template-columns: 32px 1fr auto;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 14px;
+	border-bottom: 1px solid color-mix(in oklch, var(--ms-bd-1) 50%, transparent);
+}
+[data-app-shell="modern"] .lb-row:hover {
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .lb-row:last-child {
+	border-bottom: 0;
+}
+[data-app-shell="modern"] .lb-rank {
+	font-size: 11px;
+	font-family: "Geist Mono", ui-monospace, monospace;
+	color: var(--ms-fg-4);
+	font-weight: 600;
+}
+[data-app-shell="modern"] .lb-user {
+	min-width: 0;
+}
+[data-app-shell="modern"] .lb-username {
+	font-size: 12.5px;
+	color: var(--ms-fg-1);
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+[data-app-shell="modern"] .lb-amount {
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ms-ac-kicks);
+}
+
+/* ─── Sprint 5: ModActionsModern ─────────────────────────────────────────── */
+[data-app-shell="modern"] .mod-section {
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--ms-bd-1, #22262e);
+}
+[data-app-shell="modern"] .mod-section h3 {
+	margin: 0 0 10px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--ms-fg-3, #828690);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+/* Sprint 10: collapsible section toggle */
+[data-app-shell="modern"] .mod-section.is-collapsed {
+	padding-bottom: 8px;
+}
+[data-app-shell="modern"] .mod-section.is-collapsed h3 {
+	margin-bottom: 0;
+}
+[data-app-shell="modern"] .mod-section-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: none;
+	border: none;
+	padding: 2px 0;
+	color: inherit;
+	font: inherit;
+	letter-spacing: inherit;
+	text-transform: inherit;
+	cursor: pointer;
+	border-radius: 3px;
+}
+[data-app-shell="modern"] .mod-section-toggle:hover {
+	color: var(--ms-fg-1, #ebecef);
+}
+[data-app-shell="modern"] .mod-section-toggle:focus-visible {
+	outline: 1px solid var(--ms-ac-mint, var(--ac-mint));
+	outline-offset: 1px;
+}
+[data-app-shell="modern"] .mod-section-body[hidden] {
+	display: none;
+}
+
+/* Sprint 11: chat user right-click context menu */
+[data-app-shell="modern"] .chat-user-menu {
+	min-width: 200px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-3, 8px);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+	padding: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+[data-app-shell="modern"] .chat-user-menu-title {
+	padding: 6px 10px 4px;
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	border-bottom: 1px solid var(--ms-bd-1, #22262e);
+	margin-bottom: 3px;
+}
+[data-app-shell="modern"] .chat-user-menu button {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: none;
+	border: none;
+	padding: 6px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	color: var(--ms-fg-1, #ebecef);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+	transition: background 0.12s, color 0.12s;
+}
+[data-app-shell="modern"] .chat-user-menu button:hover {
+	background: var(--ms-bg-hover, #22252c);
+}
+[data-app-shell="modern"] .chat-user-menu button.danger {
+	color: var(--live, #ef4f5f);
+}
+[data-app-shell="modern"] .chat-user-menu button.danger:hover {
+	background: color-mix(in oklch, var(--live, #ef4f5f) 18%, transparent);
+}
+[data-app-shell="modern"] .chat-user-menu-divider {
+	height: 1px;
+	background: var(--ms-bd-1, #22262e);
+	margin: 4px 0;
+}
+[data-app-shell="modern"] .mod-target {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+}
+[data-app-shell="modern"] .mod-target-ava {
+	width: 36px;
+	height: 36px;
+	border-radius: var(--ms-r-2, 6px);
+	background: linear-gradient(135deg, oklch(0.55 0.16 280), oklch(0.45 0.12 320));
+	display: grid;
+	place-items: center;
+	font-weight: 600;
+	font-size: 14px;
+	color: white;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .mod-target-info {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+[data-app-shell="modern"] .mod-target-name {
+	font-weight: 600;
+	font-size: 13px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .mod-target-meta {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+[data-app-shell="modern"] .mod-target-empty {
+	padding: 16px 12px;
+	border: 1px dashed var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	color: var(--ms-fg-3, #828690);
+	font-size: 12px;
+	text-align: center;
+}
+[data-app-shell="modern"] .mod-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 6px;
+}
+
+/* Sprint 19: timeout picker (preset chips + custom seconds input) */
+[data-app-shell="modern"] .mod-timeout-picker {
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	padding: 8px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+[data-app-shell="modern"] .mod-timeout-picker-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+[data-app-shell="modern"] .mod-timeout-picker-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--ms-fg-2, var(--fg-2));
+	font-weight: 600;
+}
+[data-app-shell="modern"] .mod-timeout-picker-current {
+	font-size: 12px;
+	color: var(--ms-ac-mint, var(--ac-mint));
+	font-variant-numeric: tabular-nums;
+}
+[data-app-shell="modern"] .mod-timeout-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+[data-app-shell="modern"] .mod-timeout-chip {
+	background: var(--ms-bg-3, #1e2127);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	color: var(--ms-fg-2, var(--fg-2));
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 500;
+	cursor: pointer;
+	font-variant-numeric: tabular-nums;
+	transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+[data-app-shell="modern"] .mod-timeout-chip:hover:not(:disabled) {
+	background: var(--ms-bg-hover, #22252c);
+	color: var(--ms-fg-1, var(--fg-1));
+}
+[data-app-shell="modern"] .mod-timeout-chip.is-active {
+	background: color-mix(in oklch, var(--ms-ac-mint, var(--ac-mint)) 22%, transparent);
+	border-color: var(--ms-ac-mint, var(--ac-mint));
+	color: var(--ms-ac-mint, var(--ac-mint));
+}
+[data-app-shell="modern"] .mod-timeout-chip:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .mod-timeout-custom {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .mod-timeout-custom input {
+	flex: 1 1 auto;
+	min-width: 0;
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	color: var(--ms-fg-1, var(--fg-1));
+	padding: 5px 8px;
+	font-size: 12px;
+	font-family: inherit;
+	font-variant-numeric: tabular-nums;
+	outline: none;
+}
+[data-app-shell="modern"] .mod-timeout-custom input:focus {
+	border-color: var(--ms-ac-mint, var(--ac-mint));
+}
+[data-app-shell="modern"] .mod-timeout-custom-unit {
+	font-size: 11px;
+	color: var(--ms-fg-4, var(--fg-4));
+}
+[data-app-shell="modern"] .mod-timeout-apply {
+	background: var(--ms-ac-mint, var(--ac-mint));
+	color: var(--ms-bg-0, #0c0d10);
+	border: none;
+	padding: 5px 12px;
+	border-radius: var(--ms-r-2, 6px);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: opacity 0.12s;
+}
+[data-app-shell="modern"] .mod-timeout-apply:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .mod-timeout-hint {
+	font-size: 10px;
+	color: var(--ms-fg-4, var(--fg-4));
+	font-family: var(--ms-font-mono);
+}
+
+/* Sprint 19: clickable suspended row (double-click / right-click opens user) */
+[data-app-shell="modern"] .mod-list-row-clickable {
+	cursor: pointer;
+	transition: background 0.12s;
+}
+[data-app-shell="modern"] .mod-list-row-clickable:hover {
+	background: color-mix(in oklch, var(--ms-bg-hover, #22252c) 60%, transparent);
+}
+
+/* Sprint 21: selected user status pill + ban-kaldir button + action tags */
+[data-app-shell="modern"] .mod-target-status {
+	margin-left: 6px;
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--live, #ef4f5f);
+	background: color-mix(in oklch, var(--live, #ef4f5f) 18%, transparent);
+	padding: 1px 6px;
+	border-radius: 4px;
+	border: 1px solid color-mix(in oklch, var(--live, #ef4f5f) 35%, transparent);
+}
+[data-app-shell="modern"] .mod-target-unban,
+[data-app-shell="modern"] .mod-target-detail {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: none;
+	padding: 4px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: opacity 0.12s, background 0.12s;
+}
+[data-app-shell="modern"] .mod-target-unban {
+	background: var(--ms-ac-mint, #7adbb4);
+	color: var(--ms-bg-0, #0c0d10);
+}
+[data-app-shell="modern"] .mod-target-unban:hover {
+	opacity: 0.88;
+}
+[data-app-shell="modern"] .mod-target-detail {
+	background: var(--ms-bg-3, #1e2127);
+	color: var(--ms-fg-1, #ebecef);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+}
+[data-app-shell="modern"] .mod-target-detail:hover {
+	background: var(--ms-bg-hover, #22252c);
+	border-color: var(--ms-ac-mint, #7adbb4);
+}
+
+[data-app-shell="modern"] .mod-action-tag {
+	display: inline-block;
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	padding: 1px 5px;
+	border-radius: 3px;
+	margin-right: 4px;
+	color: var(--ms-fg-1, #ebecef);
+	background: var(--ms-bg-3, #1e2127);
+}
+[data-app-shell="modern"] .mod-action-ban {
+	background: color-mix(in oklch, var(--live, #ef4f5f) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--live, #ef4f5f);
+}
+[data-app-shell="modern"] .mod-action-to {
+	background: color-mix(in oklch, var(--ms-ac-warn, #d4a851) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--ms-ac-warn, #d4a851);
+}
+[data-app-shell="modern"] .mod-action-unban {
+	background: color-mix(in oklch, var(--ms-ac-mint, #7adbb4) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--ms-ac-mint, #7adbb4);
+}
+[data-app-shell="modern"] .mod-action-delete {
+	background: color-mix(in oklch, var(--ms-fg-3, #828690) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--ms-fg-3, #828690);
+}
+
+/* Sprint 21: UserWindow tab content layout robustness — explicit flex chain
+   so .uw-tab-body always gets remaining vertical space and renders content. */
+[data-app-shell="modern"] .uw-main > .uw-stats,
+[data-app-shell="modern"] .uw-main > .uw-tabs {
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .uw-main > .uw-tab-body {
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+/* Sprint 22: Global no-select — UI chrome (tabs, buttons, panel headers,
+   stat numbers) kazara secilmesin. Chat icerigi ve composer hariç. */
+[data-app-shell="modern"],
+[data-app-shell="modern"] *,
+.modern-shell-root,
+.modern-shell-root * {
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+/* Chat icerigi + composer + her tur INPUT/TEXTAREA + UserWindow icerik
+   sekmesinde select edilebilir kalsin. Kullanici mesaj kopyalayabilsin. */
+[data-app-shell="modern"] .chat-list,
+[data-app-shell="modern"] .chat-list *,
+[data-app-shell="modern"] .chat-text,
+[data-app-shell="modern"] .chat-text *,
+[data-app-shell="modern"] .chat-name,
+[data-app-shell="modern"] .chat-time,
+[data-app-shell="modern"] .chat-reply,
+[data-app-shell="modern"] .chat-system,
+[data-app-shell="modern"] .composer-input,
+[data-app-shell="modern"] input,
+[data-app-shell="modern"] textarea,
+[data-app-shell="modern"] .uw-msg-list,
+[data-app-shell="modern"] .uw-msg-list *,
+[data-app-shell="modern"] .uw-msg-content,
+[data-app-shell="modern"] .uw-card,
+[data-app-shell="modern"] .uw-card *,
+[data-app-shell="modern"] .uw-notes-tab,
+[data-app-shell="modern"] .uw-notes-tab *,
+[data-app-shell="modern"] .act-json,
+[data-app-shell="modern"] .act-kv-v,
+[data-app-shell="modern"] .ep-preview-name {
+	user-select: text;
+	-webkit-user-select: text;
+}
+[data-app-shell="modern"] .mod-btn {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	padding: 8px 10px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	gap: 3px;
+	color: var(--ms-fg-1, #ebecef);
+	cursor: pointer;
+	transition: background 0.1s, border-color 0.1s;
+}
+[data-app-shell="modern"] .mod-btn:hover {
+	background: var(--ms-bg-3, #1e2127);
+	border-color: var(--ms-bd-3, #3a4049);
+}
+[data-app-shell="modern"] .mod-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+[data-app-shell="modern"] .mod-btn .label {
+	font-size: 12px;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+[data-app-shell="modern"] .mod-btn .hint {
+	font-size: 10.5px;
+	color: var(--ms-fg-3, #828690);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+[data-app-shell="modern"] .mod-btn.danger:hover {
+	border-color: color-mix(in oklch, var(--ms-live, #ef4f5f) 50%, var(--ms-bd-3, #3a4049));
+}
+[data-app-shell="modern"] .mod-btn.danger .label {
+	color: var(--ms-live, #ef4f5f);
+}
+[data-app-shell="modern"] .mod-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+[data-app-shell="modern"] .mod-list-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 8px;
+	border-radius: var(--ms-r-2, 6px);
+	font-size: 12px;
+	color: var(--ms-fg-2, #b6b9c0);
+}
+[data-app-shell="modern"] .mod-list-row:hover {
+	background: var(--ms-bg-2, #181a20);
+}
+[data-app-shell="modern"] .mod-list-row .reason {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+}
+/* Toggle pill */
+[data-app-shell="modern"] .mod-toggle {
+	width: 26px;
+	height: 14px;
+	background: var(--ms-bd-2, #2d323b);
+	border-radius: 7px;
+	position: relative;
+	transition: background 0.15s;
+	border: none;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+[data-app-shell="modern"] .mod-toggle::after {
+	content: "";
+	position: absolute;
+	top: 1px;
+	left: 1px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--ms-fg-3, #828690);
+	transition: left 0.15s, background 0.15s;
+}
+[data-app-shell="modern"] .mod-toggle.is-on {
+	background: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+[data-app-shell="modern"] .mod-toggle.is-on::after {
+	left: 13px;
+	background: #052420;
+}
+
+/* ============================================================
+   Sprint 6a — SettingsModern styles
+   Scoped under [data-app-shell="modern"]
+   ============================================================ */
+
+[data-app-shell="modern"] .set-shell {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	color: var(--ms-fg-1, #f2f7f5);
+	font-size: var(--ms-fs-13, 13px);
+}
+
+[data-app-shell="modern"] .set-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 14px 16px 10px;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(128,159,177,0.16));
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .set-main {
+	display: flex;
+	flex: 1 1 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .set-nav {
+	flex: 0 0 200px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 8px;
+	border-right: 1px solid var(--ms-bd-1, rgba(128,159,177,0.16));
+	overflow-y: auto;
+}
+
+[data-app-shell="modern"] .set-nav-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 0;
+	background: transparent;
+	color: var(--ms-fg-2, #cfdbe2);
+	font-size: var(--ms-fs-13, 13px);
+	font-weight: 500;
+	cursor: pointer;
+	text-align: left;
+	position: relative;
+	transition: background 0.12s, color 0.12s;
+}
+
+[data-app-shell="modern"] .set-nav-item:hover {
+	background: rgba(47, 211, 160, 0.08);
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+[data-app-shell="modern"] .set-nav-item.is-active {
+	background: color-mix(in oklch, var(--ac-mint, #2fd3a0) 14%, transparent);
+	color: var(--ac-mint, #2fd3a0);
+	font-weight: 600;
+}
+
+[data-app-shell="modern"] .set-nav-warn-dot {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--ac-warn, #f2c94c);
+}
+
+[data-app-shell="modern"] .set-content {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow-y: auto;
+	padding: 16px 20px;
+}
+
+[data-app-shell="modern"] .set-content h3 {
+	margin: 0 0 4px;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+[data-app-shell="modern"] .set-content .sub {
+	margin-bottom: 16px;
+	font-size: 12px;
+	color: var(--ms-fg-3, #8aa1ab);
+}
+
+[data-app-shell="modern"] .set-block {
+	margin-bottom: 12px;
+	border: 1px solid var(--ms-bd-1, rgba(128,159,177,0.16));
+	border-radius: var(--ms-r-3, 8px);
+	overflow: hidden;
+	background: var(--ms-bg-1, rgba(7,13,18,0.74));
+}
+
+[data-app-shell="modern"] .set-block-section-label {
+	padding: 8px 14px;
+	font-size: 11px;
+	color: var(--ms-fg-3, #8aa1ab);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(128,159,177,0.14));
+}
+
+[data-app-shell="modern"] .set-block-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(128,159,177,0.10));
+}
+
+[data-app-shell="modern"] .set-block-row:last-child {
+	border-bottom: 0;
+}
+
+[data-app-shell="modern"] .set-block-row.danger {
+	background: rgba(255, 77, 109, 0.04);
+}
+
+[data-app-shell="modern"] .set-block-row .l {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+	flex: 1 1 0;
+}
+
+[data-app-shell="modern"] .set-block-row .l b {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+[data-app-shell="modern"] .set-block-row .l span {
+	font-size: 11.5px;
+	color: var(--ms-fg-3, #8aa1ab);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+[data-app-shell="modern"] .set-block-empty {
+	padding: 12px 14px;
+	font-size: 12px;
+	color: var(--ms-fg-3, #8aa1ab);
+}
+
+/* ── Toggle pill ── */
+[data-app-shell="modern"] .set-toggle {
+	width: 32px;
+	height: 18px;
+	border-radius: 9px;
+	background: var(--ms-bd-2, rgba(128,159,177,0.24));
+	border: 0;
+	position: relative;
+	cursor: pointer;
+	flex: 0 0 32px;
+	transition: background 0.15s;
+}
+
+[data-app-shell="modern"] .set-toggle[aria-checked="true"] {
+	background: var(--ac-mint, #2fd3a0);
+}
+
+[data-app-shell="modern"] .set-toggle-thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: var(--ms-fg-3, #8aa1ab);
+	transition: left 0.15s, background 0.15s;
+	pointer-events: none;
+}
+
+[data-app-shell="modern"] .set-toggle[aria-checked="true"] .set-toggle-thumb {
+	left: 16px;
+	background: #052420;
+}
+
+/* ── Stepper ── */
+[data-app-shell="modern"] .set-stepper {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	background: var(--ms-bg-2, rgba(11,19,26,0.9));
+	border: 1px solid var(--ms-bd-2, rgba(128,159,177,0.24));
+	border-radius: var(--ms-r-2, 6px);
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .set-stepper button {
+	width: 24px;
+	height: 28px;
+	border: 0;
+	background: transparent;
+	color: var(--ms-fg-2, #cfdbe2);
+	cursor: pointer;
+	font-size: 14px;
+}
+
+[data-app-shell="modern"] .set-stepper button:hover {
+	background: rgba(255,255,255,0.06);
+}
+
+[data-app-shell="modern"] .set-stepper-val {
+	padding: 0 10px;
+	min-width: 48px;
+	text-align: center;
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+[data-app-shell="modern"] .set-stepper-unit {
+	border-left: 1px solid var(--ms-bd-2, rgba(128,159,177,0.24));
+	padding: 0 8px;
+	font-size: 11.5px;
+	color: var(--ms-fg-3, #8aa1ab);
+}
+
+/* ── Buttons ── */
+[data-app-shell="modern"] .set-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 5px 12px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 1px solid var(--ms-bd-2, rgba(128,159,177,0.24));
+	background: transparent;
+	color: var(--ms-fg-1, #f2f7f5);
+	font-size: 12px;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: background 0.12s, border-color 0.12s;
+}
+
+[data-app-shell="modern"] .set-btn:hover {
+	background: rgba(255,255,255,0.06);
+	border-color: rgba(128,159,177,0.4);
+}
+
+[data-app-shell="modern"] .set-btn.primary {
+	background: var(--ac-mint, #2fd3a0);
+	color: #052420;
+	border-color: transparent;
+	font-weight: 600;
+}
+
+[data-app-shell="modern"] .set-btn.primary:hover {
+	background: #3de0ad;
+}
+
+[data-app-shell="modern"] .set-btn.ghost {
+	background: transparent;
+	border-color: var(--ms-bd-2, rgba(128,159,177,0.24));
+	color: var(--ms-fg-2, #cfdbe2);
+}
+
+[data-app-shell="modern"] .set-btn.danger {
+	color: #ff8da1;
+	border-color: rgba(255,77,109,0.32);
+}
+
+[data-app-shell="modern"] .set-btn.danger:hover {
+	background: rgba(255,77,109,0.12);
+}
+
+/* ── Input ── */
+[data-app-shell="modern"] .set-input {
+	height: 30px;
+	padding: 0 10px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 1px solid var(--ms-bd-2, rgba(128,159,177,0.24));
+	background: var(--ms-bg-2, rgba(11,19,26,0.9));
+	color: var(--ms-fg-1, #f2f7f5);
+	font-size: 12px;
+	outline: none;
+	min-width: 0;
+}
+
+[data-app-shell="modern"] .set-input:focus {
+	border-color: rgba(47,211,160,0.6);
+	box-shadow: 0 0 0 2px rgba(47,211,160,0.1);
+}
+
+/* ── Scope rows ── */
+[data-app-shell="modern"] .scope-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 9px 14px;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(128,159,177,0.10));
+}
+
+[data-app-shell="modern"] .scope-row:last-child {
+	border-bottom: 0;
+}
+
+[data-app-shell="modern"] .scope-ic {
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 10px;
+	font-weight: 800;
+	flex: 0 0 18px;
+	margin-top: 1px;
+}
+
+[data-app-shell="modern"] .scope-ic.ok {
+	background: color-mix(in oklch, var(--ac-mint, #2fd3a0) 20%, transparent);
+	color: var(--ac-mint, #2fd3a0);
+}
+
+[data-app-shell="modern"] .scope-ic.miss {
+	background: color-mix(in oklch, var(--ac-warn, #f2c94c) 20%, transparent);
+	color: var(--ac-warn, #f2c94c);
+}
+
+[data-app-shell="modern"] .scope-name {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ms-fg-1, #f2f7f5);
+	font-variant-numeric: tabular-nums;
+}
+
+[data-app-shell="modern"] .scope-affects {
+	font-size: 11.5px;
+	color: var(--ms-fg-3, #8aa1ab);
+	margin-top: 2px;
+}
+
+/* ── Scope warn banner ── */
+[data-app-shell="modern"] .set-scope-warn-banner {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	margin-bottom: 14px;
+	border-radius: var(--ms-r-3, 8px);
+	border: 1px solid color-mix(in oklch, var(--ac-warn, #f2c94c) 30%, transparent);
+	background: color-mix(in oklch, var(--ac-warn, #f2c94c) 10%, transparent);
+	font-size: 12.5px;
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+/* ── Advanced: mono topic IDs ── */
+[data-app-shell="modern"] .set-topic-mono {
+	font-family: "SFMono-Regular", ui-monospace, monospace;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--ac-mint, #2fd3a0);
+}
+
+/* ── pbadge extensions ── */
+[data-app-shell="modern"] .pbadge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1.4;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+[data-app-shell="modern"] .pbadge.kick {
+	background: rgba(83, 218, 166, 0.18);
+	color: #53daa6;
+}
+
+[data-app-shell="modern"] .pbadge.s7tv {
+	background: rgba(113, 107, 255, 0.18);
+	color: #9e9bff;
+}
+
+[data-app-shell="modern"] .pbadge.bttv {
+	background: rgba(231, 76, 60, 0.18);
+	color: #f08172;
+}
+
+[data-app-shell="modern"] .pbadge.ffz {
+	background: rgba(128, 159, 177, 0.18);
+	color: #9bb2bd;
+}
+
+[data-app-shell="modern"] .pbadge.sub {
+	background: color-mix(in oklch, var(--ac-mint, #2fd3a0) 18%, transparent);
+	color: var(--ac-mint, #2fd3a0);
+}
+
+/* ── ms-icon-btn active state ── */
+[data-app-shell="modern"] .ms-icon-btn-active {
+	background: color-mix(in oklch, var(--ac-mint, #2fd3a0) 14%, transparent) !important;
+	color: var(--ac-mint, #2fd3a0) !important;
+}
+
+/* =============================================================================
+ * Sprint 6b — EmotePickerModern CSS
+ * All selectors scoped under [data-app-shell="modern"] (additive only).
+ * ========================================================================== */
+
+/* Modal scrim + epicker shell */
+[data-app-shell="modern"] .modal-scrim {
+	position: fixed;
+	inset: 0;
+	background: rgba(8, 9, 12, 0.65);
+	backdrop-filter: blur(4px);
+	z-index: 200;
+	display: grid;
+	place-items: center;
+	padding: 40px;
+}
+
+[data-app-shell="modern"] .modal.epicker {
+	width: 760px;
+	max-width: 100%;
+	height: 580px;
+	min-width: 520px;
+	min-height: 460px;
+	display: flex;
+	flex-direction: column;
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: 12px;
+	box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .modal-hd {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--ms-bd-1, #22262e);
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .modal-hd h2 {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--ms-fg-1, #ebecef);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* Tab strip */
+[data-app-shell="modern"] .ep-tabs {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 10px 12px 0;
+	border-bottom: 1px solid var(--ms-bd-1, #22262e);
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .ep-tab {
+	padding: 7px 12px;
+	font-size: 12px;
+	color: var(--ms-fg-3, #828690);
+	border: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+	background: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	white-space: nowrap;
+}
+
+[data-app-shell="modern"] .ep-tab:hover {
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .ep-tab.is-active {
+	color: var(--ms-fg-1, #ebecef);
+	border-bottom-color: var(--ms-ac-mint, #2fd3a0);
+}
+
+[data-app-shell="modern"] .ep-tab .count {
+	color: var(--ms-fg-4, #5a5e68);
+	font-family: ui-monospace, monospace;
+	font-size: 10.5px;
+}
+
+[data-app-shell="modern"] .ep-tab.is-active .count {
+	color: var(--ms-fg-3, #828690);
+}
+
+[data-app-shell="modern"] .ep-tab .err {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ms-ac-warn, #d97706);
+}
+
+/* Search row */
+[data-app-shell="modern"] .ep-search-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--ms-bd-1, #22262e);
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .ep-search {
+	flex: 1 1 auto;
+	position: relative;
+}
+
+[data-app-shell="modern"] .ep-search input {
+	width: 100%;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: 6px;
+	padding: 7px 10px 7px 32px;
+	font-size: 12.5px;
+	outline: none;
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .ep-search input:focus {
+	border-color: var(--ms-bd-3, #3a4049);
+	background: var(--ms-bg-3, #1e2127);
+}
+
+[data-app-shell="modern"] .ep-search .ic {
+	position: absolute;
+	left: 10px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--ms-fg-3, #828690);
+	display: flex;
+	align-items: center;
+}
+
+/* Body: grid + preview */
+[data-app-shell="modern"] .ep-body {
+	flex: 1 1 auto;
+	display: grid;
+	grid-template-columns: 1fr 240px;
+	min-height: 0;
+}
+
+[data-app-shell="modern"] .ep-grid {
+	padding: 8px;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, 44px);
+	gap: 4px;
+	align-content: start;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bd-3, #3a4049) transparent;
+}
+
+[data-app-shell="modern"] .ep-cell {
+	width: 44px;
+	height: 44px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid transparent;
+	border-radius: 6px;
+	display: grid;
+	place-items: center;
+	position: relative;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .ep-cell:hover,
+[data-app-shell="modern"] .ep-cell.is-hovered {
+	background: var(--ms-bg-3, #1e2127);
+	border-color: var(--ms-bd-2, #2d323b);
+}
+
+[data-app-shell="modern"] .ep-cell .ind {
+	position: absolute;
+	bottom: 2px;
+	right: 2px;
+	font-family: ui-monospace, monospace;
+	font-size: 7px;
+	font-weight: 700;
+	padding: 0 2px;
+	border-radius: 2px;
+	background: rgba(0, 0, 0, 0.5);
+	color: var(--ms-fg-2, #b6b9c0);
+}
+
+[data-app-shell="modern"] .ep-cell.is-fav::after {
+	content: "★";
+	position: absolute;
+	top: 1px;
+	right: 2px;
+	font-size: 9px;
+	color: var(--ms-ac-gift, #d97706);
+}
+
+/* Preview pane */
+[data-app-shell="modern"] .ep-preview {
+	border-left: 1px solid var(--ms-bd-1, #22262e);
+	padding: 16px 14px;
+	display: flex;
+	flex-direction: column;
+	background: var(--ms-bg-1, #131418);
+	overflow-y: auto;
+}
+
+[data-app-shell="modern"] .ep-preview-img {
+	width: 100%;
+	height: 140px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: 6px;
+	display: grid;
+	place-items: center;
+	margin-bottom: 12px;
+}
+
+[data-app-shell="modern"] .ep-preview-name {
+	font-size: 14px;
+	font-weight: 600;
+	margin-bottom: 4px;
+	color: var(--ms-fg-1, #ebecef);
+	word-break: break-all;
+}
+
+[data-app-shell="modern"] .ep-preview-meta {
+	font-size: 11.5px;
+	color: var(--ms-fg-3, #828690);
+	margin-bottom: 10px;
+}
+
+[data-app-shell="modern"] .ep-preview-tags {
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+	margin-bottom: 14px;
+}
+
+[data-app-shell="modern"] .ep-preview-actions {
+	display: flex;
+	gap: 6px;
+	margin-top: auto;
+}
+
+[data-app-shell="modern"] .ep-preview-actions .btn {
+	flex: 1;
+	justify-content: center;
+}
+
+/* Empty state */
+[data-app-shell="modern"] .ep-empty {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	color: var(--ms-fg-3, #828690);
+	font-size: 12px;
+	gap: 8px;
+	text-align: center;
+	padding: 20px;
+}
+
+/* Provider status footer */
+[data-app-shell="modern"] .prov-status {
+	padding: 10px 14px;
+	border-top: 1px solid var(--ms-bd-1, #22262e);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+	background: var(--ms-bg-1, #131418);
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .prov-status .row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+[data-app-shell="modern"] .prov-stat {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+[data-app-shell="modern"] .prov-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ms-fg-4, #5a5e68);
+}
+
+[data-app-shell="modern"] .prov-dot.ok {
+	background: var(--ms-ac-mint, #2fd3a0);
+}
+
+[data-app-shell="modern"] .prov-dot.err {
+	background: var(--ms-ac-warn, #d97706);
+}
+
+[data-app-shell="modern"] .prov-dot.off {
+	background: var(--ms-fg-4, #5a5e68);
+}
+
+[data-app-shell="modern"] .prov-dot.loading {
+	background: var(--ms-fg-4, #5a5e68);
+}
+
+/* =============================================================================
+ * Fidelity sprint — Fixes 1-12
+ * All selectors scoped under [data-app-shell="modern"].
+ * ========================================================================== */
+
+/* ── Fix 11: Design-token aliases (Designs/styles.css :root → our scope) ── */
+/* We alias the Designs CSS var names so shared classes (topbar, modal, etc.)
+   that use --bg-0..3, --fg-1..4, --live, --ac-mint, --bd-1..3 work. */
+[data-app-shell="modern"] {
+	--bg-0: #0c0d10;
+	--bg-1: #131418;
+	--bg-2: #181a20;
+	--bg-3: #1e2127;
+	--bg-hover: #22252c;
+	--bd-1: #22262e;
+	--bd-2: #2d323b;
+	--bd-3: #3a4049;
+	--fg-1: #ebecef;
+	--fg-2: #b6b9c0;
+	--fg-3: #828690;
+	--fg-4: #5a5e68;
+	--ac-mint: oklch(0.82 0.09 175);
+	--ac-warn: oklch(0.78 0.13 55);
+	--live: #ef4f5f;
+	--r-1: 4px;
+	--r-2: 6px;
+	--r-3: 8px;
+	--r-4: 12px;
+	--shadow-pop: 0 1px 0 rgba(255,255,255,.04) inset, 0 18px 50px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.4);
+}
+
+/* ── Fix 4: Topbar layout (Designs/styles.css .topbar → modern scope) ── */
+/* Sprint 32: topbar height 56 -> 68; stream title + kategori satiri eklenince
+   meta column iki + iki satira cikabiliyor (channel name + tabs + stream),
+   eski yukseklik kayma yapiyordu. min-height kullanarak responsive da kalir. */
+[data-app-shell="modern"] .topbar {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 16px;
+	padding: 6px 12px 6px 16px;
+	min-height: 68px;
+	background: var(--bg-1);
+	border-bottom: 1px solid var(--bd-1);
+	flex: 0 0 auto;
+	z-index: 10;
+}
+
+[data-app-shell="modern"] .tb-channel {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+}
+
+[data-app-shell="modern"] .tb-ava {
+	width: 32px;
+	height: 32px;
+	border-radius: var(--r-3);
+	background: linear-gradient(135deg, #3b3f4a, #1e2128);
+	display: grid;
+	place-items: center;
+	font-weight: 600;
+	font-size: 12px;
+	color: var(--fg-1);
+	flex: 0 0 auto;
+	position: relative;
+	border: 1px solid var(--bd-2);
+}
+
+/* Fix 3: LIVE dot on avatar when live */
+[data-app-shell="modern"] .tb-ava::after {
+	content: "";
+	position: absolute;
+	right: -1px;
+	bottom: -1px;
+	width: 9px;
+	height: 9px;
+	background: var(--live);
+	border-radius: 50%;
+	border: 2px solid var(--bg-1);
+	box-shadow: 0 0 0 0 color-mix(in oklch, var(--live) 60%, transparent);
+	animation: tb-pulse 2s infinite;
+	display: none; /* shown via JS class tb-ava-live */
+}
+[data-app-shell="modern"] .tb-ava.is-live::after {
+	display: block;
+}
+/* Sprint 15: profile_pic image fills avatar container */
+[data-app-shell="modern"] .tb-ava img,
+[data-app-shell="modern"] .mod-target-ava img,
+[data-app-shell="modern"] .uw-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: inherit;
+	display: block;
+}
+
+@keyframes tb-pulse {
+	0%   { box-shadow: 0 0 0 0 color-mix(in oklch, var(--live) 50%, transparent); }
+	70%  { box-shadow: 0 0 0 6px color-mix(in oklch, var(--live) 0%, transparent); }
+	100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--live) 0%, transparent); }
+}
+
+[data-app-shell="modern"] .tb-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+
+[data-app-shell="modern"] .tb-meta-top {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+[data-app-shell="modern"] .tb-name {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--fg-1);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Fix 3: LIVE pill (.tb-live) */
+[data-app-shell="modern"] .tb-live {
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	background: color-mix(in oklch, var(--live) 15%, transparent);
+	color: var(--live);
+	padding: 1px 6px;
+	border-radius: var(--r-1);
+	border: 1px solid color-mix(in oklch, var(--live) 35%, transparent);
+	white-space: nowrap;
+	flex: 0 0 auto;
+}
+
+/* Sprint 31: stream baslik + kategori — kanal adinin altinda, butun
+   kullaniclar (mod / normal) icin gorunur. Title cok uzunsa ellipsis. */
+[data-app-shell="modern"] .tb-meta-stream {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	max-width: 560px;
+	font-size: 11.5px;
+	color: var(--fg-2);
+	line-height: 1.25;
+	margin-top: 1px;
+}
+[data-app-shell="modern"] .tb-stream-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 360px;
+}
+[data-app-shell="modern"] .tb-stream-sep {
+	color: var(--fg-4);
+}
+[data-app-shell="modern"] .tb-stream-category {
+	color: var(--ac-mint);
+	white-space: nowrap;
+}
+
+/* Sprint 31: disabled icon-btn (refresh aktif kanal yokken) */
+[data-app-shell="modern"] .icon-btn:disabled,
+[data-app-shell="modern"] .icon-btn[disabled] {
+	opacity: 0.35;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+/* Fix 5: tab row */
+[data-app-shell="modern"] .tb-tabs {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	color: var(--fg-3);
+}
+
+/* Sprint 30: channel tabs — make them visually distinct as chips in both
+   themes (user feedback: "kanal tablerini belirgin yap demiştim hala
+   anlamıyorum orada tab olduklarını"). Always-visible border + soft surface
+   bg so secondary channels read as clickable chips, not plain text. */
+[data-app-shell="modern"] .tb-tab {
+	padding: 3px 9px;
+	border-radius: var(--r-2);
+	border: 1px solid var(--bd-2);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--fg-2);
+	background: color-mix(in oklch, var(--bg-3) 60%, transparent);
+	cursor: pointer;
+	font: inherit;
+	transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+[data-app-shell="modern"] .tb-tab:hover {
+	background: var(--bg-3);
+	color: var(--fg-1);
+	border-color: color-mix(in oklch, var(--ac-mint) 50%, var(--bd-2));
+}
+
+[data-app-shell="modern"] .tb-tab.is-active {
+	background: color-mix(in oklch, var(--ac-mint) 16%, transparent);
+	color: var(--fg-1);
+	border-color: var(--ac-mint);
+}
+
+[data-app-shell="modern"] .tb-tab .dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--live);
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .tb-tab-body {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: none;
+	border: none;
+	padding: 0;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .tb-tab-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	margin-left: 2px;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: var(--r-1, 4px);
+	color: var(--fg-3, #828690);
+	opacity: 0;
+	cursor: pointer;
+	transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+
+[data-app-shell="modern"] .tb-tab:hover .tb-tab-close,
+[data-app-shell="modern"] .tb-tab-close:focus-visible {
+	opacity: 0.7;
+}
+
+[data-app-shell="modern"] .tb-tab-close:hover {
+	opacity: 1;
+	background: color-mix(in oklch, var(--live, #ef4f5f) 25%, transparent);
+	color: var(--live, #ef4f5f);
+}
+
+/* Fix 2: + add button in tab row */
+[data-app-shell="modern"] .tb-add {
+	width: 22px;
+	height: 22px;
+	display: grid;
+	place-items: center;
+	color: var(--fg-3);
+	border-radius: var(--r-1);
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .tb-add:hover {
+	background: var(--bg-3);
+	color: var(--fg-1);
+}
+
+/* Fix 6: stats zone */
+[data-app-shell="modern"] .tb-stats {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	color: var(--fg-3);
+	font-size: 12px;
+}
+
+[data-app-shell="modern"] .tb-stat {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+[data-app-shell="modern"] .tb-stat .num {
+	color: var(--fg-1);
+}
+
+[data-app-shell="modern"] .tb-stat-sep {
+	width: 1px;
+	height: 16px;
+	background: var(--bd-2);
+}
+
+[data-app-shell="modern"] .tb-role {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 8px 4px 4px;
+	background: var(--bg-3);
+	border: 1px solid var(--bd-2);
+	border-radius: var(--r-2);
+	font-size: 12px;
+	color: var(--fg-2);
+}
+
+[data-app-shell="modern"] .tb-role-badge {
+	font-size: 10px;
+	font-weight: 600;
+	padding: 2px 6px;
+	border-radius: var(--r-1);
+	background: color-mix(in oklch, var(--ac-mint) 18%, transparent);
+	color: var(--ac-mint);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+/* Fix 7: actions zone */
+[data-app-shell="modern"] .tb-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+/* Override .icon-btn for topbar (32×32) */
+[data-app-shell="modern"] .topbar .icon-btn {
+	width: 32px;
+	height: 32px;
+	display: grid;
+	place-items: center;
+	border-radius: var(--r-2);
+	color: var(--fg-3);
+	position: relative;
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .topbar .icon-btn:hover {
+	background: var(--bg-3);
+	color: var(--fg-1);
+}
+
+/* Fix 7: is-on state — mint accent */
+[data-app-shell="modern"] .topbar .icon-btn.is-on {
+	background: var(--bg-3);
+	color: var(--fg-1);
+	box-shadow: inset 0 -2px 0 0 var(--ac-mint);
+}
+
+/* Fix 7: pip count badge on icon btn */
+[data-app-shell="modern"] .topbar .icon-btn .pip {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	min-width: 14px;
+	height: 14px;
+	border-radius: 7px;
+	background: var(--live);
+	color: white;
+	font-size: 9px;
+	font-weight: 600;
+	display: grid;
+	place-items: center;
+	padding: 0 3px;
+	border: 2px solid var(--bg-1);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+/* ── Fix 8: Settings modal (non-emote-picker) ── */
+[data-app-shell="modern"] .modal-scrim {
+	position: fixed;
+	inset: 0;
+	background: rgba(8, 9, 12, 0.65);
+	backdrop-filter: blur(4px);
+	z-index: 200;
+	display: grid;
+	place-items: center;
+	padding: 40px;
+}
+
+/* Generic .modal (settings, not .epicker) */
+[data-app-shell="modern"] .modal:not(.epicker) {
+	background: var(--bg-1);
+	border: 1px solid var(--bd-2);
+	border-radius: var(--r-4);
+	box-shadow: 0 30px 80px rgba(0,0,0,.6);
+	width: 100%;
+	max-height: calc(100vh - 80px);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .modal-body {
+	flex: 1 1 auto;
+	display: flex;
+	min-height: 0;
+	overflow: hidden;
+}
+
+/* .modal-hd already defined for emote picker; extend for settings */
+[data-app-shell="modern"] .modal:not(.epicker) .modal-hd {
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--bd-1);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .modal:not(.epicker) .modal-hd h2 {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--fg-1);
+}
+
+/* .set-shell inside modal: fill height */
+[data-app-shell="modern"] .modal-body .set-shell {
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+}
+
+/* .set-nav inside modal uses Designs colors */
+[data-app-shell="modern"] .modal-body .set-nav-item.is-active {
+	background: color-mix(in oklch, var(--ac-mint) 14%, transparent);
+	color: var(--ac-mint);
+}
+
+/* Main layout grid for the whole shell */
+[data-app-shell="modern"] .main {
+	display: grid;
+	grid-template-columns: minmax(520px, 1fr) 360px 360px;
+	grid-template-rows: 1fr;
+	min-height: 0;
+	height: 100%;
+	gap: 1px;
+	background: var(--bd-1);
+	/* Sprint 13: dar viewport'ta panel'leri gizleme yerine yatay scroll —
+	   chat min 520, activity 360, moderation 360 hep tam goruntude */
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: thin;
+	scrollbar-color: var(--bd-3, #3a4049) transparent;
+}
+[data-app-shell="modern"] .main::-webkit-scrollbar {
+	height: 8px;
+}
+[data-app-shell="modern"] .main::-webkit-scrollbar-track {
+	background: transparent;
+}
+[data-app-shell="modern"] .main::-webkit-scrollbar-thumb {
+	background: var(--bd-2, #2d323b);
+	border-radius: 4px;
+}
+[data-app-shell="modern"] .main::-webkit-scrollbar-thumb:hover {
+	background: var(--bd-3, #3a4049);
+}
+[data-app-shell="modern"] .main.no-act {
+	grid-template-columns: minmax(520px, 1fr) 360px;
+}
+[data-app-shell="modern"] .main.no-mod {
+	grid-template-columns: minmax(520px, 1fr) 360px;
+}
+[data-app-shell="modern"] .main.no-act.no-mod {
+	grid-template-columns: minmax(520px, 1fr);
+}
+
+/* Sprint 13: <1180px narrow viewport — panel'ler grid'den cikar,
+   drawer overlay'le acilir. Grid 1 sutuna duser, scroll gereksiz. */
+@media (max-width: 1179px) {
+	[data-app-shell="modern"] .main {
+		grid-template-columns: 1fr !important;
+		overflow-x: hidden;
+	}
+}
+
+/* Sprint 13: drawer backdrop + panel */
+[data-app-shell="modern"] .drawer-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.45);
+	backdrop-filter: blur(2px);
+	z-index: 90;
+	animation: ms-drawer-fade 0.15s ease-out;
+}
+[data-app-shell="modern"] .drawer-panel {
+	position: fixed;
+	right: 0;
+	top: 56px; /* topbar height */
+	bottom: 0;
+	width: min(380px, 92vw);
+	background: var(--ms-bg-1, #131418);
+	border-left: 1px solid var(--ms-bd-2, #2d323b);
+	box-shadow: -16px 0 40px rgba(0, 0, 0, 0.45);
+	display: flex;
+	flex-direction: column;
+	z-index: 100;
+	overflow: hidden;
+	animation: ms-drawer-slide 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+[data-app-shell="modern"] .drawer-panel > * {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+}
+[data-app-shell="modern"] .drawer-close {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 2;
+	width: 26px;
+	height: 26px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+}
+@keyframes ms-drawer-fade {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+@keyframes ms-drawer-slide {
+	from { transform: translateX(20px); opacity: 0; }
+	to { transform: translateX(0); opacity: 1; }
+}
+
+/* Sprint 9: custom thin scrollbar (Designs/styles.css parity) */
+[data-app-shell="modern"] .scroll {
+	overflow: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--bd-3, #3a4049) transparent;
+}
+[data-app-shell="modern"] .scroll::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+[data-app-shell="modern"] .scroll::-webkit-scrollbar-track {
+	background: transparent;
+}
+[data-app-shell="modern"] .scroll::-webkit-scrollbar-thumb {
+	background: var(--bd-2, #2d323b);
+	border-radius: 6px;
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+[data-app-shell="modern"] .scroll::-webkit-scrollbar-thumb:hover {
+	background: var(--bd-3, #3a4049);
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+[data-app-shell="modern"] .scroll::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+[data-app-shell="modern"] .main > .panel {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	min-width: 0;
+	overflow: hidden;
+	background: var(--ms-bg-1);
+}
+
+[data-app-shell="modern"] .main.no-act {
+	grid-template-columns: minmax(520px, 1fr) 360px;
+}
+
+[data-app-shell="modern"] .main.no-mod {
+	grid-template-columns: minmax(520px, 1fr) 360px;
+}
+
+[data-app-shell="modern"] .main.no-act.no-mod {
+	grid-template-columns: 1fr;
+}
+
+/* ── Fix 2: AddChannelPopover ── */
+[data-app-shell="modern"] .add-ch-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 150;
+}
+
+[data-app-shell="modern"] .add-ch-popover {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	z-index: 160;
+	min-width: 260px;
+	background: var(--bg-2, #181a20);
+	border: 1px solid var(--bd-2, #2d323b);
+	border-radius: var(--r-3, 8px);
+	box-shadow: 0 18px 42px rgba(0,0,0,.45);
+	padding: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+[data-app-shell="modern"] .add-ch-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .add-ch-body {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+[data-app-shell="modern"] .add-ch-input {
+	width: 100%;
+}
+
+[data-app-shell="modern"] .add-ch-error {
+	font-size: 11px;
+	color: var(--live, #ef4f5f);
+}
+
+[data-app-shell="modern"] .add-ch-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
+/* ── Fix 12: panel header count badge ── */
+[data-app-shell="modern"] .panel-hd h2 .count {
+	margin-left: 6px;
+	font-size: 11px;
+	color: var(--fg-3, #828690);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-variant-numeric: tabular-nums;
+	font-weight: 400;
+}
+
+/* ── Fix 11: ms-bg-0/1/2/3 should use exact Designs hex values ── */
+/* Override to match --bg-0..3 exactly in our OKLCH token aliases */
+[data-app-shell="modern"] {
+	--ms-bg-0: #0c0d10;
+	--ms-bg-1: #131418;
+	--ms-bg-2: #181a20;
+	--ms-bg-3: #1e2127;
+	--ms-ac-mint: oklch(0.82 0.09 175);
+	--ms-ac-live: #ef4f5f;
+	--ms-fg-1: #ebecef;
+	--ms-fg-2: #b6b9c0;
+	--ms-fg-3: #828690;
+	--ms-fg-4: #5a5e68;
+}
+
+/* =============================================================================
+ * Sprint 12 — UserWindow Modern
+ * All selectors scoped under [data-app-shell="modern"] (additive only).
+ * ========================================================================== */
+
+/* ── Shell layout ── */
+[data-app-shell="modern"] .uw-shell {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	background: var(--ms-bg-0, #0c0d10);
+	color: var(--ms-fg-1, #ebecef);
+	font-family: var(--ms-font-sans, "Geist", system-ui, sans-serif);
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .uw-main {
+	flex: 1 1 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+/* ── Header ── */
+[data-app-shell="modern"] .uw-header {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	padding: 18px 20px 14px;
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .uw-avatar {
+	width: 56px;
+	height: 56px;
+	border-radius: 10px;
+	background: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 22%, var(--ms-bg-2, #181a20));
+	color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-weight: 700;
+	font-size: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	letter-spacing: 0.04em;
+}
+
+[data-app-shell="modern"] .uw-header-info {
+	flex: 1 1 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+[data-app-shell="modern"] .uw-header-row1 {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+[data-app-shell="modern"] .uw-username {
+	font-size: 18px;
+	font-weight: 800;
+	line-height: 1.2;
+}
+
+[data-app-shell="modern"] .uw-copy {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 24px;
+	padding: 0 8px;
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 5px;
+	background: rgba(255,255,255,0.04);
+	color: var(--ms-fg-2, #b6b9c0);
+	font-size: 11px;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-copy:hover {
+	border-color: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 55%, transparent);
+	color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+
+[data-app-shell="modern"] .uw-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11px;
+	font-weight: 500;
+	padding: 2px 8px;
+	border-radius: 999px;
+}
+
+[data-app-shell="modern"] .uw-status-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-status.active-now {
+	background: rgba(47, 180, 100, 0.14);
+	color: #4ade80;
+}
+
+[data-app-shell="modern"] .uw-status.active-now .uw-status-dot {
+	background: #4ade80;
+	box-shadow: 0 0 0 3px rgba(74,222,128,0.2);
+}
+
+[data-app-shell="modern"] .uw-status.offline {
+	background: rgba(130, 134, 144, 0.12);
+	color: var(--ms-fg-3, #828690);
+}
+
+[data-app-shell="modern"] .uw-status.offline .uw-status-dot {
+	background: var(--ms-fg-3, #828690);
+}
+
+[data-app-shell="modern"] .uw-subtitle {
+	font-size: 12px;
+	color: var(--ms-fg-3, #828690);
+	line-height: 1.4;
+}
+
+[data-app-shell="modern"] .uw-header-badge-area {
+	display: flex;
+	align-items: flex-start;
+	padding-top: 2px;
+}
+
+[data-app-shell="modern"] .uw-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	padding-top: 2px;
+}
+
+[data-app-shell="modern"] .uw-icon-btn {
+	width: 30px;
+	height: 30px;
+	border-radius: 6px;
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--ms-fg-3, #828690);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-icon-btn:hover:not(:disabled) {
+	background: var(--ms-bg-hover, #1f2630);
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .uw-icon-btn:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-close-btn:hover {
+	background: rgba(239,79,95,0.14) !important;
+	color: #ef4f5f !important;
+	border-color: rgba(239,79,95,0.28) !important;
+}
+
+/* ── Stats row ── */
+[data-app-shell="modern"] .uw-stats {
+	display: flex;
+	gap: 0;
+	flex: 0 0 auto;
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+}
+
+[data-app-shell="modern"] .uw-stat {
+	flex: 1 1 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 6px;
+	gap: 2px;
+	border-right: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+}
+
+[data-app-shell="modern"] .uw-stat:last-child {
+	border-right: none;
+}
+
+[data-app-shell="modern"] .uw-stat-num {
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1.1;
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .uw-stat-label {
+	font-size: 9px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--ms-fg-4, #5a5e68);
+}
+
+/* ── Tabs ──
+   Sprint 33b: tab listesine "Kendi Kanalın" eklenince taşıyordu;
+   overflow-x: auto + flex-wrap kapalı tutuluyor (tabların orjinal sırası
+   korunsun), gerekirse yatay scroll. Scrollbar gizli (gerek kalmadan
+   horizontal swipe / wheel). */
+[data-app-shell="modern"] .uw-tabs {
+	display: flex;
+	gap: 0;
+	padding: 0 16px;
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	flex: 0 0 auto;
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: thin;
+}
+[data-app-shell="modern"] .uw-tabs::-webkit-scrollbar {
+	height: 4px;
+}
+[data-app-shell="modern"] .uw-tabs::-webkit-scrollbar-thumb {
+	background: var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 2px;
+}
+
+[data-app-shell="modern"] .uw-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 38px;
+	padding: 0 12px;
+	border: none;
+	border-bottom: 2px solid transparent;
+	background: transparent;
+	color: var(--ms-fg-3, #828690);
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: color 0.12s, border-color 0.12s;
+}
+
+[data-app-shell="modern"] .uw-tab:hover {
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .uw-tab.active {
+	color: var(--ms-fg-1, #ebecef);
+	border-bottom-color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+
+[data-app-shell="modern"] .uw-tab-count {
+	min-width: 18px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 8px;
+	background: var(--ms-bg-2, #181a20);
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 10px;
+	line-height: 16px;
+	text-align: center;
+	color: var(--ms-fg-3, #828690);
+}
+
+/* ── Tab body / content ── */
+[data-app-shell="modern"] .uw-tab-body {
+	flex: 1 1 0;
+	min-height: 0;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bg-3, #1e2127) transparent;
+}
+
+[data-app-shell="modern"] .uw-tab-body::-webkit-scrollbar {
+	width: 5px;
+}
+
+[data-app-shell="modern"] .uw-tab-body::-webkit-scrollbar-thumb {
+	background: var(--ms-bg-3, #1e2127);
+	border-radius: 3px;
+}
+
+[data-app-shell="modern"] .uw-tab-content {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+[data-app-shell="modern"] .uw-empty-state {
+	color: var(--ms-fg-3, #828690);
+	font-size: 13px;
+	margin: 0;
+	padding: 8px 0;
+}
+
+[data-app-shell="modern"] .uw-muted {
+	color: var(--ms-fg-3, #828690);
+	font-size: 12px;
+}
+
+/* ── Cards (overview) ── */
+[data-app-shell="modern"] .uw-card {
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+/* Sprint 33: My Channel tab — kart başlığı + hint metni */
+[data-app-shell="modern"] .uw-mychannel-tab .uw-card {
+	padding: 12px 14px;
+}
+[data-app-shell="modern"] .uw-card-title {
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--ms-fg-1, #ebecef);
+	margin-bottom: 4px;
+}
+[data-app-shell="modern"] .uw-card-hint {
+	margin: 0;
+	font-size: 12px;
+	color: var(--ms-fg-3, #828690);
+	line-height: 1.45;
+}
+
+[data-app-shell="modern"] .uw-card-hd {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	padding: 10px 14px 8px;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(90,100,115,0.5));
+}
+
+[data-app-shell="modern"] .uw-card-hd h3 {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .uw-card-meta {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+}
+
+/* ── Message lists ── */
+[data-app-shell="modern"] .uw-msg-list {
+	list-style: none;
+	margin: 0;
+	padding: 8px 0;
+}
+
+[data-app-shell="modern"] .uw-msg-list--full {
+	padding: 0;
+}
+
+[data-app-shell="modern"] .uw-msg-row,
+[data-app-shell="modern"] .uw-mod-row {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 5px 14px;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+[data-app-shell="modern"] .uw-msg-row:hover,
+[data-app-shell="modern"] .uw-mod-row:hover {
+	background: var(--ms-bg-hover, #1f2630);
+}
+
+[data-app-shell="modern"] .uw-msg-row.is-removed .uw-msg-content {
+	opacity: 0.38;
+	text-decoration: line-through;
+}
+
+[data-app-shell="modern"] .uw-msg-time {
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 11px;
+	color: var(--ms-fg-4, #5a5e68);
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-msg-name {
+	font-weight: 700;
+	font-size: 12px;
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-msg-content {
+	font-size: 13px;
+	color: var(--ms-fg-2, #b6b9c0);
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+[data-app-shell="modern"] .uw-msg-excerpt {
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-style: italic;
+}
+
+[data-app-shell="modern"] .uw-inline-del {
+	flex-shrink: 0;
+	height: 22px;
+	padding: 0 8px;
+	border: 1px solid rgba(239,79,95,0.28);
+	border-radius: 4px;
+	background: rgba(239,79,95,0.10);
+	color: #ef4f5f;
+	font-size: 11px;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-inline-del:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-inline-del:hover:not(:disabled) {
+	background: rgba(239,79,95,0.20);
+}
+
+/* ── Action / status pills ── */
+[data-app-shell="modern"] .uw-action-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 6px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-action-ban {
+	background: rgba(239,79,95,0.15);
+	color: #ef4f5f;
+}
+
+[data-app-shell="modern"] .uw-action-to {
+	background: rgba(242,201,76,0.15);
+	color: #f2c94c;
+}
+
+[data-app-shell="modern"] .uw-action-delete {
+	background: rgba(182,185,192,0.12);
+	color: var(--ms-fg-2, #b6b9c0);
+}
+
+[data-app-shell="modern"] .uw-action-unban {
+	background: rgba(74,222,128,0.12);
+	color: #4ade80;
+}
+
+[data-app-shell="modern"] .uw-status-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 6px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 600;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-status-success {
+	background: rgba(74,222,128,0.12);
+	color: #4ade80;
+}
+
+[data-app-shell="modern"] .uw-status-pending {
+	background: rgba(242,201,76,0.14);
+	color: #f2c94c;
+}
+
+[data-app-shell="modern"] .uw-status-failed {
+	background: rgba(239,79,95,0.12);
+	color: #ef4f5f;
+}
+
+/* ── Notes tab ── */
+[data-app-shell="modern"] .uw-notes-tab {
+	height: 100%;
+}
+
+[data-app-shell="modern"] .uw-notes-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+[data-app-shell="modern"] .uw-note-row {
+	display: flex;
+	gap: 10px;
+	align-items: baseline;
+	padding: 8px 10px;
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 6px;
+}
+
+[data-app-shell="modern"] .uw-note-text {
+	font-size: 13px;
+	color: var(--ms-fg-2, #b6b9c0);
+	line-height: 1.5;
+}
+
+[data-app-shell="modern"] .uw-notes-composer {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: auto;
+	padding-top: 12px;
+}
+
+[data-app-shell="modern"] .uw-notes-input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 8px 10px;
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 6px;
+	color: var(--ms-fg-1, #ebecef);
+	font-family: var(--ms-font-sans, "Geist", system-ui, sans-serif);
+	font-size: 13px;
+	resize: none;
+	outline: none;
+}
+
+[data-app-shell="modern"] .uw-notes-input:focus {
+	border-color: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 55%, transparent);
+}
+
+/* ── Buttons ── */
+[data-app-shell="modern"] .uw-btn-primary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 34px;
+	border: none;
+	border-radius: 6px;
+	background: var(--ms-ac-mint, oklch(0.82 0.09 175));
+	color: #0c0d10;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-btn-primary:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-btn-primary:hover:not(:disabled) {
+	filter: brightness(1.08);
+}
+
+[data-app-shell="modern"] .uw-btn-secondary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 34px;
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 6px;
+	background: transparent;
+	color: var(--ms-fg-2, #b6b9c0);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-btn-secondary:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-btn-danger {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 34px;
+	border: 1px solid rgba(239,79,95,0.30);
+	border-radius: 6px;
+	background: rgba(239,79,95,0.12);
+	color: #ef4f5f;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-btn-danger:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-btn-danger:hover:not(:disabled) {
+	background: rgba(239,79,95,0.22);
+}
+
+/* ── Mod panel (right sidebar) ── */
+[data-app-shell="modern"] .uw-mod-panel {
+	width: 260px;
+	flex-shrink: 0;
+	border-left: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	background: var(--ms-bg-1, #131418);
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bg-3, #1e2127) transparent;
+	display: flex;
+	flex-direction: column;
+}
+
+[data-app-shell="modern"] .uw-mod-panel::-webkit-scrollbar {
+	width: 4px;
+}
+
+[data-app-shell="modern"] .uw-mod-panel::-webkit-scrollbar-thumb {
+	background: var(--ms-bg-3, #1e2127);
+	border-radius: 2px;
+}
+
+[data-app-shell="modern"] .uw-panel-section {
+	padding: 16px;
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+[data-app-shell="modern"] .uw-panel-heading {
+	margin: 0;
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.10em;
+	color: var(--ms-fg-4, #5a5e68);
+}
+
+[data-app-shell="modern"] .uw-panel-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+[data-app-shell="modern"] .uw-panel-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+[data-app-shell="modern"] .uw-panel-label {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ms-fg-2, #b6b9c0);
+}
+
+[data-app-shell="modern"] .uw-duration-display {
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+
+[data-app-shell="modern"] .uw-presets {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+[data-app-shell="modern"] .uw-preset-chip {
+	height: 26px;
+	padding: 0 10px;
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 5px;
+	background: transparent;
+	color: var(--ms-fg-2, #b6b9c0);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-preset-chip:hover {
+	background: var(--ms-bg-hover, #1f2630);
+}
+
+[data-app-shell="modern"] .uw-preset-chip.active {
+	background: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 22%, transparent);
+	border-color: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 50%, transparent);
+	color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+
+[data-app-shell="modern"] .uw-custom-input-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+[data-app-shell="modern"] .uw-custom-sec-input {
+	flex: 1 1 0;
+	height: 30px;
+	padding: 0 8px;
+	background: var(--ms-bg-0, #0c0d10);
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 5px;
+	color: var(--ms-fg-1, #ebecef);
+	font-size: 12px;
+	outline: none;
+}
+
+[data-app-shell="modern"] .uw-custom-sec-input:focus {
+	border-color: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 55%, transparent);
+}
+
+/* ── Account section ── */
+[data-app-shell="modern"] .uw-account-section {
+	margin-top: auto;
+}
+
+[data-app-shell="modern"] .uw-account-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 3px 0;
+}
+
+/* ── Panel empty state ── */
+[data-app-shell="modern"] .uw-panel-empty {
+	padding: 20px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+
+
+
+
+/* Sprint 25: UserWindow MOD STRIP — yatay strip (eski sag dikey panel yerine) */
+[data-app-shell="modern"] .uw-mod-panel { display: none !important; }
+
+[data-app-shell="modern"] .uw-mod-strip {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	padding: 10px 16px;
+	background: var(--ms-bg-1, #131418);
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .uw-strip-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+[data-app-shell="modern"] .uw-strip-heading {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	color: var(--ms-fg-3, #828690);
+	margin-right: 4px;
+}
+[data-app-shell="modern"] .uw-strip-current {
+	font-family: var(--ms-font-mono, monospace);
+	font-size: 12px;
+	color: var(--ms-ac-mint, #7adbb4);
+	font-variant-numeric: tabular-nums;
+	min-width: 28px;
+}
+[data-app-shell="modern"] .uw-strip-chips {
+	display: inline-flex;
+	gap: 3px;
+}
+[data-app-shell="modern"] .uw-strip-input {
+	width: 70px;
+	padding: 4px 8px;
+	font-size: 12px;
+}
+[data-app-shell="modern"] .uw-strip-unit {
+	font-size: 11px;
+	color: var(--ms-fg-4, var(--fg-4));
+}
+[data-app-shell="modern"] .uw-strip-apply,
+[data-app-shell="modern"] .uw-strip-clear,
+[data-app-shell="modern"] .uw-strip-ban,
+[data-app-shell="modern"] .uw-strip-unban {
+	padding: 5px 12px;
+	font-size: 12px;
+	font-weight: 600;
+	border-radius: var(--ms-r-2, 6px);
+	cursor: pointer;
+	transition: opacity 0.12s, background 0.12s;
+}
+[data-app-shell="modern"] .uw-strip-apply:disabled,
+[data-app-shell="modern"] .uw-strip-clear:disabled,
+[data-app-shell="modern"] .uw-strip-ban:disabled,
+[data-app-shell="modern"] .uw-strip-unban:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .uw-strip-divider {
+	width: 1px;
+	height: 28px;
+	background: var(--ms-border, rgba(110,120,135,0.4));
+	flex-shrink: 0;
+}
+[data-app-shell="modern"] .uw-strip-account {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+	gap: 12px;
+	margin-left: auto;
+}
+[data-app-shell="modern"] .uw-strip-empty {
+	flex: 1;
+	text-align: center;
+	padding: 4px 0;
+}
+
+/* Sprint 32: owner-only role mgmt — mod / VIP / OG toggle butonlari.
+   Aktif rol (is-on) mint vurguda, edilgen rol soluk surface. */
+[data-app-shell="modern"] .uw-strip-roles {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .uw-btn-ghost {
+	height: 26px;
+	padding: 0 10px;
+	border-radius: 4px;
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	background: transparent;
+	color: var(--ms-fg-2, #b6b9c0);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+[data-app-shell="modern"] .uw-btn-ghost:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 12%, transparent);
+	color: var(--ms-fg-1, #e6e9ee);
+	border-color: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 45%, var(--ms-border));
+}
+[data-app-shell="modern"] .uw-btn-ghost.is-on {
+	background: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 20%, transparent);
+	color: var(--ms-ac-mint, #2fd3a0);
+	border-color: var(--ms-ac-mint, #2fd3a0);
+}
+[data-app-shell="modern"] .uw-btn-ghost:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+
+/* Sprint 26 (UI polish):
+   1. ActivityViewModern filter chip row: gizli scroll yerine flex-wrap
+      kullan -> dar ekranda chipler ikinci satıra düşer, Ödüller görünür.
+   2. ModActionsModern TimeoutPicker alt hint satırı (Ctrl+T / Ctrl+Shift+T)
+      kullanıcı isteği üzerine gizlendi.
+   3. UserWindow .uw-mod-strip Apply butonunu kompakt sığdır + chips genişlik
+      sınırı + custom input dar kalsın diye layout fine-tune. */
+[data-app-shell="modern"] .filter-row {
+	flex-wrap: wrap;
+	overflow-x: visible;
+}
+
+[data-app-shell="modern"] .mod-timeout-hint {
+	display: none !important;
+}
+
+[data-app-shell="modern"] .uw-mod-strip {
+	gap: 8px;
+	padding: 8px 12px;
+}
+[data-app-shell="modern"] .uw-strip-timeout {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+[data-app-shell="modern"] .uw-strip-apply {
+	padding: 6px 16px !important;
+	max-width: 100px;
+	white-space: nowrap;
+}
+[data-app-shell="modern"] .uw-strip-clear,
+[data-app-shell="modern"] .uw-strip-ban,
+[data-app-shell="modern"] .uw-strip-unban {
+	padding: 6px 12px !important;
+	white-space: nowrap;
+}
+[data-app-shell="modern"] .uw-strip-chips .uw-preset-chip {
+	padding: 4px 8px;
+	font-size: 11px;
+}
+[data-app-shell="modern"] .uw-strip-input {
+	width: 64px !important;
+}
+
+/* Sprint 28: Moderation panel — Recent actions ve Suspended users
+   bolumleri kendi icinde scroll. Recent actions FIFO 50 item; Suspended
+   listesi sinirsiz (kullanicidan istek: hep kalir). Section body max-height
+   ile scroll devreye girer; section header sabit kalir. */
+[data-app-shell="modern"] #mod-sec-history,
+[data-app-shell="modern"] #mod-sec-suspended {
+	max-height: 240px;
+	overflow-y: auto;
+}
+
+/* Sprint 28b: Chat row + light theme contrast fixes.
+
+   1) Chat row: 56px sabit time sutunu Geist Mono ile fazla genis idi,
+      sol tarafa bos alan birakiyordu. `auto` ile content-aware genislik. */
+[data-app-shell="modern"] .chat-row {
+	grid-template-columns: auto minmax(0, 1fr) auto !important;
+	column-gap: 8px !important;
+	padding: 3px 8px 3px 12px !important;
+}
+
+/* 2) Light theme'de inline sender color (rastgele pastel renkler) okunmuyor.
+      filter ile koyulastir + saturate bumpla — minimum-contrast saglar.
+      Inline `color: ...` style'i bozulmadan, filtre ile gorsel yogunluk artar. */
+[data-app-shell="modern"][data-theme="light"] .chat-name {
+	filter: brightness(0.55) saturate(1.5) contrast(1.15);
+}
+
+/* 3) Topbar light theme — tema rengi olan acik yesil (mint) light bg'de
+      okunmuyor. Active tab + is-on icin daha koyu mint + bg surface var,
+      ve tab text rengi explicit dark fg-1. */
+[data-app-shell="modern"][data-theme="light"] .tb-tab,
+[data-app-shell="modern"][data-theme="light"] .tb-name {
+	color: var(--ms-fg-1, #1c2230) !important;
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab.is-active {
+	background: color-mix(in oklch, var(--ms-ac-mint, #2f9d7c) 18%, transparent);
+	color: var(--ms-fg-1, #1c2230);
+	border-color: var(--ms-ac-mint, #2f9d7c);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn {
+	color: var(--ms-fg-2, #495063);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn:hover {
+	background: color-mix(in oklch, var(--ms-fg-1, #1c2230) 6%, transparent);
+	color: var(--ms-fg-1, #1c2230);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn.is-on {
+	color: var(--ms-ac-mint, #2f9d7c);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-stat,
+[data-app-shell="modern"][data-theme="light"] .tb-role,
+[data-app-shell="modern"][data-theme="light"] .tb-role-badge {
+	color: var(--ms-fg-2, #495063);
+}
+
+/* Mint primary butonlar (Apply timeout, ban-kaldir vs) light'ta text kontrasti */
+[data-app-shell="modern"][data-theme="light"] .mod-timeout-apply,
+[data-app-shell="modern"][data-theme="light"] .uw-strip-apply,
+[data-app-shell="modern"][data-theme="light"] .uw-strip-unban,
+[data-app-shell="modern"][data-theme="light"] .mod-target-unban,
+[data-app-shell="modern"][data-theme="light"] .uw-btn-primary {
+	color: #ffffff !important;
+	background: var(--ms-ac-mint, #2f9d7c) !important;
+}
+[data-app-shell="modern"][data-theme="light"] .mod-timeout-apply:disabled,
+[data-app-shell="modern"][data-theme="light"] .uw-strip-apply:disabled,
+[data-app-shell="modern"][data-theme="light"] .uw-strip-unban:disabled,
+[data-app-shell="modern"][data-theme="light"] .uw-btn-primary:disabled {
+	color: #ffffff !important;
+	opacity: 0.4 !important;
+}

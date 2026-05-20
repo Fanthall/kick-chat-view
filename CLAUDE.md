@@ -46,6 +46,41 @@
 - `src/renderer/services/sevenTv.ts`: 7TV emote API wrapper'i.
 - `src/renderer/util/localModerationStorage.ts`: Blocked emote ve suspended user listelerini localStorage uzerinden okuma/yazma yardimcilari.
 
+## Modern UI Architecture (2026-05-20)
+
+### Shell Switch
+
+- Default shell: **modern** (changed in Sprint 7; was classic).
+- Override priority: URL param `?shell=classic|modern` > hash `#...shell=classic|modern` > `localStorage.chatViewShellPreference` > default (modern).
+- localStorage key: `chatViewShellPreference` = `"modern" | "classic"`. Legacy key `chatViewShellPreview` is automatically migrated to `chatViewShellPreference` on first App.tsx mount.
+- Runtime toggle: Settings → Advanced → "Modern UI (beta)" toggle writes `chatViewShellPreference` and dispatches `chat-view-shell-preference-changed` custom event. `App.tsx` listens and re-renders the shell without reload.
+- Classic shell remains fully functional; `src/renderer/src/Layout/Layout.tsx` is unmodified.
+
+### File Map
+
+| File | Role |
+|---|---|
+| `src/renderer/src/Layout/LayoutModern.tsx` | 3-col shell: topbar, channel tabs, screen routing |
+| `src/renderer/src/Chat/ChatModern.tsx` | Chat panel: message list, composer, emote autocomplete integration |
+| `src/renderer/src/Chat/EmoteAutocompleteModern.tsx` | Inline emote dropdown (Sprint 3) |
+| `src/renderer/src/Chat/EmotePickerModern.tsx` | Modal emote picker with focus trap (Sprint 6b/7) |
+| `src/renderer/src/ActivityView/ActivityViewModern.tsx` | Activity panel + KICKs leaderboard sub-tab (Sprint 4) |
+| `src/renderer/src/ModActions/ModActionsModern.tsx` | Moderation panel: user card, quick actions, chat controls (Sprint 5) |
+| `src/renderer/src/Settings/SettingsModern.tsx` | Settings side-nav IA: 6 sections (Sprint 6a) |
+| `src/renderer/src/Component/Icon/Icon.tsx` | Shared icon component (Sprint 2) |
+| `src/renderer/src/Settings/SettingsClassic.tsx` | Renamed from Settings.tsx; still imported by classic Layout as default export |
+| `src/renderer/util/useFocusTrap.ts` | Focus trap hook for modal dialogs (Sprint 7) |
+
+### Design Tokens Scope
+
+All Modern UI CSS variables are scoped under `[data-app-shell="modern"]` in the stylesheet. They do not affect NextUI or classic component styles. Token prefix: `--ms-*`.
+
+### Constraint Reminders
+
+- CONSTRAINT-2: `chatViewShellPreference` is the authoritative key; `chatViewShellPreview` is legacy (migrated, then removed).
+- CONSTRAINT-4: All message HTML goes through `renderMessageHtml` / `buildBadgesHtml` (sanitized). No raw `dangerouslySetInnerHTML` outside these helpers.
+- NextUI ↔ OKLCH scope isolation: Modern tokens under `[data-app-shell="modern"]` only; do not bleed into NextUI `dark` class scope.
+
 ## Veri Akisi
 
 1. `App.tsx` acilista 7TV emote listesini ceker ve `chatListener()` thunk'ini dispatch eder.

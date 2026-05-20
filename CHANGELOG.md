@@ -1,3 +1,17 @@
+## [Modern UI (beta)] — 2026-05-20
+
+- **LayoutModern shell:** 3-column layout (Chat / Activity / Moderation) + topbar with channel tabs, live pill, viewer count, uptime, category. Modern shell is now the default; classic accessible via Settings → Advanced → Modern UI toggle.
+- **ChatModern:** Full chat panel with emote rendering (Kick/7TV/BTTV/FFZ), reply, pin, timeout/ban quick-actions, optimistic send, scroll pause/resume, emote autocomplete.
+- **EmoteAutocompleteModern:** Inline autocomplete dropdown with provider badges, animated/zero-width/sub-only indicators.
+- **EmotePickerModern:** Modal emote picker with per-provider tabs (Kick/7TV/BTTV/FFZ/Emoji/Favorites), search, preview pane, right-click favorite, provider status footer, focus trap (Sprint 7 a11y).
+- **ActivityViewModern + KICKs Leaderboard:** Activity panel with filter chips (All/Subs/Gifts/KICKs/Rewards), expand drawer with raw JSON inspect (token-masked), reward accept/reject actions. KICKs leaderboard sub-tab with week/month/lifetime periods.
+- **ModActionsModern:** Selected user card, 6 quick-action buttons (timeout/ban/clear/note/promote), chat controls panel (slow/sub/follower/emote/R9K localStorage toggles), suspended users list.
+- **SettingsModern:** Side-nav IA with 6 sections — Channel (multi-channel, auto-connect), Account (OAuth status, sign-out), Permissions (scope matrix, re-authorize), Moderation (timeout defaults, mod check message, suspended users, blocked emotes), Emotes (provider status, GIF/badge toggles), Advanced (event subscriptions, verbose logging, shell toggle).
+- **Design tokens:** OKLCH-based color palette under `[data-app-shell="modern"]` scope; Geist font; does not affect NextUI classic scope.
+- **Settings → Advanced:** Modern UI toggle dispatches `chat-view-shell-preference-changed` event; App.tsx re-renders immediately without reload.
+- **A11y (Sprint 7):** aria-label + title on all icon-only buttons; role=tablist/tab/switch; aria-modal + role=dialog + aria-labelledby on EmotePickerModern; focus trap hook (useFocusTrap); aria-expanded on activity row expand; aria-selected on all tab strips.
+- **localStorage key:** `chatViewShellPreference` (replaces legacy `chatViewShellPreview` — migrated automatically on first load).
+
 # 2.1.0
 
 - Migrate to `css-minifier-webpack-plugin`
