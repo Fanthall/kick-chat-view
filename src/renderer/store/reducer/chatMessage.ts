@@ -230,7 +230,26 @@ const ChatMessageReducers = (
 				),
 			};
 		}
-		const newList = trimList(state.messageList.concat(action.message));
+		// Sprint 34: chronological insert. Canlı Pusher mesajı ile gecikmeli
+		// history fetch race olduğunda eski history mesajı liste sonuna
+		// concat ediliyordu → UI'da bottom-scroll en yeni gibi gözüktüğü
+		// için sıralama bozuk görünüyordu. created_at karşılaştırması ile
+		// uygun konuma insert edip listeyi daima oldest→newest tutuyoruz.
+		const incomingTs = new Date(action.message.created_at).getTime();
+		let insertAt = state.messageList.length;
+		for (let i = state.messageList.length - 1; i >= 0; i--) {
+			const ts = new Date(state.messageList[i].created_at).getTime();
+			if (Number.isFinite(ts) && ts <= incomingTs) {
+				insertAt = i + 1;
+				break;
+			}
+			insertAt = i;
+		}
+		const newList = trimList([
+			...state.messageList.slice(0, insertAt),
+			action.message,
+			...state.messageList.slice(insertAt),
+		]);
 		const celebrationSub = getSubFromCelebrationMessage(action.message);
 		return {
 			...state,
