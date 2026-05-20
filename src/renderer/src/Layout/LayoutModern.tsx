@@ -34,7 +34,7 @@ import {
 } from "../../util/channelSettings";
 import { chatListener } from "../../util/chatConnection";
 import Icon from "../Component/Icon/Icon";
-import Chat from "../Chat/Chat";
+import ChatModern from "../Chat/ChatModern";
 import ActivityView from "../ActivityView/ActivityView";
 import ModActions from "../ModActions/ModActions";
 
@@ -237,7 +237,7 @@ const LayoutModern: FunctionComponent = () => {
 					}}
 					aria-label="Chat"
 				>
-					<Chat />
+					<ChatModern />
 				</section>
 				<aside
 					style={{

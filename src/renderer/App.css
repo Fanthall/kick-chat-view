@@ -2156,3 +2156,401 @@ body {
 	flex: 1 1 auto;
 }
 
+/* =============================================================================
+ * Sprint 3 — ChatModern + EmoteAutocompleteModern selectors
+ *
+ * All selectors are scoped under [data-app-shell="modern"] so classic
+ * chat styles remain completely untouched.
+ * ========================================================================== */
+
+/* ── Panel header ── */
+[data-app-shell="modern"] .panel-hd {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px 10px 14px;
+	border-bottom: 1px solid var(--ms-border);
+	min-height: 44px;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .panel-hd h2 {
+	margin: 0;
+	font-size: var(--ms-fs-13);
+	font-weight: 600;
+	color: var(--ms-fg-1);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+[data-app-shell="modern"] .panel-hd-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+[data-app-shell="modern"] .icon-btn {
+	width: 28px;
+	height: 28px;
+	display: grid;
+	place-items: center;
+	border-radius: var(--ms-r-2);
+	color: var(--ms-fg-3);
+	background: transparent;
+	border: none;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .icon-btn:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+}
+
+/* ── Chat list ── */
+[data-app-shell="modern"] .chat-list {
+	flex: 1 1 auto;
+	padding: 6px 0 12px;
+	overflow-y: auto;
+}
+
+/* ── Chat row ── */
+[data-app-shell="modern"] .chat-row {
+	display: grid;
+	grid-template-columns: 56px minmax(0, 1fr) auto;
+	column-gap: 10px;
+	padding: 3px 8px 3px 14px;
+	align-items: baseline;
+	position: relative;
+	min-height: var(--ms-row-h, 30px);
+}
+[data-app-shell="modern"] .chat-row:hover {
+	background: color-mix(in oklch, var(--ms-bg-hover) 50%, transparent);
+}
+[data-app-shell="modern"] .chat-row:hover .chat-tools {
+	opacity: 1;
+}
+[data-app-shell="modern"] .chat-row.is-mention {
+	border-left: 2px solid var(--ms-ac-warn);
+	padding-left: 12px;
+	background: color-mix(in oklch, var(--ms-ac-warn) 5%, transparent);
+}
+[data-app-shell="modern"] .chat-row.is-suspicious {
+	border-left: 2px solid var(--ms-ac-mod);
+	padding-left: 12px;
+	background: color-mix(in oklch, var(--ms-ac-mod) 5%, transparent);
+}
+[data-app-shell="modern"] .chat-row.is-removed .chat-text {
+	text-decoration: line-through;
+	opacity: 0.45;
+}
+[data-app-shell="modern"] .chat-row.is-bot {
+	background: color-mix(in oklch, var(--ms-bg-2) 60%, transparent);
+}
+
+/* ── Chat system row ── */
+[data-app-shell="modern"] .chat-system {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 14px;
+	font-size: var(--ms-fs-12);
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"] .sys-icon {
+	display: inline-flex;
+	align-items: center;
+	flex-shrink: 0;
+	color: var(--ms-ac-mod);
+}
+[data-app-shell="modern"] .sys-actor {
+	font-weight: 600;
+	color: var(--ms-fg-2);
+}
+
+/* ── Chat time ── */
+[data-app-shell="modern"] .chat-time {
+	font-family: var(--ms-font-mono);
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	line-height: var(--ms-row-h, 30px);
+	padding-top: 1px;
+}
+
+/* ── Chat body ── */
+[data-app-shell="modern"] .chat-body {
+	word-break: break-word;
+	font-size: var(--ms-fs-13);
+	line-height: 1.45;
+}
+[data-app-shell="modern"] .chat-name {
+	font-weight: 600;
+	margin-right: 2px;
+}
+[data-app-shell="modern"] .chat-name:hover {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+[data-app-shell="modern"] .chat-text {
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .chat-badges {
+	display: inline;
+	margin-right: 4px;
+	vertical-align: middle;
+}
+
+/* ── Chat reply preview ── */
+[data-app-shell="modern"] .chat-reply {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	margin-bottom: 2px;
+	padding-left: 2px;
+	border-left: 2px solid var(--ms-border);
+}
+[data-app-shell="modern"] .chat-reply-name {
+	font-weight: 600;
+	color: var(--ms-fg-2);
+	white-space: nowrap;
+}
+
+/* ── Chat tools (hover) ── */
+[data-app-shell="modern"] .chat-tools {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	opacity: 0;
+	transition: opacity 0.1s;
+	align-self: center;
+}
+[data-app-shell="modern"] .chat-tools button {
+	width: 22px;
+	height: 22px;
+	display: grid;
+	place-items: center;
+	border-radius: var(--ms-r-1);
+	color: var(--ms-fg-3);
+	background: transparent;
+	border: none;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .chat-tools button:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .chat-tools button.danger:hover {
+	background: color-mix(in oklch, var(--ms-ac-live) 15%, transparent);
+	color: var(--ms-ac-live);
+}
+
+/* ── Pause pill ── */
+[data-app-shell="modern"] .chat-pause {
+	position: sticky;
+	bottom: 8px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 12px;
+	border-radius: 99px;
+	background: var(--ms-bg-2);
+	border: 1px solid var(--ms-border);
+	color: var(--ms-fg-2);
+	font-size: 12px;
+	cursor: pointer;
+	z-index: 10;
+	white-space: nowrap;
+	margin: 0 auto;
+}
+[data-app-shell="modern"] .chat-pause:hover {
+	background: var(--ms-bg-hover);
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .chat-pause-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ms-ac-live);
+	animation: ms-live-pulse 1.6s ease-in-out infinite;
+}
+
+/* ── Inline mention / emote ── */
+[data-app-shell="modern"] .mention {
+	color: var(--ms-ac-mint);
+	font-weight: 500;
+}
+[data-app-shell="modern"] .emote {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+/* ── Badge variants ── */
+[data-app-shell="modern"] .badge.b-vip {
+	color: var(--ms-ac-sub);
+}
+[data-app-shell="modern"] .badge.b-mod {
+	color: var(--ms-ac-mod);
+}
+[data-app-shell="modern"] .badge.b-sub {
+	color: var(--ms-ac-sub);
+}
+[data-app-shell="modern"] .badge.b-og {
+	color: var(--ms-ac-gift);
+}
+[data-app-shell="modern"] .badge.b-vrf {
+	color: var(--ms-ac-mint);
+}
+[data-app-shell="modern"] .badge.b-stf {
+	color: var(--ms-ac-live);
+}
+[data-app-shell="modern"] .badge.b-bot {
+	color: var(--ms-fg-3);
+}
+
+/* ── Composer area ── */
+[data-app-shell="modern"] .composer-wrap {
+	flex: 0 0 auto;
+	border-top: 1px solid var(--ms-border);
+	padding: 8px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	background: var(--ms-bg-1);
+}
+[data-app-shell="modern"] .composer-reply {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 4px 8px;
+	border-radius: var(--ms-r-2);
+	background: var(--ms-bg-2);
+	font-size: 12px;
+	color: var(--ms-fg-2);
+	border: 1px solid var(--ms-border);
+}
+[data-app-shell="modern"] .composer-reply button {
+	color: var(--ms-fg-3);
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	padding: 0 2px;
+}
+[data-app-shell="modern"] .composer {
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+	border: 1px solid var(--ms-border);
+	border-radius: var(--ms-r-3);
+	background: var(--ms-bg-2);
+	padding: 4px 6px 4px 10px;
+	transition: border-color 0.15s;
+}
+[data-app-shell="modern"] .composer:focus-within {
+	border-color: color-mix(in oklch, var(--ms-ac-mint) 60%, transparent);
+}
+[data-app-shell="modern"] .composer-input {
+	flex: 1 1 auto;
+	background: transparent;
+	border: none;
+	outline: none;
+	resize: none;
+	font: inherit;
+	color: var(--ms-fg-1);
+	font-size: var(--ms-fs-13);
+	line-height: 1.45;
+	min-height: 22px;
+	max-height: 120px;
+	overflow-y: auto;
+	padding: 0;
+}
+[data-app-shell="modern"] .composer-input::placeholder {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"] .composer-tools {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+[data-app-shell="modern"] .composer-send {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 10px;
+	border-radius: var(--ms-r-2);
+	background: var(--ms-ac-mint);
+	color: var(--ms-bg-0);
+	font-size: var(--ms-fs-12);
+	font-weight: 600;
+	border: none;
+	cursor: pointer;
+	transition: opacity 0.15s;
+}
+[data-app-shell="modern"] .composer-send:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .composer-send:not(:disabled):hover {
+	opacity: 0.88;
+}
+[data-app-shell="modern"] .composer-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 11px;
+	color: var(--ms-fg-3);
+	gap: 8px;
+}
+
+/* ── Autocomplete ── */
+[data-app-shell="modern"] .autocomplete {
+	background: var(--ms-bg-1);
+	border: 1px solid var(--ms-border);
+	border-radius: var(--ms-r-3);
+	box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+	overflow: hidden;
+	max-height: 220px;
+	overflow-y: auto;
+}
+[data-app-shell="modern"] .ac-row {
+	display: grid;
+	grid-template-columns: 28px 1fr auto;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 10px;
+	cursor: pointer;
+	user-select: none;
+}
+[data-app-shell="modern"] .ac-row:hover,
+[data-app-shell="modern"] .ac-row.is-active {
+	background: var(--ms-bg-hover);
+}
+[data-app-shell="modern"] .ac-emote {
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+[data-app-shell="modern"] .ac-emote img {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+}
+[data-app-shell="modern"] .ac-name {
+	font-size: var(--ms-fs-13);
+	color: var(--ms-fg-1);
+	font-weight: 500;
+}
+[data-app-shell="modern"] .ac-tags {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
