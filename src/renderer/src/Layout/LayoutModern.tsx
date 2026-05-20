@@ -290,7 +290,8 @@ const LayoutModern: FunctionComponent = () => {
 						const isBanner =
 							t === "sub-banner" ||
 							t === "gift-sub-banner" ||
-							t === "host-banner";
+							t === "host-banner" ||
+							t === "kicks-banner";
 						const isOwn = ownName && senderName === ownName;
 						if (!isBanner && !isOwn) newCount++;
 					}

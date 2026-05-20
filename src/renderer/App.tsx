@@ -219,6 +219,78 @@ export default function App() {
 			});
 	}, [isUserWindow, isKickConnection]);
 
+	// Sprint 40: webhook event listener (kicks.gifted vb.) — yalnız ana pencere.
+	useEffect(() => {
+		if (
+			isUserWindow ||
+			isActivityWindow ||
+			isModerationWindow ||
+			isKickConnection
+		) {
+			return;
+		}
+		const unsub = (window.electron as any)?.webhook?.onEvent?.(
+			(event: {
+				eventType: string;
+				messageId: string;
+				timestamp: string;
+				payload: any;
+				verified: boolean;
+			}) => {
+				try {
+					const eventType = event.eventType || "";
+					const slug =
+						event.payload?.broadcaster?.channel_slug ||
+						event.payload?.channel?.slug ||
+						event.payload?.channel_slug ||
+						getActiveChannelSlug() ||
+						undefined;
+					if (eventType === "kicks.gifted") {
+						// eslint-disable-next-line @typescript-eslint/no-var-requires
+						const { normalizeKickWebhookActivity } = require("./util/kickActivity");
+						const item = normalizeKickWebhookActivity(eventType, {
+							...event.payload,
+							channel: { slug },
+						});
+						if (item) {
+							// eslint-disable-next-line @typescript-eslint/no-var-requires
+							const {
+								addActivity,
+								newMessage,
+							} = require("./store/actions/chatMessage");
+							dispatch(addActivity({ ...item, channelSlug: slug }));
+							const senderName = item.actor?.username || "Anonim";
+							const giftName = item.giftName ? ` — ${item.giftName}` : "";
+							const amount =
+								item.amount != null ? `${item.amount} KICKs` : "KICKs";
+							const banner = {
+								id: `kicks-banner-${item.id || event.messageId}`,
+								channelSlug: slug,
+								chatroom_id: 0,
+								content: `${senderName}, ${amount} gönderdi${giftName}`,
+								type: "kicks-banner",
+								created_at: new Date(
+									item.createdAt || Date.now()
+								).toISOString(),
+								sender: {
+									id: 0,
+									username: senderName,
+									slug: senderName.toLowerCase(),
+									identity: { color: "#61a8ff", badges: [] },
+								},
+							};
+							dispatch(newMessage(banner));
+						}
+					}
+				} catch (err) {
+					console.log("[webhook dispatch error]", err);
+				}
+			}
+		);
+		return () => unsub?.();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isUserWindow, isActivityWindow, isModerationWindow, isKickConnection]);
+
 	// Sprint 16: pop-out + modern shell pencereleri tam-bleed render edilir
 	// (98% wrapper + 17px paddingRight + overflowY:scroll classic shell icindi).
 	const isPopOutWindow =

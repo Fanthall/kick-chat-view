@@ -802,6 +802,203 @@ const EmotesSection: FunctionComponent = () => {
 	);
 };
 
+// ─── Sprint 40: Webhook receiver block ────────────────────────────────────────
+
+const WEBHOOK_PUBLIC_URL_KEY = "chatViewWebhookPublicUrl";
+const WEBHOOK_SUBSCRIPTION_IDS_KEY = "chatViewWebhookSubscriptionIds";
+
+const WebhookReceiverBlock: FunctionComponent = () => {
+	const [info, setInfo] = useState<{ port: number; path: string; localUrl: string; running?: boolean } | null>(null);
+	const [running, setRunning] = useState<boolean>(false);
+	const [publicUrl, setPublicUrl] = useState<string>(
+		() => localStorage.getItem(WEBHOOK_PUBLIC_URL_KEY) || ""
+	);
+	const [subscriptionIds, setSubscriptionIds] = useState<string[]>(() => {
+		try {
+			const raw = localStorage.getItem(WEBHOOK_SUBSCRIPTION_IDS_KEY);
+			return raw ? JSON.parse(raw) : [];
+		} catch {
+			return [];
+		}
+	});
+	const [busy, setBusy] = useState<string>("");
+
+	useEffect(() => {
+		(window.electron as any)?.webhook
+			?.getReceiverInfo?.()
+			.then((res: any) => {
+				setInfo(res);
+				setRunning(!!res?.running);
+			})
+			.catch(() => {});
+	}, []);
+
+	const handleStart = async () => {
+		setBusy("start");
+		try {
+			const res = await (window.electron as any)?.webhook?.start?.();
+			if (res?.ok) {
+				setRunning(true);
+				const newInfo = await (window.electron as any)?.webhook?.getReceiverInfo?.();
+				if (newInfo) setInfo(newInfo);
+				toast.success("Webhook receiver başlatıldı.");
+			} else {
+				toast.error("Receiver başlatılamadı.");
+			}
+		} finally {
+			setBusy("");
+		}
+	};
+	const handleStop = async () => {
+		setBusy("stop");
+		try {
+			await (window.electron as any)?.webhook?.stop?.();
+			setRunning(false);
+			toast("Webhook receiver durduruldu.", { type: "info" });
+		} finally {
+			setBusy("");
+		}
+	};
+
+	const handlePublicUrlChange = (v: string) => {
+		setPublicUrl(v);
+		localStorage.setItem(WEBHOOK_PUBLIC_URL_KEY, v);
+	};
+
+	const persistIds = (ids: string[]) => {
+		setSubscriptionIds(ids);
+		localStorage.setItem(
+			WEBHOOK_SUBSCRIPTION_IDS_KEY,
+			JSON.stringify(ids)
+		);
+	};
+
+	const handleSubscribeKicks = async () => {
+		if (!publicUrl || !/^https?:\/\//i.test(publicUrl)) {
+			toast.error("Geçerli bir public URL girin (ngrok / cloudflare-tunnel).");
+			return;
+		}
+		setBusy("subscribe");
+		try {
+			const res: any = await window.electron.kick.subscribeToEvents({
+				events: [{ name: "kicks.gifted", version: 1 }],
+				method: "webhook",
+			} as any);
+			const newIds: string[] = (res?.data || [])
+				.map((d: any) => d?.subscription_id || d?.id)
+				.filter(Boolean);
+			persistIds([...subscriptionIds, ...newIds]);
+			toast.success(
+				newIds.length
+					? `kicks.gifted aboneliği eklendi (${newIds.length}).`
+					: "Subscribe başarılı."
+			);
+		} catch (err: any) {
+			toast.error(err?.message || "Subscribe başarısız.");
+		} finally {
+			setBusy("");
+		}
+	};
+
+	const handleUnsubscribeAll = async () => {
+		if (subscriptionIds.length === 0) return;
+		setBusy("unsubscribe");
+		try {
+			await window.electron.kick.deleteEventSubscriptions(subscriptionIds);
+			persistIds([]);
+			toast.success("Tüm webhook abonelikleri silindi.");
+		} catch (err: any) {
+			toast.error(err?.message || "Silme başarısız.");
+		} finally {
+			setBusy("");
+		}
+	};
+
+	return (
+		<div className="set-block">
+			<div className="set-block-section-label">Webhook receiver (KICKs)</div>
+			<div className="set-block-help" style={{ fontSize: 11, color: "var(--ms-fg-4)", padding: "0 14px 8px" }}>
+				KICKs olayları Kick tarafından <b>yalnızca webhook</b> ile yayınlanıyor.
+				Local receiver bu HTTP server'ı yönetir. Public URL (ngrok / cloudflare-tunnel)
+				gerekiyor — local URL'yi tunnel ile dışarı aç ve aşağıdaki alana yapıştır.
+			</div>
+
+			<div className="set-block-row">
+				<div className="l">
+					<b>Local URL</b>
+					<span style={{ fontFamily: "var(--ms-font-mono)" }}>
+						{info?.localUrl || `http://localhost:18292/webhook/kick`}
+					</span>
+				</div>
+				<div style={{ display: "flex", gap: 6 }}>
+					{running ? (
+						<button
+							type="button"
+							className="set-btn"
+							disabled={busy === "stop"}
+							onClick={handleStop}
+						>
+							Durdur
+						</button>
+					) : (
+						<button
+							type="button"
+							className="set-btn primary"
+							disabled={busy === "start"}
+							onClick={handleStart}
+						>
+							Başlat
+						</button>
+					)}
+				</div>
+			</div>
+
+			<div className="set-block-row">
+				<div className="l">
+					<b>Public URL (tunnel)</b>
+					<span>ngrok veya cloudflare-tunnel üzerinden local URL'ye yönlendir.</span>
+				</div>
+				<input
+					className="set-input"
+					style={{ width: 320, fontFamily: "var(--ms-font-mono)" }}
+					placeholder="https://xxxx.ngrok-free.app/webhook/kick"
+					value={publicUrl}
+					onChange={(e) => handlePublicUrlChange(e.target.value)}
+				/>
+			</div>
+
+			<div className="set-block-row">
+				<div className="l">
+					<b>kicks.gifted aboneliği</b>
+					<span>
+						{subscriptionIds.length === 0
+							? "Henüz subscribe edilmedi."
+							: `${subscriptionIds.length} aktif subscription.`}
+					</span>
+				</div>
+				<div style={{ display: "flex", gap: 6 }}>
+					<button
+						type="button"
+						className="set-btn primary"
+						disabled={busy === "subscribe" || !running || !publicUrl}
+						onClick={handleSubscribeKicks}
+					>
+						{busy === "subscribe" ? "..." : "Subscribe"}
+					</button>
+					<button
+						type="button"
+						className="set-btn ghost"
+						disabled={busy === "unsubscribe" || subscriptionIds.length === 0}
+						onClick={handleUnsubscribeAll}
+					>
+						Hepsini sil
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+};
+
 // ─── Section: Advanced ────────────────────────────────────────────────────────
 
 interface AdvancedSectionProps {
@@ -975,6 +1172,10 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 					</div>
 				</div>
 			</div>
+
+			{/* Sprint 40: Webhook receiver block — KICKs gibi sadece webhook'la
+			    gelen olaylar için local HTTP server + public tunnel URL. */}
+			<WebhookReceiverBlock />
 
 			<div className="set-block">
 				<div className="set-block-section-label">Event subscriptions</div>
