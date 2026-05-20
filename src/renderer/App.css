@@ -3299,23 +3299,34 @@ html.modern-shell-root[data-theme="light"] {
 	border-radius: 4px;
 	border: 1px solid color-mix(in oklch, var(--live, #ef4f5f) 35%, transparent);
 }
-[data-app-shell="modern"] .mod-target-unban {
-	margin-top: 6px;
+[data-app-shell="modern"] .mod-target-unban,
+[data-app-shell="modern"] .mod-target-detail {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	background: var(--ms-ac-mint, #7adbb4);
-	color: var(--ms-bg-0, #0c0d10);
 	border: none;
 	padding: 4px 10px;
 	border-radius: var(--ms-r-2, 6px);
 	font-size: 11px;
 	font-weight: 600;
 	cursor: pointer;
-	transition: opacity 0.12s;
+	transition: opacity 0.12s, background 0.12s;
+}
+[data-app-shell="modern"] .mod-target-unban {
+	background: var(--ms-ac-mint, #7adbb4);
+	color: var(--ms-bg-0, #0c0d10);
 }
 [data-app-shell="modern"] .mod-target-unban:hover {
 	opacity: 0.88;
+}
+[data-app-shell="modern"] .mod-target-detail {
+	background: var(--ms-bg-3, #1e2127);
+	color: var(--ms-fg-1, #ebecef);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+}
+[data-app-shell="modern"] .mod-target-detail:hover {
+	background: var(--ms-bg-hover, #22252c);
+	border-color: var(--ms-ac-mint, #7adbb4);
 }
 
 [data-app-shell="modern"] .mod-action-tag {
@@ -3355,6 +3366,43 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .uw-main > .uw-tab-body {
 	flex: 1 1 auto;
 	min-height: 0;
+}
+
+/* Sprint 22: Global no-select — UI chrome (tabs, buttons, panel headers,
+   stat numbers) kazara secilmesin. Chat icerigi ve composer hariç. */
+[data-app-shell="modern"],
+[data-app-shell="modern"] *,
+.modern-shell-root,
+.modern-shell-root * {
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+/* Chat icerigi + composer + her tur INPUT/TEXTAREA + UserWindow icerik
+   sekmesinde select edilebilir kalsin. Kullanici mesaj kopyalayabilsin. */
+[data-app-shell="modern"] .chat-list,
+[data-app-shell="modern"] .chat-list *,
+[data-app-shell="modern"] .chat-text,
+[data-app-shell="modern"] .chat-text *,
+[data-app-shell="modern"] .chat-name,
+[data-app-shell="modern"] .chat-time,
+[data-app-shell="modern"] .chat-reply,
+[data-app-shell="modern"] .chat-system,
+[data-app-shell="modern"] .composer-input,
+[data-app-shell="modern"] input,
+[data-app-shell="modern"] textarea,
+[data-app-shell="modern"] .uw-msg-list,
+[data-app-shell="modern"] .uw-msg-list *,
+[data-app-shell="modern"] .uw-msg-content,
+[data-app-shell="modern"] .uw-card,
+[data-app-shell="modern"] .uw-card *,
+[data-app-shell="modern"] .uw-notes-tab,
+[data-app-shell="modern"] .uw-notes-tab *,
+[data-app-shell="modern"] .act-json,
+[data-app-shell="modern"] .act-kv-v,
+[data-app-shell="modern"] .ep-preview-name {
+	user-select: text;
+	-webkit-user-select: text;
 }
 [data-app-shell="modern"] .mod-btn {
 	display: flex;

@@ -706,16 +706,48 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 								<div className="mod-target-meta">
 									{userMsgCount} msgs · {userTimeouts} timeouts
 								</div>
-								{canModerate && selectedUserIsBanned && (
+								<div
+									style={{
+										marginTop: 6,
+										display: "flex",
+										gap: 6,
+										flexWrap: "wrap",
+									}}
+								>
 									<button
 										type="button"
-										className="mod-target-unban"
-										onClick={handleSelectedUnban}
-										aria-label={`Unban ${selectedUser.username}`}
+										className="mod-target-detail"
+										onClick={() => {
+											if (!selectedUser) return;
+											try {
+												const payload = buildUserWindowPayload({
+													user: selectedUser,
+													messages: messages.messageList,
+													modActions: messages.modAction,
+													openedFrom: "moderation",
+													channelName: activeChannelSlug || undefined,
+													canModerateChannel: canModerate,
+												});
+												window.electron.userWindow.open(payload);
+											} catch (err: any) {
+												toast.error(err?.message || "User window acilamadi.");
+											}
+										}}
+										aria-label={`Open detail for ${selectedUser.username}`}
 									>
-										<Icon name="check" size={11} /> Bani kaldir
+										<Icon name="user" size={11} /> Detay
 									</button>
-								)}
+									{canModerate && selectedUserIsBanned && (
+										<button
+											type="button"
+											className="mod-target-unban"
+											onClick={handleSelectedUnban}
+											aria-label={`Unban ${selectedUser.username}`}
+										>
+											<Icon name="check" size={11} /> Bani kaldir
+										</button>
+									)}
+								</div>
 							</div>
 						</div>
 					) : (
