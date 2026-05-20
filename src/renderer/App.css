@@ -2939,3 +2939,161 @@ body {
 	color: var(--ms-ac-kicks);
 }
 
+/* ─── Sprint 5: ModActionsModern ─────────────────────────────────────────── */
+[data-app-shell="modern"] .mod-section {
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--ms-bd-1, #22262e);
+}
+[data-app-shell="modern"] .mod-section h3 {
+	margin: 0 0 10px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--ms-fg-3, #828690);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+[data-app-shell="modern"] .mod-target {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+}
+[data-app-shell="modern"] .mod-target-ava {
+	width: 36px;
+	height: 36px;
+	border-radius: var(--ms-r-2, 6px);
+	background: linear-gradient(135deg, oklch(0.55 0.16 280), oklch(0.45 0.12 320));
+	display: grid;
+	place-items: center;
+	font-weight: 600;
+	font-size: 14px;
+	color: white;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .mod-target-info {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+[data-app-shell="modern"] .mod-target-name {
+	font-weight: 600;
+	font-size: 13px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .mod-target-meta {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+[data-app-shell="modern"] .mod-target-empty {
+	padding: 16px 12px;
+	border: 1px dashed var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	color: var(--ms-fg-3, #828690);
+	font-size: 12px;
+	text-align: center;
+}
+[data-app-shell="modern"] .mod-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 6px;
+}
+[data-app-shell="modern"] .mod-btn {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	padding: 8px 10px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	gap: 3px;
+	color: var(--ms-fg-1, #ebecef);
+	cursor: pointer;
+	transition: background 0.1s, border-color 0.1s;
+}
+[data-app-shell="modern"] .mod-btn:hover {
+	background: var(--ms-bg-3, #1e2127);
+	border-color: var(--ms-bd-3, #3a4049);
+}
+[data-app-shell="modern"] .mod-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+[data-app-shell="modern"] .mod-btn .label {
+	font-size: 12px;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+[data-app-shell="modern"] .mod-btn .hint {
+	font-size: 10.5px;
+	color: var(--ms-fg-3, #828690);
+	font-family: "Geist Mono", ui-monospace, monospace;
+}
+[data-app-shell="modern"] .mod-btn.danger:hover {
+	border-color: color-mix(in oklch, var(--ms-live, #ef4f5f) 50%, var(--ms-bd-3, #3a4049));
+}
+[data-app-shell="modern"] .mod-btn.danger .label {
+	color: var(--ms-live, #ef4f5f);
+}
+[data-app-shell="modern"] .mod-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+[data-app-shell="modern"] .mod-list-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 8px;
+	border-radius: var(--ms-r-2, 6px);
+	font-size: 12px;
+	color: var(--ms-fg-2, #b6b9c0);
+}
+[data-app-shell="modern"] .mod-list-row:hover {
+	background: var(--ms-bg-2, #181a20);
+}
+[data-app-shell="modern"] .mod-list-row .reason {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+}
+/* Toggle pill */
+[data-app-shell="modern"] .mod-toggle {
+	width: 26px;
+	height: 14px;
+	background: var(--ms-bd-2, #2d323b);
+	border-radius: 7px;
+	position: relative;
+	transition: background 0.15s;
+	border: none;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+[data-app-shell="modern"] .mod-toggle::after {
+	content: "";
+	position: absolute;
+	top: 1px;
+	left: 1px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--ms-fg-3, #828690);
+	transition: left 0.15s, background 0.15s;
+}
+[data-app-shell="modern"] .mod-toggle.is-on {
+	background: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+[data-app-shell="modern"] .mod-toggle.is-on::after {
+	left: 13px;
+	background: #052420;
+}
+
