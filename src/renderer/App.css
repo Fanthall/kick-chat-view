@@ -4184,10 +4184,21 @@ body {
 [data-app-shell="modern"] .main {
 	display: grid;
 	grid-template-columns: minmax(520px, 1fr) 360px 360px;
+	grid-template-rows: 1fr;
 	min-height: 0;
+	height: 100%;
 	gap: 1px;
 	background: var(--bd-1);
 	overflow: hidden;
+}
+
+[data-app-shell="modern"] .main > .panel {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	min-width: 0;
+	overflow: hidden;
+	background: var(--ms-bg-1);
 }
 
 [data-app-shell="modern"] .main.no-act {
