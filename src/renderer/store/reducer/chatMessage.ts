@@ -417,9 +417,44 @@ const ChatMessageReducers = (
 			create_at: action.message.create_at,
 			raw: action.message,
 		});
+		// Sprint 35: chat akışına da sub banner satırı bas — kullanıcı sub
+		// event'lerini activity'den ayrıca takip etmek zorunda kalmasın.
+		const subBannerId = `sub-banner-${action.message.id || action.message.username}-${action.message.create_at}`;
+		const isRenewal = !!action.message.streak && action.message.streak > 1;
+		const subBanner: UserMessage = {
+			id: subBannerId,
+			channelSlug: action.message.channelSlug,
+			chatroom_id: action.message.chatroom_id,
+			content: isRenewal
+				? `${action.message.username} aboneliğini yeniledi — ${action.message.months} ay`
+				: `${action.message.username} abone oldu — ${action.message.months} ay`,
+			type: "sub-banner",
+			created_at: new Date(action.message.create_at).toISOString(),
+			sender: {
+				id: 0,
+				username: action.message.username,
+				slug: action.message.username.toLowerCase(),
+				identity: {
+					color: "#7c3aed",
+					badges: [
+						{
+							type: "subscriber",
+							text: "Sub",
+							count: action.message.months,
+						},
+					],
+				},
+			},
+		};
+		const subBannerExists = state.messageList.some(
+			(m) => m.id === subBannerId
+		);
 		return {
 			...state,
 			activityList: newList,
+			messageList: subBannerExists
+				? state.messageList
+				: trimList(state.messageList.concat(subBanner)),
 		};
 	} else if (action.type === ChatMessageTypes.GIF_SUB_MESSAGE_ACTION) {
 		const newList = appendActivityItem(state.activityList, {
@@ -443,9 +478,40 @@ const ChatMessageReducers = (
 			create_at: action.message.create_at,
 			raw: action.message,
 		});
+		// Sprint 35: gift sub için chat banner satırı.
+		const giftCount = action.message.gifted_usernames.length;
+		const giftBannerId = `gift-sub-banner-${action.message.id || action.message.gifter_username}-${action.message.create_at}`;
+		const targetList = action.message.gifted_usernames.slice(0, 3).join(", ");
+		const tailNote =
+			action.message.gifted_usernames.length > 3
+				? ` +${action.message.gifted_usernames.length - 3} kişi daha`
+				: "";
+		const giftBanner: UserMessage = {
+			id: giftBannerId,
+			channelSlug: action.message.channelSlug,
+			chatroom_id: action.message.chatroom_id,
+			content: `${action.message.gifter_username}, ${giftCount} kişiye hediye abonelik verdi → ${targetList}${tailNote}`,
+			type: "gift-sub-banner",
+			created_at: new Date(action.message.create_at).toISOString(),
+			sender: {
+				id: 0,
+				username: action.message.gifter_username,
+				slug: action.message.gifter_username.toLowerCase(),
+				identity: {
+					color: "#ec4899",
+					badges: [],
+				},
+			},
+		};
+		const giftBannerExists = state.messageList.some(
+			(m) => m.id === giftBannerId
+		);
 		return {
 			...state,
 			activityList: newList,
+			messageList: giftBannerExists
+				? state.messageList
+				: trimList(state.messageList.concat(giftBanner)),
 		};
 	} else if (action.type === ChatMessageTypes.ADD_ACTIVITY_ACTION) {
 		return {
