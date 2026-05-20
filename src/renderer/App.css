@@ -4445,3 +4445,734 @@ body:has([data-app-shell="modern"]) {
 	--ms-fg-4: #5a5e68;
 }
 
+/* =============================================================================
+ * Sprint 12 — UserWindow Modern
+ * All selectors scoped under [data-app-shell="modern"] (additive only).
+ * ========================================================================== */
+
+/* ── Shell layout ── */
+[data-app-shell="modern"] .uw-shell {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	background: var(--ms-bg-0, #0c0d10);
+	color: var(--ms-fg-1, #ebecef);
+	font-family: var(--ms-font-sans, "Geist", system-ui, sans-serif);
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .uw-main {
+	flex: 1 1 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+/* ── Header ── */
+[data-app-shell="modern"] .uw-header {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	padding: 18px 20px 14px;
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .uw-avatar {
+	width: 56px;
+	height: 56px;
+	border-radius: 10px;
+	background: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 22%, var(--ms-bg-2, #181a20));
+	color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-weight: 700;
+	font-size: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	letter-spacing: 0.04em;
+}
+
+[data-app-shell="modern"] .uw-header-info {
+	flex: 1 1 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+[data-app-shell="modern"] .uw-header-row1 {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+[data-app-shell="modern"] .uw-username {
+	font-size: 18px;
+	font-weight: 800;
+	line-height: 1.2;
+}
+
+[data-app-shell="modern"] .uw-copy {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 24px;
+	padding: 0 8px;
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 5px;
+	background: rgba(255,255,255,0.04);
+	color: var(--ms-fg-2, #b6b9c0);
+	font-size: 11px;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-copy:hover {
+	border-color: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 55%, transparent);
+	color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+
+[data-app-shell="modern"] .uw-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11px;
+	font-weight: 500;
+	padding: 2px 8px;
+	border-radius: 999px;
+}
+
+[data-app-shell="modern"] .uw-status-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-status.active-now {
+	background: rgba(47, 180, 100, 0.14);
+	color: #4ade80;
+}
+
+[data-app-shell="modern"] .uw-status.active-now .uw-status-dot {
+	background: #4ade80;
+	box-shadow: 0 0 0 3px rgba(74,222,128,0.2);
+}
+
+[data-app-shell="modern"] .uw-status.offline {
+	background: rgba(130, 134, 144, 0.12);
+	color: var(--ms-fg-3, #828690);
+}
+
+[data-app-shell="modern"] .uw-status.offline .uw-status-dot {
+	background: var(--ms-fg-3, #828690);
+}
+
+[data-app-shell="modern"] .uw-subtitle {
+	font-size: 12px;
+	color: var(--ms-fg-3, #828690);
+	line-height: 1.4;
+}
+
+[data-app-shell="modern"] .uw-header-badge-area {
+	display: flex;
+	align-items: flex-start;
+	padding-top: 2px;
+}
+
+[data-app-shell="modern"] .uw-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	padding-top: 2px;
+}
+
+[data-app-shell="modern"] .uw-icon-btn {
+	width: 30px;
+	height: 30px;
+	border-radius: 6px;
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--ms-fg-3, #828690);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-icon-btn:hover:not(:disabled) {
+	background: var(--ms-bg-hover, #1f2630);
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .uw-icon-btn:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-close-btn:hover {
+	background: rgba(239,79,95,0.14) !important;
+	color: #ef4f5f !important;
+	border-color: rgba(239,79,95,0.28) !important;
+}
+
+/* ── Stats row ── */
+[data-app-shell="modern"] .uw-stats {
+	display: flex;
+	gap: 0;
+	flex: 0 0 auto;
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+}
+
+[data-app-shell="modern"] .uw-stat {
+	flex: 1 1 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 6px;
+	gap: 2px;
+	border-right: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+}
+
+[data-app-shell="modern"] .uw-stat:last-child {
+	border-right: none;
+}
+
+[data-app-shell="modern"] .uw-stat-num {
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1.1;
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .uw-stat-label {
+	font-size: 9px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--ms-fg-4, #5a5e68);
+}
+
+/* ── Tabs ── */
+[data-app-shell="modern"] .uw-tabs {
+	display: flex;
+	gap: 0;
+	padding: 0 16px;
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .uw-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 38px;
+	padding: 0 12px;
+	border: none;
+	border-bottom: 2px solid transparent;
+	background: transparent;
+	color: var(--ms-fg-3, #828690);
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: color 0.12s, border-color 0.12s;
+}
+
+[data-app-shell="modern"] .uw-tab:hover {
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .uw-tab.active {
+	color: var(--ms-fg-1, #ebecef);
+	border-bottom-color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+
+[data-app-shell="modern"] .uw-tab-count {
+	min-width: 18px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 8px;
+	background: var(--ms-bg-2, #181a20);
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 10px;
+	line-height: 16px;
+	text-align: center;
+	color: var(--ms-fg-3, #828690);
+}
+
+/* ── Tab body / content ── */
+[data-app-shell="modern"] .uw-tab-body {
+	flex: 1 1 0;
+	min-height: 0;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bg-3, #1e2127) transparent;
+}
+
+[data-app-shell="modern"] .uw-tab-body::-webkit-scrollbar {
+	width: 5px;
+}
+
+[data-app-shell="modern"] .uw-tab-body::-webkit-scrollbar-thumb {
+	background: var(--ms-bg-3, #1e2127);
+	border-radius: 3px;
+}
+
+[data-app-shell="modern"] .uw-tab-content {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+[data-app-shell="modern"] .uw-empty-state {
+	color: var(--ms-fg-3, #828690);
+	font-size: 13px;
+	margin: 0;
+	padding: 8px 0;
+}
+
+[data-app-shell="modern"] .uw-muted {
+	color: var(--ms-fg-3, #828690);
+	font-size: 12px;
+}
+
+/* ── Cards (overview) ── */
+[data-app-shell="modern"] .uw-card {
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .uw-card-hd {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	padding: 10px 14px 8px;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(90,100,115,0.5));
+}
+
+[data-app-shell="modern"] .uw-card-hd h3 {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--ms-fg-1, #ebecef);
+}
+
+[data-app-shell="modern"] .uw-card-meta {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+}
+
+/* ── Message lists ── */
+[data-app-shell="modern"] .uw-msg-list {
+	list-style: none;
+	margin: 0;
+	padding: 8px 0;
+}
+
+[data-app-shell="modern"] .uw-msg-list--full {
+	padding: 0;
+}
+
+[data-app-shell="modern"] .uw-msg-row,
+[data-app-shell="modern"] .uw-mod-row {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 5px 14px;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+[data-app-shell="modern"] .uw-msg-row:hover,
+[data-app-shell="modern"] .uw-mod-row:hover {
+	background: var(--ms-bg-hover, #1f2630);
+}
+
+[data-app-shell="modern"] .uw-msg-row.is-removed .uw-msg-content {
+	opacity: 0.38;
+	text-decoration: line-through;
+}
+
+[data-app-shell="modern"] .uw-msg-time {
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 11px;
+	color: var(--ms-fg-4, #5a5e68);
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-msg-name {
+	font-weight: 700;
+	font-size: 12px;
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-msg-content {
+	font-size: 13px;
+	color: var(--ms-fg-2, #b6b9c0);
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+[data-app-shell="modern"] .uw-msg-excerpt {
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-style: italic;
+}
+
+[data-app-shell="modern"] .uw-inline-del {
+	flex-shrink: 0;
+	height: 22px;
+	padding: 0 8px;
+	border: 1px solid rgba(239,79,95,0.28);
+	border-radius: 4px;
+	background: rgba(239,79,95,0.10);
+	color: #ef4f5f;
+	font-size: 11px;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-inline-del:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-inline-del:hover:not(:disabled) {
+	background: rgba(239,79,95,0.20);
+}
+
+/* ── Action / status pills ── */
+[data-app-shell="modern"] .uw-action-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 6px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-action-ban {
+	background: rgba(239,79,95,0.15);
+	color: #ef4f5f;
+}
+
+[data-app-shell="modern"] .uw-action-to {
+	background: rgba(242,201,76,0.15);
+	color: #f2c94c;
+}
+
+[data-app-shell="modern"] .uw-action-delete {
+	background: rgba(182,185,192,0.12);
+	color: var(--ms-fg-2, #b6b9c0);
+}
+
+[data-app-shell="modern"] .uw-action-unban {
+	background: rgba(74,222,128,0.12);
+	color: #4ade80;
+}
+
+[data-app-shell="modern"] .uw-status-pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 6px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 600;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+[data-app-shell="modern"] .uw-status-success {
+	background: rgba(74,222,128,0.12);
+	color: #4ade80;
+}
+
+[data-app-shell="modern"] .uw-status-pending {
+	background: rgba(242,201,76,0.14);
+	color: #f2c94c;
+}
+
+[data-app-shell="modern"] .uw-status-failed {
+	background: rgba(239,79,95,0.12);
+	color: #ef4f5f;
+}
+
+/* ── Notes tab ── */
+[data-app-shell="modern"] .uw-notes-tab {
+	height: 100%;
+}
+
+[data-app-shell="modern"] .uw-notes-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+[data-app-shell="modern"] .uw-note-row {
+	display: flex;
+	gap: 10px;
+	align-items: baseline;
+	padding: 8px 10px;
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 6px;
+}
+
+[data-app-shell="modern"] .uw-note-text {
+	font-size: 13px;
+	color: var(--ms-fg-2, #b6b9c0);
+	line-height: 1.5;
+}
+
+[data-app-shell="modern"] .uw-notes-composer {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: auto;
+	padding-top: 12px;
+}
+
+[data-app-shell="modern"] .uw-notes-input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 8px 10px;
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 6px;
+	color: var(--ms-fg-1, #ebecef);
+	font-family: var(--ms-font-sans, "Geist", system-ui, sans-serif);
+	font-size: 13px;
+	resize: none;
+	outline: none;
+}
+
+[data-app-shell="modern"] .uw-notes-input:focus {
+	border-color: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 55%, transparent);
+}
+
+/* ── Buttons ── */
+[data-app-shell="modern"] .uw-btn-primary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 34px;
+	border: none;
+	border-radius: 6px;
+	background: var(--ms-ac-mint, oklch(0.82 0.09 175));
+	color: #0c0d10;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-btn-primary:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-btn-primary:hover:not(:disabled) {
+	filter: brightness(1.08);
+}
+
+[data-app-shell="modern"] .uw-btn-secondary {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 34px;
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 6px;
+	background: transparent;
+	color: var(--ms-fg-2, #b6b9c0);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-btn-secondary:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-btn-danger {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 34px;
+	border: 1px solid rgba(239,79,95,0.30);
+	border-radius: 6px;
+	background: rgba(239,79,95,0.12);
+	color: #ef4f5f;
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-btn-danger:disabled {
+	opacity: 0.38;
+	cursor: default;
+}
+
+[data-app-shell="modern"] .uw-btn-danger:hover:not(:disabled) {
+	background: rgba(239,79,95,0.22);
+}
+
+/* ── Mod panel (right sidebar) ── */
+[data-app-shell="modern"] .uw-mod-panel {
+	width: 260px;
+	flex-shrink: 0;
+	border-left: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	background: var(--ms-bg-1, #131418);
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--ms-bg-3, #1e2127) transparent;
+	display: flex;
+	flex-direction: column;
+}
+
+[data-app-shell="modern"] .uw-mod-panel::-webkit-scrollbar {
+	width: 4px;
+}
+
+[data-app-shell="modern"] .uw-mod-panel::-webkit-scrollbar-thumb {
+	background: var(--ms-bg-3, #1e2127);
+	border-radius: 2px;
+}
+
+[data-app-shell="modern"] .uw-panel-section {
+	padding: 16px;
+	border-bottom: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+[data-app-shell="modern"] .uw-panel-heading {
+	margin: 0;
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.10em;
+	color: var(--ms-fg-4, #5a5e68);
+}
+
+[data-app-shell="modern"] .uw-panel-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+[data-app-shell="modern"] .uw-panel-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+[data-app-shell="modern"] .uw-panel-label {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ms-fg-2, #b6b9c0);
+}
+
+[data-app-shell="modern"] .uw-duration-display {
+	font-family: var(--ms-font-mono, "Geist Mono", monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+
+[data-app-shell="modern"] .uw-presets {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+[data-app-shell="modern"] .uw-preset-chip {
+	height: 26px;
+	padding: 0 10px;
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 5px;
+	background: transparent;
+	color: var(--ms-fg-2, #b6b9c0);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+[data-app-shell="modern"] .uw-preset-chip:hover {
+	background: var(--ms-bg-hover, #1f2630);
+}
+
+[data-app-shell="modern"] .uw-preset-chip.active {
+	background: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 22%, transparent);
+	border-color: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 50%, transparent);
+	color: var(--ms-ac-mint, oklch(0.82 0.09 175));
+}
+
+[data-app-shell="modern"] .uw-custom-input-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+[data-app-shell="modern"] .uw-custom-sec-input {
+	flex: 1 1 0;
+	height: 30px;
+	padding: 0 8px;
+	background: var(--ms-bg-0, #0c0d10);
+	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
+	border-radius: 5px;
+	color: var(--ms-fg-1, #ebecef);
+	font-size: 12px;
+	outline: none;
+}
+
+[data-app-shell="modern"] .uw-custom-sec-input:focus {
+	border-color: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 55%, transparent);
+}
+
+/* ── Account section ── */
+[data-app-shell="modern"] .uw-account-section {
+	margin-top: auto;
+}
+
+[data-app-shell="modern"] .uw-account-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 3px 0;
+}
+
+/* ── Panel empty state ── */
+[data-app-shell="modern"] .uw-panel-empty {
+	padding: 20px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+
+

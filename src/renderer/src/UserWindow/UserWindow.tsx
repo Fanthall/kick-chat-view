@@ -1,7 +1,23 @@
-import { Button } from "@nextui-org/react";
+/**
+ * Sprint 12 — UserWindow (modern redesign)
+ *
+ * Replaces NextUI-based 467-LOC layout with design-system-aligned
+ * user-detail popup. All IPC handlers and optimistic-update patterns
+ * (addLocalModAction / createLocalAction) are preserved verbatim.
+ *
+ * CONSTRAINT-4: message HTML uses `message.content` as plain text —
+ * no dangerouslySetInnerHTML in this file (UserWindow has no emote
+ * rendering path; raw content is safe).
+ */
+
 import moment from "moment";
-import React, { FunctionComponent, useEffect, useState } from "react";
-import { FiCopy } from "react-icons/fi";
+import React, {
+	FunctionComponent,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
+import { FiCopy, FiX, FiMessageSquare } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { UserWindowPayload } from "../../../shared/userWindow";
 import { ModMessage, UserMessage } from "../../util/chatInterface";
@@ -12,6 +28,65 @@ import {
 	parseTimeoutSeconds,
 } from "../../util/timeoutDuration";
 
+// ─── Local notes ─────────────────────────────────────────────────────────────
+
+interface UserNote {
+	text: string;
+	ts: number;
+}
+
+const NOTES_KEY_PREFIX = "chatViewUserNotes_";
+
+const loadNotes = (username: string): UserNote[] => {
+	try {
+		const raw = localStorage.getItem(NOTES_KEY_PREFIX + username.toLowerCase());
+		return raw ? (JSON.parse(raw) as UserNote[]) : [];
+	} catch {
+		return [];
+	}
+};
+
+const saveNotes = (username: string, notes: UserNote[]) => {
+	localStorage.setItem(
+		NOTES_KEY_PREFIX + username.toLowerCase(),
+		JSON.stringify(notes)
+	);
+};
+
+// ─── Small helpers ────────────────────────────────────────────────────────────
+
+const getInitials = (username: string) =>
+	username.slice(0, 2).toUpperCase();
+
+/** Returns "active now" if last message was within 5 minutes. */
+const getStatusLabel = (messages: UserMessage[]): "active now" | "offline" => {
+	if (!messages.length) return "offline";
+	const last = messages[messages.length - 1];
+	const diff = Date.now() - new Date(last.created_at).getTime();
+	return diff < 5 * 60 * 1000 ? "active now" : "offline";
+};
+
+/** Derive current ban state: look for latest ban/unban action. */
+const deriveIsBanned = (modActions: ModMessage[]): boolean => {
+	const relevant = modActions.filter(
+		(a) => a.type === "ban" || a.type === "unban"
+	);
+	if (!relevant.length) return false;
+	const last = relevant[relevant.length - 1];
+	return last.type === "ban";
+};
+
+type Tab = "overview" | "messages" | "activity" | "modhistory" | "notes";
+
+const TIMEOUT_PRESETS = [
+	{ label: "1m", seconds: 60 },
+	{ label: "5m", seconds: 300 },
+	{ label: "10m", seconds: 600 },
+	{ label: "30m", seconds: 1800 },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const UserWindow: FunctionComponent = () => {
 	const [payload, setPayload] = useState<UserWindowPayload | undefined>();
 	const [copyStatus, setCopyStatus] = useState<string>("");
@@ -20,16 +95,28 @@ const UserWindow: FunctionComponent = () => {
 	>();
 	const [grantedScopes, setGrantedScopes] = useState<string[]>([]);
 	const [moderationLoading, setModerationLoading] = useState<string>("");
-	const [timeoutSecondsText, setTimeoutSecondsText] = useState<string>(
-		String(DEFAULT_TIMEOUT_SECONDS)
-	);
+	const [activeTab, setActiveTab] = useState<Tab>("overview");
+
+	// Timeout state
+	const [selectedPreset, setSelectedPreset] = useState<number>(600); // 10m default
+	const [customSeconds, setCustomSeconds] = useState<string>("");
+
+	// Notes
+	const [notes, setNotes] = useState<UserNote[]>([]);
+	const [noteInput, setNoteInput] = useState<string>("");
+
+	// ── Payload subscription ──────────────────────────────────────────────────
 
 	useEffect(() => {
 		return window.electron.userWindow.onPayload((nextPayload) => {
 			setPayload(nextPayload);
 			document.title = `${nextPayload.user.username} - User Details`;
+			const loaded = loadNotes(nextPayload.user.username);
+			setNotes(loaded);
 		});
 	}, []);
+
+	// ── Channel + scope resolution ────────────────────────────────────────────
 
 	useEffect(() => {
 		if (!payload?.channelName) {
@@ -61,28 +148,50 @@ const UserWindow: FunctionComponent = () => {
 			});
 	}, [payload?.channelName]);
 
-	if (!payload) {
-		return (
-			<div className="user-window-shell">
-				<div className="user-window-empty">Waiting for user details...</div>
-			</div>
-		);
-	}
+	// ── Derived values ────────────────────────────────────────────────────────
 
 	const hasBanScope = hasKickScope(grantedScopes, "moderation:ban");
 	const hasMessageManageScope = hasKickScope(
 		grantedScopes,
 		"moderation:chat_message:manage"
 	);
-	const canUseModerationUi = payload.canModerateChannel === true;
-	const canModerateUser = canUseModerationUi && !!broadcasterUserId && hasBanScope;
+	const canUseModerationUi = payload?.canModerateChannel === true;
+	const canModerateUser =
+		canUseModerationUi && !!broadcasterUserId && hasBanScope;
 	const canDeleteMessages =
 		canUseModerationUi && !!broadcasterUserId && hasMessageManageScope;
+
+	const isBanned = useMemo(
+		() => (payload ? deriveIsBanned(payload.modActions) : false),
+		[payload]
+	);
+
+	const timeoutSeconds = useMemo(() => {
+		if (customSeconds.trim()) {
+			const parsed = parseTimeoutSeconds(customSeconds);
+			return parsed && parsed > 0 ? parsed : 0;
+		}
+		return selectedPreset;
+	}, [customSeconds, selectedPreset]);
+
+	const timeoutLabel = timeoutSeconds > 0
+		? formatTimeoutDuration(timeoutSeconds)
+		: "?";
+
+	const timeoutCount = useMemo(
+		() => (payload ? payload.modActions.filter((a) => a.type === "to").length : 0),
+		[payload]
+	);
+	const banCount = useMemo(
+		() => (payload ? payload.modActions.filter((a) => a.type === "ban").length : 0),
+		[payload]
+	);
+
+	// ── Optimistic update helpers (preserved from original) ──────────────────
 
 	const addLocalModAction = (action: ModMessage) => {
 		setPayload((current) => {
 			if (!current) return current;
-
 			return {
 				...current,
 				messages:
@@ -104,18 +213,15 @@ const UserWindow: FunctionComponent = () => {
 	const createLocalAction = (
 		action: "delete" | "timeout" | "ban" | "unban",
 		message?: UserMessage,
-		timeoutSeconds = DEFAULT_TIMEOUT_SECONDS
+		timeoutSec = DEFAULT_TIMEOUT_SECONDS
 	): ModMessage => {
+		if (!payload) throw new Error("No payload");
 		const actor = {
 			id: 0,
 			username: "You",
 			slug: "you",
-			identity: {
-				color: "#2fd3a0",
-				badges: [],
-			},
+			identity: { color: "#2fd3a0", badges: [] },
 		};
-
 		return {
 			type: action === "timeout" ? "to" : action,
 			id: `local-window-mod-${action}-${Date.now()}`,
@@ -127,15 +233,12 @@ const UserWindow: FunctionComponent = () => {
 			unbanned_by: action === "unban" ? actor : undefined,
 			expires_at:
 				action === "timeout"
-					? new Date(Date.now() + timeoutSeconds * 1000).toISOString()
+					? new Date(Date.now() + timeoutSec * 1000).toISOString()
 					: undefined,
 			created_at: Date.now(),
 			message:
 				action === "delete" && message
-					? {
-							id: message.id,
-							messageList: [message],
-					  }
+					? { id: message.id, messageList: [message] }
 					: undefined,
 		};
 	};
@@ -145,11 +248,10 @@ const UserWindow: FunctionComponent = () => {
 		message?: UserMessage
 	) => {
 		if (!broadcasterUserId || !hasBanScope) {
-			toast("Kick moderation:ban scope is not available.", {
-				type: "warning",
-			});
+			toast("Kick moderation:ban scope is not available.", { type: "warning" });
 			return;
 		}
+		if (!payload) return;
 
 		const userId = payload.user.id || message?.sender.id;
 		if (!userId) {
@@ -157,21 +259,17 @@ const UserWindow: FunctionComponent = () => {
 			return;
 		}
 
-		const timeoutSeconds =
-			action === "timeout"
-				? parseTimeoutSeconds(timeoutSecondsText)
-				: undefined;
-		if (action === "timeout" && !timeoutSeconds) {
-			toast("Timeout duration must be seconds, e.g. 300.", {
-				type: "warning",
-			});
+		const timeoutSec =
+			action === "timeout" ? timeoutSeconds : undefined;
+		if (action === "timeout" && (!timeoutSec || timeoutSec <= 0)) {
+			toast("Timeout duration must be > 0 seconds.", { type: "warning" });
 			return;
 		}
 
 		const localAction = createLocalAction(
 			action,
 			message,
-			timeoutSeconds || DEFAULT_TIMEOUT_SECONDS
+			timeoutSec || DEFAULT_TIMEOUT_SECONDS
 		);
 		addLocalModAction(localAction);
 		setModerationLoading(action);
@@ -185,7 +283,7 @@ const UserWindow: FunctionComponent = () => {
 			action === "timeout"
 				? window.electron.kick.timeoutUser({
 						...request,
-						duration: timeoutSeconds || DEFAULT_TIMEOUT_SECONDS,
+						duration: timeoutSec || DEFAULT_TIMEOUT_SECONDS,
 				  })
 				: action === "ban"
 				? window.electron.kick.banUser(request)
@@ -212,7 +310,7 @@ const UserWindow: FunctionComponent = () => {
 				const actionText =
 					action === "timeout"
 						? `${action} ${formatTimeoutDuration(
-								timeoutSeconds || DEFAULT_TIMEOUT_SECONDS
+								timeoutSec || DEFAULT_TIMEOUT_SECONDS
 						  )}`
 						: action;
 				toast(`${actionText} request sent for ${payload.user.username}`, {
@@ -237,9 +335,7 @@ const UserWindow: FunctionComponent = () => {
 						  }
 						: current
 				);
-				toast(err.message || `${action} request failed.`, {
-					type: "error",
-				});
+				toast(err.message || `${action} request failed.`, { type: "error" });
 			})
 			.finally(() => setModerationLoading(""));
 	};
@@ -296,170 +392,501 @@ const UserWindow: FunctionComponent = () => {
 			.finally(() => setModerationLoading(""));
 	};
 
+	// ── Empty state ───────────────────────────────────────────────────────────
+
+	if (!payload) {
+		return (
+			<div
+				className="uw-shell"
+				data-app-shell="modern"
+				style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+			>
+				<span className="uw-muted">Loading user details...</span>
+			</div>
+		);
+	}
+
+	// ── Derived display values ────────────────────────────────────────────────
+
+	const { user, messages, modActions, channelName } = payload;
+	const statusLabel = getStatusLabel(messages);
+	const isActive = statusLabel === "active now";
+
+	const subBadge = user.identity?.badges?.find(
+		(b) =>
+			b.type?.toLowerCase() === "subscriber" &&
+			typeof b.count === "number" &&
+			b.count > 0
+	);
+
+	// ── Tab counts ────────────────────────────────────────────────────────────
+
+	const tabCounts: Record<Tab, number | null> = {
+		overview: null,
+		messages: messages.length,
+		activity: 0,
+		modhistory: modActions.length,
+		notes: notes.length,
+	};
+
+	const TABS: { id: Tab; label: string }[] = [
+		{ id: "overview", label: "Overview" },
+		{ id: "messages", label: "Messages" },
+		{ id: "activity", label: "Activity" },
+		{ id: "modhistory", label: "Mod history" },
+		{ id: "notes", label: "Notes" },
+	];
+
+	// ── Save note ─────────────────────────────────────────────────────────────
+
+	const handleSaveNote = () => {
+		const text = noteInput.trim();
+		if (!text) return;
+		const updated = [...notes, { text, ts: Date.now() }];
+		setNotes(updated);
+		saveNotes(user.username, updated);
+		setNoteInput("");
+	};
+
+	// ── Render ────────────────────────────────────────────────────────────────
+
 	return (
-		<div className="user-window-shell">
-			<header className="user-window-header">
-				<div>
-					<div className="user-window-title-row">
-						<div className="user-window-title">{payload.user.username}</div>
+		<div className="uw-shell" data-app-shell="modern">
+			{/* ── MAIN CONTENT ────────────────────────────────────────── */}
+			<div className="uw-main">
+				{/* ─ Header ─ */}
+				<header className="uw-header">
+					<div className="uw-avatar" aria-hidden="true">
+						{getInitials(user.username)}
+					</div>
+
+					<div className="uw-header-info">
+						<div className="uw-header-row1">
+							<span
+								className="uw-username"
+								style={{ color: user.identity?.color || undefined }}
+							>
+								{user.username}
+							</span>
+							<button
+								type="button"
+								className="uw-copy"
+								title="Copy username"
+								onClick={() => {
+									navigator.clipboard
+										.writeText(user.username)
+										.then(() => {
+											setCopyStatus("Copied");
+											setTimeout(() => setCopyStatus(""), 1400);
+										})
+										.catch(() => setCopyStatus("Failed"));
+								}}
+							>
+								<FiCopy size={12} />
+								{copyStatus || "Copy"}
+							</button>
+							<span
+								className={`uw-status${isActive ? " active-now" : " offline"}`}
+								title={isActive ? "Last message < 5 min ago" : "No recent messages"}
+							>
+								<span className="uw-status-dot" />
+								{statusLabel}
+							</span>
+						</div>
+						<div className="uw-subtitle">
+							{channelName || "—"}
+							{" · "}
+							<strong>{messages.length}</strong> messages
+							{" · "}
+							<strong>{modActions.length}</strong> mod actions
+						</div>
+					</div>
+
+					{/* Sub badge */}
+					{subBadge && (
+						<div className="uw-header-badge-area">
+							<span className="pbadge sub">
+								Sub{" "}
+								{typeof subBadge.count === "number" && subBadge.count > 0
+									? `· ${subBadge.count}mo`
+									: ""}
+							</span>
+						</div>
+					)}
+
+					{/* Top-right icons */}
+					<div className="uw-header-actions">
 						<button
 							type="button"
-							className="user-window-copy"
-							title="Copy username"
-							onClick={() => {
-								navigator.clipboard
-									.writeText(payload.user.username)
-									.then(() => {
-										setCopyStatus("Copied");
-										setTimeout(() => setCopyStatus(""), 1400);
-									})
-									.catch(() => {
-										setCopyStatus("Copy failed");
-									});
-							}}
+							className="uw-icon-btn"
+							title="Mention in chat (no-op)"
+							disabled
 						>
-							<FiCopy size={14} />
-							{copyStatus || "Copy"}
+							<FiMessageSquare size={16} />
+						</button>
+						<button
+							type="button"
+							className="uw-icon-btn uw-close-btn"
+							title="Close"
+							onClick={() => window.close()}
+						>
+							<FiX size={16} />
 						</button>
 					</div>
-					<div className="user-window-subtitle">
-						{payload.channelName || "No channel"} - {payload.messages.length} messages - {payload.modActions.length} mod actions
+				</header>
+
+				{/* ─ Stat row ─ */}
+				<div className="uw-stats">
+					<div className="uw-stat">
+						<span className="uw-stat-num">{messages.length}</span>
+						<span className="uw-stat-label">msgs this session</span>
+					</div>
+					<div className="uw-stat">
+						<span className="uw-stat-num">—</span>
+						<span className="uw-stat-label">msgs lifetime</span>
+					</div>
+					<div className="uw-stat">
+						<span className="uw-stat-num">—</span>
+						<span className="uw-stat-label">watch time</span>
+					</div>
+					<div className="uw-stat">
+						<span className="uw-stat-num">{timeoutCount}</span>
+						<span className="uw-stat-label">timeouts</span>
+					</div>
+					<div className="uw-stat">
+						<span className="uw-stat-num">{banCount}</span>
+						<span className="uw-stat-label">bans</span>
+					</div>
+					<div className="uw-stat">
+						<span className="uw-stat-num">{notes.length}</span>
+						<span className="uw-stat-label">notes</span>
 					</div>
 				</div>
-				<div className="user-window-badges">
-					{payload.user.identity?.badges?.map((badge) => {
-						const label = badge.text || badge.type;
-						const isSubscriber =
-							badge.type?.toLowerCase() === "subscriber" &&
-							typeof badge.count === "number" &&
-							badge.count > 0;
-						return (
-							<span
-								key={`${badge.type}-${badge.text}-${badge.count ?? ""}`}
-								className="user-window-badge"
-								title={
-									isSubscriber
-										? `${badge.count} ay abone`
-										: undefined
-								}
-							>
-								{label}
-								{isSubscriber && (
-									<span className="user-window-badge-count">
-										{badge.count}
-										<span className="user-window-badge-count-unit">ay</span>
-									</span>
+
+				{/* ─ Tabs ─ */}
+				<nav className="uw-tabs" role="tablist">
+					{TABS.map((tab) => (
+						<button
+							key={tab.id}
+							type="button"
+							role="tab"
+							aria-selected={activeTab === tab.id}
+							className={`uw-tab${activeTab === tab.id ? " active" : ""}`}
+							onClick={() => setActiveTab(tab.id)}
+						>
+							{tab.label}
+							{tabCounts[tab.id] !== null && (
+								<span className="uw-tab-count">{tabCounts[tab.id]}</span>
+							)}
+						</button>
+					))}
+				</nav>
+
+				{/* ─ Tab content ─ */}
+				<div className="uw-tab-body">
+					{/* Overview */}
+					{activeTab === "overview" && (
+						<div className="uw-tab-content">
+							<div className="uw-card uw-messages-card">
+								<div className="uw-card-hd">
+									<h3>Messages</h3>
+									<span className="uw-card-meta">{messages.length} this session</span>
+								</div>
+								{messages.length === 0 ? (
+									<p className="uw-empty-state">No messages this session.</p>
+								) : (
+									<ul className="uw-msg-list">
+										{messages.slice(-3).map((msg) => (
+											<li key={msg.id} className={`uw-msg-row${msg.removed ? " is-removed" : ""}`}>
+												<span className="uw-msg-time">
+													{moment(new Date(msg.created_at)).format("HH:mm")}
+												</span>
+												<span
+													className="uw-msg-name"
+													style={{ color: msg.sender.identity?.color || undefined }}
+												>
+													{msg.sender.username}
+												</span>
+												<span className="uw-msg-content">{msg.content}</span>
+											</li>
+										))}
+									</ul>
 								)}
-							</span>
-						);
-					})}
-				</div>
-			</header>
-			{canUseModerationUi && (
-				<section className="user-window-actions">
-					<Button
-						size="sm"
-						color="warning"
-						variant="flat"
-						isDisabled={!canModerateUser}
-						isLoading={moderationLoading === "timeout"}
-						onPress={() => runUserModeration("timeout")}
-					>
-						Timeout
-					</Button>
-					<input
-						className="user-window-timeout-input"
-						value={timeoutSecondsText}
-						onChange={(event) => setTimeoutSecondsText(event.target.value)}
-						title="Timeout seconds"
-					/>
-					<Button
-						size="sm"
-						color="danger"
-						variant="flat"
-						isDisabled={!canModerateUser}
-						isLoading={moderationLoading === "ban"}
-						onPress={() => runUserModeration("ban")}
-					>
-						Ban
-					</Button>
-					<Button
-						size="sm"
-						variant="flat"
-						isDisabled={!canModerateUser}
-						isLoading={moderationLoading === "unban"}
-						onPress={() => runUserModeration("unban")}
-					>
-						Unban
-					</Button>
-					<span className="user-window-muted">
-						{canModerateUser || canDeleteMessages
-							? "Moderation ready"
-							: "Missing moderation scopes"}
-					</span>
-				</section>
-			)}
-			<section className="user-window-section user-window-section--messages">
-				<div className="user-window-section-title">Messages</div>
-				<div className="user-window-list">
-					{payload.messages.length === 0 && (
-						<div className="user-window-muted">No messages captured yet.</div>
+							</div>
+
+							<div className="uw-card uw-mod-card">
+								<div className="uw-card-hd">
+									<h3>Moderation</h3>
+									<span className="uw-card-meta">{modActions.length} actions</span>
+								</div>
+								{modActions.length === 0 ? (
+									<p className="uw-empty-state">No moderation actions captured.</p>
+								) : (
+									<ul className="uw-msg-list">
+										{modActions.slice(-3).map((a) => (
+											<li key={a.id} className="uw-mod-row">
+												<span className="uw-msg-time">
+													{moment(new Date(a.created_at)).format("HH:mm")}
+												</span>
+												<span className={`uw-action-pill uw-action-${a.type}`}>
+													{a.type.toUpperCase()}
+												</span>
+												<span className="uw-muted">
+													{a.banned_by?.username ||
+														a.unbanned_by?.username ||
+														"system"}
+												</span>
+												<span
+													className={`uw-status-pill uw-status-${a.status || "success"}`}
+												>
+													{a.status || "success"}
+												</span>
+											</li>
+										))}
+									</ul>
+								)}
+							</div>
+						</div>
 					)}
-					{payload.messages.map((message) => (
-						<div key={message.id} className="user-window-message">
-							<span className="user-window-time">
-								{moment(new Date(message.created_at)).format("HH:mm:ss")}
-							</span>
-							<span
-								className="user-window-name"
-								style={{ color: message.sender.identity?.color || "#2fd3a0" }}
-							>
-								{message.sender.username}
-							</span>
-							<span className={message.removed ? "removedMessage" : ""}>
-								{message.content}
-							</span>
-							{canUseModerationUi && (
-								<Button
-									size="sm"
-									color="danger"
-									variant="flat"
-									className="user-window-inline-action"
-									isDisabled={!canDeleteMessages || message.removed}
-									isLoading={moderationLoading === `delete-${message.id}`}
-									onPress={() => runDeleteMessage(message)}
-								>
-									Delete
-								</Button>
+
+					{/* Messages */}
+					{activeTab === "messages" && (
+						<div className="uw-tab-content">
+							{messages.length === 0 ? (
+								<p className="uw-empty-state">No messages this session.</p>
+							) : (
+								<ul className="uw-msg-list uw-msg-list--full">
+									{messages.map((msg) => (
+										<li key={msg.id} className={`uw-msg-row${msg.removed ? " is-removed" : ""}`}>
+											<span className="uw-msg-time">
+												{moment(new Date(msg.created_at)).format("HH:mm:ss")}
+											</span>
+											<span
+												className="uw-msg-name"
+												style={{ color: msg.sender.identity?.color || undefined }}
+											>
+												{msg.sender.username}
+											</span>
+											<span className="uw-msg-content">{msg.content}</span>
+											{canUseModerationUi && (
+												<button
+													type="button"
+													className="uw-inline-del"
+													disabled={!canDeleteMessages || msg.removed || moderationLoading === `delete-${msg.id}`}
+													onClick={() => runDeleteMessage(msg)}
+												>
+													{moderationLoading === `delete-${msg.id}` ? "..." : "Delete"}
+												</button>
+											)}
+										</li>
+									))}
+								</ul>
 							)}
 						</div>
-					))}
-				</div>
-			</section>
-			<section className="user-window-section user-window-section--moderation">
-				<div className="user-window-section-title">Moderation</div>
-				<div className="user-window-list">
-					{payload.modActions.length === 0 && (
-						<div className="user-window-muted">No moderation actions captured.</div>
 					)}
-					{payload.modActions.map((action) => (
-						<div key={action.id} className="user-window-mod-action">
-							<span className="user-window-time">
-								{moment(new Date(action.created_at)).format("HH:mm:ss")}
-							</span>
-							<span>{action.type.toUpperCase()}</span>
-							<span className={`user-window-status user-window-status-${action.status || "success"}`}>
-								{action.status || "success"}
-							</span>
-							<span className="user-window-muted">
-								{action.banned_by?.username ||
-									action.unbanned_by?.username ||
-									"system"}
-							</span>
+
+					{/* Activity */}
+					{activeTab === "activity" && (
+						<div className="uw-tab-content">
+							<p className="uw-empty-state">
+								No per-user activity captured yet.
+							</p>
 						</div>
-					))}
+					)}
+
+					{/* Mod history */}
+					{activeTab === "modhistory" && (
+						<div className="uw-tab-content">
+							{modActions.length === 0 ? (
+								<p className="uw-empty-state">No moderation actions captured.</p>
+							) : (
+								<ul className="uw-msg-list uw-msg-list--full">
+									{modActions.map((a) => (
+										<li key={a.id} className="uw-mod-row">
+											<span className="uw-msg-time">
+												{moment(new Date(a.created_at)).format("HH:mm:ss")}
+											</span>
+											<span className={`uw-action-pill uw-action-${a.type}`}>
+												{a.type.toUpperCase()}
+											</span>
+											<span className="uw-muted">
+												by{" "}
+												{a.banned_by?.username ||
+													a.unbanned_by?.username ||
+													"system"}
+											</span>
+											{a.message?.messageList?.[0] && (
+												<span className="uw-muted uw-msg-excerpt">
+													"{a.message.messageList[0].content}"
+												</span>
+											)}
+											<span
+												className={`uw-status-pill uw-status-${a.status || "success"}`}
+											>
+												{a.status || "success"}
+											</span>
+										</li>
+									))}
+								</ul>
+							)}
+						</div>
+					)}
+
+					{/* Notes */}
+					{activeTab === "notes" && (
+						<div className="uw-tab-content uw-notes-tab">
+							{notes.length === 0 ? (
+								<p className="uw-empty-state">No notes yet. Add one below.</p>
+							) : (
+								<ul className="uw-notes-list">
+									{notes.map((n, i) => (
+										<li key={i} className="uw-note-row">
+											<span className="uw-msg-time">
+												{moment(n.ts).format("MM/DD HH:mm")}
+											</span>
+											<span className="uw-note-text">{n.text}</span>
+										</li>
+									))}
+								</ul>
+							)}
+							<div className="uw-notes-composer">
+								<textarea
+									className="uw-notes-input"
+									placeholder="Add a note..."
+									value={noteInput}
+									rows={2}
+									onChange={(e) => setNoteInput(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+											handleSaveNote();
+										}
+									}}
+								/>
+								<button
+									type="button"
+									className="uw-btn-primary"
+									onClick={handleSaveNote}
+									disabled={!noteInput.trim()}
+								>
+									Save note
+								</button>
+							</div>
+						</div>
+					)}
 				</div>
-			</section>
+			</div>
+
+			{/* ── MOD PANEL ───────────────────────────────────────────── */}
+			<aside className="uw-mod-panel">
+				{canUseModerationUi && hasBanScope ? (
+					<>
+						<div className="uw-panel-section">
+							<p className="uw-panel-heading">MOD ACTIONS</p>
+
+							{/* Timeout */}
+							<div className="uw-panel-group">
+								<div className="uw-panel-row">
+									<span className="uw-panel-label">Timeout</span>
+									<span className="uw-duration-display">{timeoutLabel}</span>
+								</div>
+								<div className="uw-presets">
+									{TIMEOUT_PRESETS.map((p) => (
+										<button
+											key={p.label}
+											type="button"
+											className={`uw-preset-chip${
+												!customSeconds.trim() && selectedPreset === p.seconds
+													? " active"
+													: ""
+											}`}
+											onClick={() => {
+												setSelectedPreset(p.seconds);
+												setCustomSeconds("");
+											}}
+										>
+											{p.label}
+										</button>
+									))}
+								</div>
+								<div className="uw-custom-input-row">
+									<input
+										type="number"
+										min="1"
+										placeholder="custom (sec)"
+										className="uw-custom-sec-input"
+										value={customSeconds}
+										onChange={(e) => setCustomSeconds(e.target.value)}
+									/>
+									<span className="uw-muted">seconds</span>
+								</div>
+								<button
+									type="button"
+									className="uw-btn-primary"
+									disabled={!canModerateUser || timeoutSeconds <= 0 || moderationLoading === "timeout"}
+									onClick={() => runUserModeration("timeout")}
+								>
+									{moderationLoading === "timeout" ? "Applying..." : "Apply timeout"}
+								</button>
+							</div>
+
+							{/* Clear messages stub */}
+							<div className="uw-panel-group">
+								<button
+									type="button"
+									className="uw-btn-secondary"
+									disabled
+									title="No bulk-delete API available yet"
+								>
+									Clear messages
+									<span className="uw-muted" style={{ marginLeft: 6 }}>30 min</span>
+								</button>
+							</div>
+
+							{/* Ban / Unban */}
+							<div className="uw-panel-group">
+								{isBanned ? (
+									<button
+										type="button"
+										className="uw-btn-primary"
+										disabled={!canModerateUser || moderationLoading === "unban"}
+										onClick={() => runUserModeration("unban")}
+									>
+										{moderationLoading === "unban" ? "Unbanning..." : "Unban"}
+									</button>
+								) : (
+									<button
+										type="button"
+										className="uw-btn-danger"
+										disabled={!canModerateUser || moderationLoading === "ban"}
+										onClick={() => runUserModeration("ban")}
+									>
+										{moderationLoading === "ban" ? "Banning..." : "Ban permanently"}
+									</button>
+								)}
+							</div>
+						</div>
+
+						{/* Account section */}
+						<div className="uw-panel-section uw-account-section">
+							<p className="uw-panel-heading">ACCOUNT</p>
+							<div className="uw-account-row">
+								<span className="uw-panel-label">Joined channel</span>
+								<span className="uw-muted">—</span>
+							</div>
+							<div className="uw-account-row">
+								<span className="uw-panel-label">Joined Kick</span>
+								<span className="uw-muted">—</span>
+							</div>
+						</div>
+					</>
+				) : (
+					<div className="uw-panel-empty">
+						<p className="uw-muted">
+							Mod actions require moderator permission.
+						</p>
+					</div>
+				)}
+			</aside>
 		</div>
 	);
 };
