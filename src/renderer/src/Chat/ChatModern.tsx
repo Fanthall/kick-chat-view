@@ -1222,16 +1222,26 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 					if (
 						msg.type === "sub-banner" ||
 						msg.type === "gift-sub-banner" ||
-						msg.type === "host-banner"
+						msg.type === "host-banner" ||
+						msg.type === "kicks-banner"
 					) {
 						const isGift = msg.type === "gift-sub-banner";
 						const isHost = msg.type === "host-banner";
+						const isKicks = msg.type === "kicks-banner";
 						const variantClass = isHost
 							? " is-host"
+							: isKicks
+							? " is-kicks"
 							: isGift
 							? " is-gift"
 							: "";
-						const icon = isHost ? "🚀" : isGift ? "🎁" : "👑";
+						const icon = isHost
+							? "🚀"
+							: isKicks
+							? "⚡"
+							: isGift
+							? "🎁"
+							: "👑";
 						return (
 							<div
 								key={`chat-row-${msg.id}`}

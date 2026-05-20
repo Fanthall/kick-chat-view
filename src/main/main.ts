@@ -397,6 +397,47 @@ ipcMain.on("panel-window:clear-mod-target", () => {
 	}
 });
 
+/* ─── Sprint 40: webhook receiver IPC ───────────────────────────────────── */
+import {
+	startWebhookServer,
+	stopWebhookServer,
+	getWebhookReceiverInfo,
+	WEBHOOK_PORT_DEFAULT,
+} from "./webhookServer";
+
+let webhookRunning = false;
+let webhookCurrentPort = WEBHOOK_PORT_DEFAULT;
+
+ipcMain.handle("webhook:get-receiver-info", () => {
+	return { ...getWebhookReceiverInfo(webhookCurrentPort), running: webhookRunning };
+});
+
+ipcMain.handle("webhook:is-running", () => webhookRunning);
+
+ipcMain.handle("webhook:start", async (_e, port?: number) => {
+	const target = port || webhookCurrentPort || WEBHOOK_PORT_DEFAULT;
+	try {
+		await startWebhookServer(() => mainWindow, target);
+		webhookRunning = true;
+		webhookCurrentPort = target;
+		return { ok: true, port: target };
+	} catch (err: any) {
+		webhookRunning = false;
+		console.log("[webhook] start failed", err?.message || err);
+		return { ok: false, port: target };
+	}
+});
+
+ipcMain.handle("webhook:stop", async () => {
+	await stopWebhookServer();
+	webhookRunning = false;
+	return { ok: true };
+});
+
+app.on("before-quit", () => {
+	void stopWebhookServer();
+});
+
 if (process.env.NODE_ENV === "production") {
 	const sourceMapSupport = require("source-map-support");
 	sourceMapSupport.install();
