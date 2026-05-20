@@ -4318,7 +4318,34 @@ body:has([data-app-shell="modern"]) {
 	height: 100%;
 	gap: 1px;
 	background: var(--bd-1);
-	overflow: hidden;
+	/* Sprint 13: dar viewport'ta panel'leri gizleme yerine yatay scroll —
+	   chat min 520, activity 360, moderation 360 hep tam goruntude */
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: thin;
+	scrollbar-color: var(--bd-3, #3a4049) transparent;
+}
+[data-app-shell="modern"] .main::-webkit-scrollbar {
+	height: 8px;
+}
+[data-app-shell="modern"] .main::-webkit-scrollbar-track {
+	background: transparent;
+}
+[data-app-shell="modern"] .main::-webkit-scrollbar-thumb {
+	background: var(--bd-2, #2d323b);
+	border-radius: 4px;
+}
+[data-app-shell="modern"] .main::-webkit-scrollbar-thumb:hover {
+	background: var(--bd-3, #3a4049);
+}
+[data-app-shell="modern"] .main.no-act {
+	grid-template-columns: minmax(520px, 1fr) 360px;
+}
+[data-app-shell="modern"] .main.no-mod {
+	grid-template-columns: minmax(520px, 1fr) 360px;
+}
+[data-app-shell="modern"] .main.no-act.no-mod {
+	grid-template-columns: minmax(520px, 1fr);
 }
 
 /* Sprint 9: custom thin scrollbar (Designs/styles.css parity) */
