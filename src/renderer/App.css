@@ -2876,6 +2876,14 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .chat-sub-banner.is-kicks .csb-actor {
 	color: #93c5fd;
 }
+/* Sprint 41: Follow banner — cyan. */
+[data-app-shell="modern"] .chat-sub-banner.is-follow {
+	background: color-mix(in oklch, #22d3ee 14%, transparent);
+	border-color: color-mix(in oklch, #22d3ee 38%, transparent);
+}
+[data-app-shell="modern"] .chat-sub-banner.is-follow .csb-actor {
+	color: #67e8f9;
+}
 [data-app-shell="modern"] .chat-sub-banner .csb-icon {
 	font-size: 18px;
 	flex: 0 0 auto;

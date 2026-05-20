@@ -1223,15 +1223,19 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						msg.type === "sub-banner" ||
 						msg.type === "gift-sub-banner" ||
 						msg.type === "host-banner" ||
-						msg.type === "kicks-banner"
+						msg.type === "kicks-banner" ||
+						msg.type === "follow-banner"
 					) {
 						const isGift = msg.type === "gift-sub-banner";
 						const isHost = msg.type === "host-banner";
 						const isKicks = msg.type === "kicks-banner";
+						const isFollow = msg.type === "follow-banner";
 						const variantClass = isHost
 							? " is-host"
 							: isKicks
 							? " is-kicks"
+							: isFollow
+							? " is-follow"
 							: isGift
 							? " is-gift"
 							: "";
@@ -1239,6 +1243,8 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							? "🚀"
 							: isKicks
 							? "⚡"
+							: isFollow
+							? "❤"
 							: isGift
 							? "🎁"
 							: "👑";

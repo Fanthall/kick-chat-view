@@ -1092,6 +1092,16 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 		onShellToggle(v);
 	};
 
+	// Sprint 41: takipçi göster toggle (default true).
+	const [showFollowers, setShowFollowers] = useState<boolean>(
+		() => localStorage.getItem("chatViewShowFollowers") !== "false"
+	);
+	const handleShowFollowers = (v: boolean) => {
+		setShowFollowers(v);
+		localStorage.setItem("chatViewShowFollowers", String(v));
+		window.dispatchEvent(new Event("chat-view-show-followers-changed"));
+	};
+
 	// Sprint 20: theme + language toggles
 	const [theme, setTheme] = useState<"light" | "dark">(() => {
 		const stored = localStorage.getItem("chatViewTheme");
@@ -1116,6 +1126,25 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 		<>
 			<h3>Advanced</h3>
 			<div className="sub">Diagnostics and event subscription state. Most users won't need these.</div>
+
+			{/* Sprint 41: Takipçi bildirimi */}
+			<div className="set-block">
+				<div className="set-block-row">
+					<div className="l">
+						<b>Takipçileri göster</b>
+						<span>Kanala yeni takip olduğunda chat akışında ❤ banner ve aktivite kaydı.</span>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-checked={showFollowers}
+						className={`set-toggle ${showFollowers ? "on" : ""}`}
+						onClick={() => handleShowFollowers(!showFollowers)}
+					>
+						<span className="knob" />
+					</button>
+				</div>
+			</div>
 
 			{/* Sprint 20: Tema + Dil */}
 			<div className="set-block">
