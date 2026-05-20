@@ -33,9 +33,15 @@ import ModActionsModern from "./ModActionsModern";
 
 // ─── Isolated Redux store for the pop-out ────────────────────────────────────
 
+// Sprint 44: dev mode immutable/serializable warning yağmurunu kapatıyoruz.
 const createPopOutStore = () =>
 	configureStore({
 		reducer: { messages: chatMessageReducer },
+		middleware: (getDefaultMiddleware) =>
+			getDefaultMiddleware({
+				serializableCheck: false,
+				immutableCheck: false,
+			}),
 	});
 
 // ─── Shell ────────────────────────────────────────────────────────────────────
