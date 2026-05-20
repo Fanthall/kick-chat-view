@@ -13,6 +13,7 @@ import React, {
 	useCallback,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import MessageActionsFunc from "../../store/actions/chatMessage";
@@ -84,18 +85,20 @@ const KIND_TO_FILTER: Record<ActivityKind, FilterId> = {
 	kicks_gifted: "kicks",
 	reward_redemption: "reward",
 	host_raid: "all",
+	follow: "all",
 };
 
 // ─── Icon + accent per kind ──────────────────────────────────────────────────
-type AccentCls = "sub" | "gift" | "kicks" | "reward" | "host";
+type AccentCls = "sub" | "gift" | "kicks" | "reward" | "host" | "follow";
 
-const KIND_META: Record<ActivityKind, { iconName: "crown" | "gift" | "bolt" | "coin" | "user"; cls: AccentCls }> = {
+const KIND_META: Record<ActivityKind, { iconName: "crown" | "gift" | "bolt" | "coin" | "user" | "heart"; cls: AccentCls }> = {
 	subscription_new: { iconName: "crown", cls: "sub" },
 	subscription_renewal: { iconName: "crown", cls: "sub" },
 	subscription_gift: { iconName: "gift", cls: "gift" },
 	kicks_gifted: { iconName: "bolt", cls: "kicks" },
 	reward_redemption: { iconName: "coin", cls: "reward" },
 	host_raid: { iconName: "user", cls: "host" },
+	follow: { iconName: "heart", cls: "follow" },
 };
 
 const toActivityStatus = (value: unknown): ActivityStatus => {
@@ -167,6 +170,12 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 				<b>{actorName}</b> sent{" "}
 				<b className="mono num">{fmtNum(activity.amount)}</b> KICKs
 				{activity.giftName ? <span> · {activity.giftName}</span> : null}
+			</>
+		);
+	} else if (activity.kind === "follow") {
+		lineNode = (
+			<>
+				<b>{actorName}</b> takip etti
 			</>
 		);
 	} else if (activity.kind === "host_raid") {
@@ -318,6 +327,11 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 								{activity.message ? (
 									<> Mesaj: <i>&ldquo;{activity.message}&rdquo;</i></>
 								) : null}
+							</>
+						)}
+						{activity.kind === "follow" && (
+							<>
+								<b>{actorName}</b> kanalı <b>takip etti</b>.
 							</>
 						)}
 						{activity.kind === "reward_redemption" && (
@@ -731,10 +745,25 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 	}, [activities]);
 
 	// Filtered events
+	// Sprint 41: newest-first sort. activityList kronolojik ekleniyor;
+	// kullanıcı en son olayı en üstte görsün.
 	const filteredEvents = useMemo(() => {
-		if (filter === "all") return activities;
-		return activities.filter((a) => KIND_TO_FILTER[a.kind] === filter);
+		const base =
+			filter === "all"
+				? activities
+				: activities.filter((a) => KIND_TO_FILTER[a.kind] === filter);
+		return base.slice().sort(
+			(a, b) => (b.createdAt ?? b.create_at ?? 0) - (a.createdAt ?? a.create_at ?? 0)
+		);
 	}, [activities, filter]);
+
+	// Sprint 41: yeni event geldiğinde scrollTop=0 (en üstte yeni satır görünür).
+	const actListRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (actListRef.current) {
+			actListRef.current.scrollTop = 0;
+		}
+	}, [filteredEvents.length]);
 
 	const handleRewardAction = useCallback(
 		(activity: ActivityItem, status: "accepted" | "rejected") => {
@@ -824,7 +853,7 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 					</div>
 
 					{/* Event list */}
-					<div className="act-list scroll" style={{ flex: "1 1 auto", overflowY: "auto" }}>
+					<div ref={actListRef} className="act-list scroll" style={{ flex: "1 1 auto", overflowY: "auto" }}>
 						{filteredEvents.length === 0 ? (
 							<div
 								style={{

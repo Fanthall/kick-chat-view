@@ -245,6 +245,53 @@ export default function App() {
 						event.payload?.channel_slug ||
 						getActiveChannelSlug() ||
 						undefined;
+					if (eventType === "channel.followed") {
+						// Sprint 41: takipçi event'i
+						if (localStorage.getItem("chatViewShowFollowers") === "false") {
+							return;
+						}
+						const followerName: string =
+							event.payload?.user?.username ||
+							event.payload?.follower?.username ||
+							event.payload?.username ||
+							"Anonim";
+						const createdAt = Date.now();
+						const id = `follow-${followerName}-${event.messageId || createdAt}`;
+						// eslint-disable-next-line @typescript-eslint/no-var-requires
+						const {
+							addActivity,
+							newMessage,
+						} = require("./store/actions/chatMessage");
+						dispatch(
+							addActivity({
+								id,
+								channelSlug: slug,
+								kind: "follow",
+								actor: { username: followerName },
+								username: followerName,
+								createdAt,
+								create_at: createdAt,
+								raw: event.payload,
+							})
+						);
+						dispatch(
+							newMessage({
+								id: `follow-banner-${id}`,
+								channelSlug: slug,
+								chatroom_id: 0,
+								content: `${followerName} kanalı takip etti`,
+								type: "follow-banner",
+								created_at: new Date(createdAt).toISOString(),
+								sender: {
+									id: 0,
+									username: followerName,
+									slug: followerName.toLowerCase(),
+									identity: { color: "#22d3ee", badges: [] },
+								},
+							})
+						);
+						return;
+					}
 					if (eventType === "kicks.gifted") {
 						// eslint-disable-next-line @typescript-eslint/no-var-requires
 						const { normalizeKickWebhookActivity } = require("./util/kickActivity");
