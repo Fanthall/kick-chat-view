@@ -2053,6 +2053,70 @@ body.modern-shell-root #root {
 	color: var(--ms-fg-1);
 }
 
+/* Sprint 20: Light theme — modern shell tokens flipped to a light palette.
+   Activated when root carries data-theme="light". Default = dark (no
+   attribute or "dark"). User toggles via Settings → Account/Advanced. */
+[data-app-shell="modern"][data-theme="light"] {
+	/* Backgrounds */
+	--ms-bg-0: oklch(0.98 0.005 240);
+	--ms-bg-1: oklch(0.95 0.008 240);
+	--ms-bg-2: oklch(0.92 0.01 240);
+	--ms-bg-3: oklch(0.88 0.012 240);
+	--ms-bg-hover: oklch(0.90 0.015 240);
+	/* Foregrounds */
+	--ms-fg-1: oklch(0.20 0.015 240);
+	--ms-fg-2: oklch(0.38 0.015 240);
+	--ms-fg-3: oklch(0.52 0.012 240);
+	--ms-fg-4: oklch(0.65 0.01 240);
+	/* Borders */
+	--ms-border: oklch(0.82 0.01 240 / 0.7);
+	--ms-bd-1: oklch(0.84 0.01 240 / 0.6);
+	--ms-bd-2: oklch(0.78 0.01 240 / 0.7);
+	--ms-bd-3: oklch(0.72 0.01 240 / 0.8);
+	/* Accents need slight darkening for contrast on light bg */
+	--ms-ac-sub: oklch(0.58 0.13 295);
+	--ms-ac-gift: oklch(0.65 0.13 60);
+	--ms-ac-kicks: oklch(0.55 0.13 220);
+	--ms-ac-reward: oklch(0.55 0.13 145);
+	--ms-ac-mod: oklch(0.58 0.14 25);
+	--ms-ac-mint: oklch(0.55 0.13 165);
+	--ms-ac-warn: oklch(0.62 0.15 55);
+	--ms-ac-live: oklch(0.58 0.18 25);
+}
+
+/* Hex fallback for light theme */
+@supports not (color: oklch(0% 0 0)) {
+	[data-app-shell="modern"][data-theme="light"] {
+		--ms-bg-0: #fafbfd;
+		--ms-bg-1: #f3f5f9;
+		--ms-bg-2: #e8ecf2;
+		--ms-bg-3: #dde2ea;
+		--ms-bg-hover: #e3e8ee;
+		--ms-fg-1: #1c2230;
+		--ms-fg-2: #495063;
+		--ms-fg-3: #6b7283;
+		--ms-fg-4: #98a0b0;
+		--ms-border: rgba(180, 188, 200, 0.7);
+		--ms-bd-1: rgba(200, 207, 218, 0.6);
+		--ms-bd-2: rgba(170, 178, 192, 0.7);
+		--ms-bd-3: rgba(150, 160, 175, 0.8);
+		--ms-ac-sub: #6a4cb8;
+		--ms-ac-gift: #c08a3c;
+		--ms-ac-kicks: #2e7eb0;
+		--ms-ac-reward: #3c9268;
+		--ms-ac-mod: #b8543a;
+		--ms-ac-mint: #2f9d7c;
+		--ms-ac-warn: #c08930;
+		--ms-ac-live: #c84035;
+	}
+}
+
+/* Light theme: modern-shell-root body bg + classic frame remove */
+body.modern-shell-root[data-theme="light"],
+html.modern-shell-root[data-theme="light"] {
+	background: var(--ms-bg-0, #fafbfd) !important;
+}
+
 [data-app-shell="modern"] .ms-mono {
 	font-family: var(--ms-font-mono);
 	font-variant-numeric: tabular-nums;

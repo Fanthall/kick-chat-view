@@ -849,10 +849,86 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 		onShellToggle(v);
 	};
 
+	// Sprint 20: theme + language toggles
+	const [theme, setTheme] = useState<"light" | "dark">(() => {
+		const stored = localStorage.getItem("chatViewTheme");
+		return stored === "light" ? "light" : "dark";
+	});
+	const [language, setLanguageState] = useState<"tr" | "en">(() => {
+		const stored = localStorage.getItem("chatViewLanguage");
+		return stored === "en" ? "en" : "tr";
+	});
+	const handleThemeChange = (next: "light" | "dark") => {
+		setTheme(next);
+		localStorage.setItem("chatViewTheme", next);
+		window.dispatchEvent(new Event("chat-view-theme-changed"));
+	};
+	const handleLanguageChange = (next: "tr" | "en") => {
+		setLanguageState(next);
+		localStorage.setItem("chatViewLanguage", next);
+		window.dispatchEvent(new Event("chat-view-language-changed"));
+	};
+
 	return (
 		<>
 			<h3>Advanced</h3>
 			<div className="sub">Diagnostics and event subscription state. Most users won't need these.</div>
+
+			{/* Sprint 20: Tema + Dil */}
+			<div className="set-block">
+				<div className="set-block-row">
+					<div className="l">
+						<b>Tema / Theme</b>
+						<span>Açık veya koyu görünüm — Modern shell renkleri.</span>
+					</div>
+					<div role="radiogroup" aria-label="Theme" style={{ display: "flex", gap: 6 }}>
+						<button
+							type="button"
+							role="radio"
+							aria-checked={theme === "dark"}
+							className={`set-btn ${theme === "dark" ? "primary" : ""}`}
+							onClick={() => handleThemeChange("dark")}
+						>
+							Koyu / Dark
+						</button>
+						<button
+							type="button"
+							role="radio"
+							aria-checked={theme === "light"}
+							className={`set-btn ${theme === "light" ? "primary" : ""}`}
+							onClick={() => handleThemeChange("light")}
+						>
+							Açık / Light
+						</button>
+					</div>
+				</div>
+				<div className="set-block-row">
+					<div className="l">
+						<b>Dil / Language</b>
+						<span>Modern UI metinleri için tercih edilen dil.</span>
+					</div>
+					<div role="radiogroup" aria-label="Language" style={{ display: "flex", gap: 6 }}>
+						<button
+							type="button"
+							role="radio"
+							aria-checked={language === "tr"}
+							className={`set-btn ${language === "tr" ? "primary" : ""}`}
+							onClick={() => handleLanguageChange("tr")}
+						>
+							Türkçe
+						</button>
+						<button
+							type="button"
+							role="radio"
+							aria-checked={language === "en"}
+							className={`set-btn ${language === "en" ? "primary" : ""}`}
+							onClick={() => handleLanguageChange("en")}
+						>
+							English
+						</button>
+					</div>
+				</div>
+			</div>
 
 			<div className="set-block">
 				<div className="set-block-section-label">Event subscriptions</div>

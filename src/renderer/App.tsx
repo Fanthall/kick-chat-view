@@ -107,6 +107,45 @@ export default function App() {
 			body.classList.remove("modern-shell-root");
 		};
 	}, [useModernShell]);
+
+	// Sprint 20: theme + language preferences applied as data-attributes on
+	// <html>, <body>, and the modern shell root. CSS reacts via
+	// [data-theme="light"] selectors; i18n hook reads document.documentElement
+	// dataset.lang. Both persist to localStorage; SettingsModern dispatches
+	// change events to keep this in sync without a reload.
+	useEffect(() => {
+		const apply = () => {
+			const theme =
+				(localStorage.getItem("chatViewTheme") as "light" | "dark" | null) ||
+				"dark";
+			const lang =
+				(localStorage.getItem("chatViewLanguage") as "tr" | "en" | null) ||
+				"tr";
+			const html = document.documentElement;
+			const body = document.body;
+			html.dataset.theme = theme;
+			body.dataset.theme = theme;
+			html.lang = lang;
+			html.dataset.lang = lang;
+			body.dataset.lang = lang;
+			// Tag the modern shell root too so [data-app-shell="modern"][data-theme]
+			// CSS selectors match even when class isn't yet on root.
+			const shellRoot = document.querySelector(
+				'[data-app-shell="modern"]'
+			) as HTMLElement | null;
+			if (shellRoot) {
+				shellRoot.dataset.theme = theme;
+				shellRoot.dataset.lang = lang;
+			}
+		};
+		apply();
+		window.addEventListener("chat-view-theme-changed", apply);
+		window.addEventListener("chat-view-language-changed", apply);
+		return () => {
+			window.removeEventListener("chat-view-theme-changed", apply);
+			window.removeEventListener("chat-view-language-changed", apply);
+		};
+	}, [useModernShell]);
 	useEffect(() => {
 		if (isUserWindow || isKickConnection || isActivityWindow || isModerationWindow) return;
 		// TODO: sağ üstte ayarlardan eklenecek
