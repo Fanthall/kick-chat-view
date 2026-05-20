@@ -39,6 +39,7 @@ import {
 	useFanthalDispatch,
 	useFanthalSelector,
 } from "../../store/hooks/hooks";
+import { chatCommandDefinitions } from "../../util/chatCommands";
 import { User, UserMessage } from "../../util/chatInterface";
 import { getActiveChannelSlug } from "../../util/channelSettings";
 import { refreshChannelEmoteBundle } from "../../util/chatConnection";
@@ -506,7 +507,35 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		return searchEmotes(emoteIndex, emoteSearchMatch.query, 6);
 	}, [emoteSearchMatch, emoteIndex]);
 
+	// Sprint 14: slash command autocomplete — yalniz mesaj basinda /word formatinda
+	const slashMatch = useMemo(() => {
+		const m = messageText.match(/^\/(\w*)$/);
+		if (!m) return undefined;
+		return { query: m[1].toLowerCase() };
+	}, [messageText]);
+	const slashSuggestions = useMemo(() => {
+		if (!slashMatch) return [];
+		return chatCommandDefinitions.filter((c) =>
+			c.name.slice(1).startsWith(slashMatch.query)
+		);
+	}, [slashMatch]);
+	const [slashIndex, setSlashIndex] = useState<number>(0);
+	useEffect(() => {
+		setSlashIndex(0);
+	}, [slashMatch?.query]);
+
 	const acOpen = emoteSuggestions.length > 0;
+	const slashOpen = slashSuggestions.length > 0;
+
+	const applySlashSuggestion = (def: typeof chatCommandDefinitions[number]) => {
+		const next = def.template;
+		setMessageText(next);
+		if (composerRef.current) {
+			composerRef.current.value = next;
+			composerRef.current.focus();
+			composerRef.current.setSelectionRange(next.length, next.length);
+		}
+	};
 
 	useEffect(() => {
 		setEmoteSuggestionIndex(0);
@@ -676,6 +705,30 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 
 	// ── Keyboard handler ──
 	const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+		if (slashOpen) {
+			if (event.key === "ArrowDown") {
+				event.preventDefault();
+				setSlashIndex((prev) => (prev + 1) % slashSuggestions.length);
+				return;
+			}
+			if (event.key === "ArrowUp") {
+				event.preventDefault();
+				setSlashIndex(
+					(prev) => (prev - 1 + slashSuggestions.length) % slashSuggestions.length
+				);
+				return;
+			}
+			if (event.key === "Tab" || event.key === "Enter") {
+				event.preventDefault();
+				applySlashSuggestion(slashSuggestions[slashIndex]);
+				return;
+			}
+			if (event.key === "Escape") {
+				event.preventDefault();
+				setSlashIndex(0);
+				return;
+			}
+		}
 		if (acOpen) {
 			if (event.key === "ArrowDown") {
 				event.preventDefault();
@@ -705,6 +758,16 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 			sendMessage();
 		}
 	};
+
+	// Sprint 14: composer textarea auto-grow up to 3 lines, scroll inside after.
+	useEffect(() => {
+		const el = composerRef.current;
+		if (!el) return;
+		el.style.height = "auto";
+		// 3 satir + padding ~= 64px (line-height 1.45 * 13px * 3 + ~6 padding)
+		const next = Math.min(el.scrollHeight, 64);
+		el.style.height = next + "px";
+	}, [messageText, replyTarget]);
 
 	// ── Refresh emotes ──
 	const handleRefresh = () => {
@@ -983,6 +1046,39 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							onPick={applyEmoteSuggestion}
 							onHover={(index) => setEmoteSuggestionIndex(index)}
 						/>
+					)}
+
+					{/* Sprint 14: slash command suggestions */}
+					{slashOpen && (
+						<div
+							className="autocomplete chat-suggestion-menu"
+							role="listbox"
+							aria-label="Chat commands"
+						>
+							{slashSuggestions.map((def, i) => (
+								<div
+									key={def.name}
+									role="option"
+									aria-selected={i === slashIndex}
+									className={`ac-row ${i === slashIndex ? "is-active" : ""}`}
+									onMouseEnter={() => setSlashIndex(i)}
+									onMouseDown={(e) => {
+										e.preventDefault();
+										applySlashSuggestion(def);
+									}}
+								>
+									<div className="ac-emote" style={{ width: 22, fontFamily: "var(--ms-font-mono)" }}>/</div>
+									<div className="ac-name">
+										<span style={{ color: "var(--ms-fg-1, #ebecef)", fontFamily: "var(--ms-font-mono)" }}>
+											{def.name}
+										</span>
+										<div className="chat-suggestion-description" style={{ fontSize: 11, color: "var(--ms-fg-3, #828690)" }}>
+											{def.description} — <span className="mono">{def.usage}</span>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
 					)}
 
 					<textarea
