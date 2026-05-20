@@ -3108,6 +3108,119 @@ body.modern-shell-root #root {
 	grid-template-columns: repeat(2, 1fr);
 	gap: 6px;
 }
+
+/* Sprint 19: timeout picker (preset chips + custom seconds input) */
+[data-app-shell="modern"] .mod-timeout-picker {
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	padding: 8px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+[data-app-shell="modern"] .mod-timeout-picker-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+[data-app-shell="modern"] .mod-timeout-picker-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--ms-fg-2, var(--fg-2));
+	font-weight: 600;
+}
+[data-app-shell="modern"] .mod-timeout-picker-current {
+	font-size: 12px;
+	color: var(--ms-ac-mint, var(--ac-mint));
+	font-variant-numeric: tabular-nums;
+}
+[data-app-shell="modern"] .mod-timeout-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+[data-app-shell="modern"] .mod-timeout-chip {
+	background: var(--ms-bg-3, #1e2127);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	color: var(--ms-fg-2, var(--fg-2));
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 500;
+	cursor: pointer;
+	font-variant-numeric: tabular-nums;
+	transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+[data-app-shell="modern"] .mod-timeout-chip:hover:not(:disabled) {
+	background: var(--ms-bg-hover, #22252c);
+	color: var(--ms-fg-1, var(--fg-1));
+}
+[data-app-shell="modern"] .mod-timeout-chip.is-active {
+	background: color-mix(in oklch, var(--ms-ac-mint, var(--ac-mint)) 22%, transparent);
+	border-color: var(--ms-ac-mint, var(--ac-mint));
+	color: var(--ms-ac-mint, var(--ac-mint));
+}
+[data-app-shell="modern"] .mod-timeout-chip:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .mod-timeout-custom {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .mod-timeout-custom input {
+	flex: 1 1 auto;
+	min-width: 0;
+	background: var(--ms-bg-1, #131418);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	color: var(--ms-fg-1, var(--fg-1));
+	padding: 5px 8px;
+	font-size: 12px;
+	font-family: inherit;
+	font-variant-numeric: tabular-nums;
+	outline: none;
+}
+[data-app-shell="modern"] .mod-timeout-custom input:focus {
+	border-color: var(--ms-ac-mint, var(--ac-mint));
+}
+[data-app-shell="modern"] .mod-timeout-custom-unit {
+	font-size: 11px;
+	color: var(--ms-fg-4, var(--fg-4));
+}
+[data-app-shell="modern"] .mod-timeout-apply {
+	background: var(--ms-ac-mint, var(--ac-mint));
+	color: var(--ms-bg-0, #0c0d10);
+	border: none;
+	padding: 5px 12px;
+	border-radius: var(--ms-r-2, 6px);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: opacity 0.12s;
+}
+[data-app-shell="modern"] .mod-timeout-apply:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .mod-timeout-hint {
+	font-size: 10px;
+	color: var(--ms-fg-4, var(--fg-4));
+	font-family: var(--ms-font-mono);
+}
+
+/* Sprint 19: clickable suspended row (double-click / right-click opens user) */
+[data-app-shell="modern"] .mod-list-row-clickable {
+	cursor: pointer;
+	transition: background 0.12s;
+}
+[data-app-shell="modern"] .mod-list-row-clickable:hover {
+	background: color-mix(in oklch, var(--ms-bg-hover, #22252c) 60%, transparent);
+}
 [data-app-shell="modern"] .mod-btn {
 	display: flex;
 	flex-direction: column;

@@ -34,6 +34,7 @@ import {
 	removeSuspendedUser,
 } from "../../util/localModerationStorage";
 import { useProfilePic } from "../../util/useProfilePic";
+import { buildUserWindowPayload } from "../../util/userWindowPayload";
 import Icon from "../Component/Icon/Icon";
 
 // ─── Chat control keys ────────────────────────────────────────────────────────
@@ -70,6 +71,10 @@ interface SuspendedEntry {
 	username: string;
 	reason: string;
 	until: string;
+	/** Sprint 19: kim banladi (banned_by / unbanned_by sender). */
+	actorUsername?: string;
+	/** Sprint 19: kullanici detayi acmak icin gerekli ModMessage referansi. */
+	sourceAction?: ModMessage;
 }
 
 /** Parse the raw localStorage string "username:reason:until" or just "username". */
@@ -119,6 +124,89 @@ const ChatToggle: FunctionComponent<{ ctrl: ChatControl }> = ({ ctrl }) => {
 					aria-pressed={isOn}
 					type="button"
 				/>
+			</div>
+		</div>
+	);
+};
+
+// ─── Sprint 19: TimeoutPicker (chip presets + custom seconds input) ─────────
+
+const TIMEOUT_PRESETS: { label: string; seconds: number }[] = [
+	{ label: "1m", seconds: 60 },
+	{ label: "5m", seconds: 300 },
+	{ label: "10m", seconds: 600 },
+	{ label: "30m", seconds: 1800 },
+	{ label: "1h", seconds: 3600 },
+];
+
+const formatSeconds = (sec: number): string => {
+	if (!Number.isFinite(sec) || sec <= 0) return "—";
+	if (sec < 60) return `${sec}s`;
+	if (sec % 3600 === 0) return `${sec / 3600}h`;
+	if (sec % 60 === 0) return `${sec / 60}m`;
+	const m = Math.floor(sec / 60);
+	const s = sec % 60;
+	return `${m}m ${s}s`;
+};
+
+const TimeoutPicker: FunctionComponent<{
+	disabled: boolean;
+	defaultSeconds: number;
+	onApply: (seconds: number) => void;
+}> = ({ disabled, defaultSeconds, onApply }) => {
+	const [selectedPreset, setSelectedPreset] = useState<number>(defaultSeconds);
+	const [customSec, setCustomSec] = useState<string>("");
+	const effective = customSec ? parseInt(customSec, 10) : selectedPreset;
+	return (
+		<div className="mod-timeout-picker">
+			<div className="mod-timeout-picker-row">
+				<span className="mod-timeout-picker-label">
+					<Icon name="timeout" size={12} /> Timeout
+				</span>
+				<span className="mod-timeout-picker-current mono">
+					{formatSeconds(effective)}
+				</span>
+			</div>
+			<div className="mod-timeout-chips">
+				{TIMEOUT_PRESETS.map((p) => (
+					<button
+						key={p.seconds}
+						type="button"
+						className={`mod-timeout-chip ${
+							!customSec && selectedPreset === p.seconds ? "is-active" : ""
+						}`}
+						onClick={() => {
+							setSelectedPreset(p.seconds);
+							setCustomSec("");
+						}}
+						disabled={disabled}
+					>
+						{p.label}
+					</button>
+				))}
+			</div>
+			<div className="mod-timeout-custom">
+				<input
+					type="number"
+					min={1}
+					placeholder="custom"
+					value={customSec}
+					onChange={(e) => setCustomSec(e.target.value)}
+					disabled={disabled}
+					aria-label="Custom timeout seconds"
+				/>
+				<span className="mod-timeout-custom-unit">sec</span>
+				<button
+					type="button"
+					className="mod-timeout-apply"
+					onClick={() => effective > 0 && onApply(effective)}
+					disabled={disabled || !effective || effective <= 0}
+				>
+					Apply
+				</button>
+			</div>
+			<div className="mod-timeout-hint">
+				Ctrl+T = {formatSeconds(defaultSeconds)} · Ctrl+Shift+T = 10m
 			</div>
 		</div>
 	);
@@ -260,12 +348,15 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 		};
 		const entries: SuspendedEntry[] = [];
 		for (const action of latestByUser.values()) {
+			const actorUsername = action.banned_by?.username;
 			if (action.type === "ban") {
 				entries.push({
 					raw: action.user!.username,
 					username: action.user!.username,
 					reason: action.reason || "Banned",
 					until: "Permanent",
+					actorUsername,
+					sourceAction: action,
 				});
 			} else if (action.type === "to") {
 				const until = formatUntil(action.expires_at);
@@ -275,6 +366,8 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					username: action.user!.username,
 					reason: action.reason || "Timed out",
 					until,
+					actorUsername,
+					sourceAction: action,
 				});
 			}
 			// "unban" / "delete" -> not suspended; skipped naturally because
@@ -329,12 +422,15 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 
 	// ─── Action handlers ─────────────────────────────────────────────────────────
 
-	function handleDefaultTimeout() {
+	function runTimeout(seconds: number) {
 		if (!selectedUser || !broadcasterUserId) {
 			toast.warn("No user or channel selected for timeout.");
 			return;
 		}
-		const seconds = getDefaultTimeoutSeconds();
+		if (!Number.isFinite(seconds) || seconds <= 0) {
+			toast.warn("Timeout duration must be > 0 seconds.");
+			return;
+		}
 		window.electron.kick.timeoutUser({
 			broadcaster_user_id: broadcasterUserId,
 			user_id: selectedUser.id,
@@ -342,16 +438,12 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 		});
 	}
 
+	function handleDefaultTimeout() {
+		runTimeout(getDefaultTimeoutSeconds());
+	}
+
 	function handleLongTimeout() {
-		if (!selectedUser || !broadcasterUserId) {
-			toast.warn("No user or channel selected for timeout.");
-			return;
-		}
-		window.electron.kick.timeoutUser({
-			broadcaster_user_id: broadcasterUserId,
-			user_id: selectedUser.id,
-			duration: 600, // 10 minutes
-		});
+		runTimeout(600); // 10 minutes
 	}
 
 	function handleBan() {
@@ -379,6 +471,28 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	function handlePromote() {
 		// TODO: No VIP promote endpoint in preload. Deferred to future sprint.
 		toast.info("Promote — not yet implemented.");
+	}
+
+	function openSuspendedUser(entry: SuspendedEntry) {
+		// Sprint 19: cift tik / sag tik suspended row -> User Detail penceresi ac.
+		const action = entry.sourceAction;
+		if (!action?.user) {
+			toast.warn("Kullanici bilgisi cikartilamadi.");
+			return;
+		}
+		try {
+			const payload = buildUserWindowPayload({
+				user: action.user,
+				messages: messages.messageList,
+				modActions: messages.modAction,
+				openedFrom: "moderation",
+				channelName: activeChannelSlug || undefined,
+				canModerateChannel: canModerate,
+			});
+			window.electron.userWindow.open(payload);
+		} catch (err: any) {
+			toast.error(err?.message || "User window acilamadi.");
+		}
 	}
 
 	function handleUnban(entry: SuspendedEntry) {
@@ -555,35 +669,15 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					</h3>
 					<div
 						id="mod-sec-actions"
-						className="mod-section-body mod-grid"
+						className="mod-section-body"
 						hidden={collapsed.actions}
 					>
-						<button
-							className="mod-btn"
-							disabled={!selectedUser}
-							onClick={handleDefaultTimeout}
-							type="button"
-							aria-label="Timeout (default)"
-						>
-							<span className="label">
-								<Icon name="timeout" size={12} />
-								{" "}Timeout
-							</span>
-							<span className="hint">{defaultSeconds}s default · Ctrl+T</span>
-						</button>
-						<button
-							className="mod-btn"
-							disabled={!selectedUser}
-							onClick={handleLongTimeout}
-							type="button"
-							aria-label="Timeout (long)"
-						>
-							<span className="label">
-								<Icon name="timeout" size={12} />
-								{" "}Timeout
-							</span>
-							<span className="hint">10 min · Ctrl+Shift+T</span>
-						</button>
+					<TimeoutPicker
+						disabled={!selectedUser}
+						defaultSeconds={defaultSeconds}
+						onApply={(sec) => runTimeout(sec)}
+					/>
+					<div className="mod-grid" style={{ marginTop: 8 }}>
 						<button
 							className="mod-btn danger"
 							disabled={!selectedUser}
@@ -636,6 +730,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 							</span>
 							<span className="hint">→ VIP</span>
 						</button>
+					</div>
 					</div>
 				</div>
 				)}
@@ -714,8 +809,14 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 						{suspendedList.map((entry) => (
 							<div
 								key={entry.raw}
-								className="mod-list-row"
+								className="mod-list-row mod-list-row-clickable"
 								data-testid={`suspended-row-${entry.username}`}
+								onDoubleClick={() => openSuspendedUser(entry)}
+								onContextMenu={(e) => {
+									e.preventDefault();
+									openSuspendedUser(entry);
+								}}
+								title="Cift tik veya sag tik: kullanici detayini ac"
 							>
 								<div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
 									<span style={{ color: "var(--ms-fg-1, var(--fg-1))" }}>
@@ -723,6 +824,17 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 									</span>
 									{entry.reason && (
 										<span className="reason">{entry.reason}</span>
+									)}
+									{entry.actorUsername && (
+										<span
+											className="reason"
+											style={{
+												fontSize: 10,
+												color: "var(--ms-fg-4, var(--fg-4))",
+											}}
+										>
+											by @{entry.actorUsername}
+										</span>
 									)}
 								</div>
 								<div style={{ display: "flex", alignItems: "center", gap: 8 }}>

@@ -617,10 +617,13 @@ const ModerationSection: FunctionComponent = () => {
 
 			<div className="set-block">
 				<div className="set-block-section-label">
-					Currently suspended <span className="ms-mono" style={{ marginLeft: 4 }}>{susUsers.length}</span>
+					Suspicious users (manual list) <span className="ms-mono" style={{ marginLeft: 4 }}>{susUsers.length}</span>
+				</div>
+				<div className="set-block-help" style={{ fontSize: 11, color: "var(--ms-fg-4, var(--fg-4))", padding: "0 14px 8px", marginTop: -4 }}>
+					Manual watchlist — kanaldaki aktif ban/timeout listesi degil. Aktif kisitlamalar Moderation panelinde gorulur.
 				</div>
 				{susUsers.length === 0 ? (
-					<div className="set-block-empty">No suspended users.</div>
+					<div className="set-block-empty">Listede kimse yok.</div>
 				) : (
 					susUsers.map((u) => (
 						<div key={u} className="set-block-row" data-testid={`sus-row-${u}`}>

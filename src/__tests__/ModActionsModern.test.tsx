@@ -157,16 +157,20 @@ describe("ModActionsModern — selected user card", () => {
 // ─── Test 3: Quick action buttons disabled when no user ───────────────────────
 
 describe("ModActionsModern — quick action disabled state", () => {
-	it("all quick action buttons are disabled when no user selected", () => {
+	it("all quick action buttons + timeout picker are disabled when no user selected", () => {
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
 				<ModActionsModern isMod={true} />
 			</Provider>
 		);
-		const timeoutBtns = screen.getAllByRole("button", { name: /timeout/i });
-		timeoutBtns.forEach((btn) => expect(btn).toBeDisabled());
-
+		// Sprint 19: Apply (timeout picker primary action) is disabled.
+		const applyBtn = screen.getByRole("button", { name: /^apply$/i });
+		expect(applyBtn).toBeDisabled();
+		// Sprint 19: preset chips disabled too.
+		expect(screen.getByRole("button", { name: "1m" })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "10m" })).toBeDisabled();
+		// Ban button still disabled.
 		const banBtn = screen.getByRole("button", { name: /ban user/i });
 		expect(banBtn).toBeDisabled();
 	});
@@ -175,23 +179,67 @@ describe("ModActionsModern — quick action disabled state", () => {
 // ─── Test 4: Timeout button dispatches kick.timeoutUser ──────────────────────
 
 describe("ModActionsModern — timeout action", () => {
-	it("timeout (default) button calls kick.timeoutUser with correct user + duration", () => {
-		const store = buildStore([baseModAction]);
+	it("Apply timeout button calls kick.timeoutUser with selected preset duration", () => {
+		// Sprint 19: Two separate Timeout buttons collapsed into TimeoutPicker.
+		// Default preset = getDefaultTimeoutSeconds (600s). Apply button fires
+		// kick.timeoutUser with that duration.
+		const store = buildStore([]);
 		render(
 			<Provider store={store}>
 				<ModActionsModern isMod={true} selectedUser={baseUser} />
 			</Provider>
 		);
 
-		const timeoutBtn = screen.getByRole("button", { name: /timeout \(default\)/i });
-		expect(timeoutBtn).not.toBeDisabled();
-		fireEvent.click(timeoutBtn);
+		const applyBtn = screen.getByRole("button", { name: /^apply$/i });
+		expect(applyBtn).not.toBeDisabled();
+		fireEvent.click(applyBtn);
 
 		expect(mockTimeoutUser).toHaveBeenCalledTimes(1);
 		expect(mockTimeoutUser).toHaveBeenCalledWith(
 			expect.objectContaining({
 				broadcaster_user_id: 9999,
 				user_id: 42,
+				duration: 600,
+			})
+		);
+	});
+
+	it("Custom seconds input overrides preset and fires kick.timeoutUser", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={true} selectedUser={baseUser} />
+			</Provider>
+		);
+
+		const customInput = screen.getByLabelText(/custom timeout seconds/i);
+		fireEvent.change(customInput, { target: { value: "120" } });
+		const applyBtn = screen.getByRole("button", { name: /^apply$/i });
+		fireEvent.click(applyBtn);
+
+		expect(mockTimeoutUser).toHaveBeenCalledTimes(1);
+		expect(mockTimeoutUser).toHaveBeenCalledWith(
+			expect.objectContaining({
+				duration: 120,
+			})
+		);
+	});
+
+	it("Preset chip click switches duration; Apply uses chip seconds", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={true} selectedUser={baseUser} />
+			</Provider>
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "5m" }));
+		fireEvent.click(screen.getByRole("button", { name: /^apply$/i }));
+
+		expect(mockTimeoutUser).toHaveBeenCalledTimes(1);
+		expect(mockTimeoutUser).toHaveBeenCalledWith(
+			expect.objectContaining({
+				duration: 300,
 			})
 		);
 	});
