@@ -922,10 +922,23 @@ const WebhookReceiverBlock: FunctionComponent = () => {
 	return (
 		<div className="set-block">
 			<div className="set-block-section-label">Webhook receiver (KICKs)</div>
-			<div className="set-block-help" style={{ fontSize: 11, color: "var(--ms-fg-4)", padding: "0 14px 8px" }}>
+			<div
+				className="set-block-help"
+				style={{
+					fontSize: 11,
+					color: "var(--ms-fg-4)",
+					padding: "0 14px 8px",
+					lineHeight: 1.5,
+				}}
+			>
 				KICKs olayları Kick tarafından <b>yalnızca webhook</b> ile yayınlanıyor.
-				Local receiver bu HTTP server'ı yönetir. Public URL (ngrok / cloudflare-tunnel)
-				gerekiyor — local URL'yi tunnel ile dışarı aç ve aşağıdaki alana yapıştır.
+				Receiver app açılırken otomatik başlar. Public URL (ngrok /
+				cloudflare-tunnel) gir; auto-subscribe devreye girer.
+				<br />
+				<b>Önemli:</b> Kick'in OAuth user-token modeli yalnız{" "}
+				<b>kendi kanalın</b> için subscribe izni veriyor. Diğer kanallarda
+				izleyici olduğun için olaylar Pusher üzerinden chat akışında görünür
+				(sub / gift / host / raid). KICKs yalnız kendi kanalında.
 			</div>
 
 			<div className="set-block-row">
@@ -935,13 +948,28 @@ const WebhookReceiverBlock: FunctionComponent = () => {
 						{info?.localUrl || `http://localhost:18292/webhook/kick`}
 					</span>
 				</div>
-				<div style={{ display: "flex", gap: 6 }}>
+				<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+					<span
+						className={`tb-live`}
+						style={{
+							fontSize: 10,
+							padding: "2px 8px",
+							background: running
+								? "color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 22%, transparent)"
+								: "color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 22%, transparent)",
+							color: running ? "var(--ms-ac-mint, #2fd3a0)" : "var(--ms-ac-live, #ef4f5f)",
+							borderColor: "transparent",
+						}}
+					>
+						{running ? "ÇALIŞIYOR" : "KAPALI"}
+					</span>
 					{running ? (
 						<button
 							type="button"
-							className="set-btn"
+							className="set-btn ghost"
 							disabled={busy === "stop"}
 							onClick={handleStop}
+							title="Sadece sorun gidermek için kullan"
 						>
 							Durdur
 						</button>
@@ -952,7 +980,7 @@ const WebhookReceiverBlock: FunctionComponent = () => {
 							disabled={busy === "start"}
 							onClick={handleStart}
 						>
-							Başlat
+							Yeniden başlat
 						</button>
 					)}
 				</div>
