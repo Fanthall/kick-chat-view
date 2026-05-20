@@ -61,6 +61,12 @@ import {
 	getSuspendedUsers,
 	LOCAL_MODERATION_SETTINGS_CHANGED,
 } from "../../util/localModerationStorage";
+import {
+	getModCheckMessage,
+	hasSentModCheckForChannel,
+	markModCheckSentForChannel,
+} from "../../util/modDetectionSettings";
+import { hasKickScope, parseKickScopes } from "../../util/kickScopes";
 import { buildUserWindowPayload } from "../../util/userWindowPayload";
 import EmoteAutocompleteModern from "./EmoteAutocompleteModern";
 import EmotePickerModern from "./EmotePickerModern";
@@ -319,6 +325,8 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	const [emoteSuggestionIndex, setEmoteSuggestionIndex] = useState<number>(0);
 	const [broadcasterUserId, setBroadcasterUserId] = useState<number | undefined>(undefined);
 	const [canModerateChannel, setCanModerateChannel] = useState<boolean>(false);
+	const [tokenScopes, setTokenScopes] = useState<string[]>([]);
+	const pendingModCheckChannelsRef = useRef<Set<string>>(new Set());
 	const [pickerOpen, setPickerOpen] = useState<boolean>(false);
 
 	// Sprint 11: inline user context menu (right-click on chat row)
@@ -441,23 +449,33 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 			const ch = localStorage.getItem("channelName")?.trim();
 			if (!ch) {
 				setBroadcasterUserId(undefined);
+				setTokenScopes([]);
 				setCanModerateChannel(false);
 				return;
 			}
 			Promise.all([
 				window.electron.kick.getChannelBySlug(ch),
 				window.electron.kick.getUsers().catch(() => undefined),
+				window.electron.kick.getAuthStatus().catch(() => undefined),
 			])
-				.then(([channelResponse, userResponse]) => {
+				.then(([channelResponse, userResponse, authStatus]: any[]) => {
 					const broadcasterId = channelResponse?.data?.[0]?.broadcaster_user_id;
 					const oauthUserId = userResponse?.data?.[0]?.user_id;
+					const scopes = parseKickScopes(
+						authStatus?.grantedScopes,
+						authStatus?.tokenScope,
+						authStatus?.introspection?.data?.scope,
+						authStatus?.introspection?.data?.scopes
+					);
 					setBroadcasterUserId(broadcasterId);
+					setTokenScopes(scopes);
 					setCanModerateChannel(
 						!!broadcasterId && !!oauthUserId && broadcasterId === oauthUserId
 					);
 				})
 				.catch(() => {
 					setBroadcasterUserId(undefined);
+					setTokenScopes([]);
 					setCanModerateChannel(false);
 				});
 		};
@@ -465,6 +483,50 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		window.addEventListener("kick-channel-settings-changed", load);
 		return () => window.removeEventListener("kick-channel-settings-changed", load);
 	}, []);
+
+	// Sprint 30: mark mod-check echo when our own probe message appears.
+	useEffect(() => {
+		const modCheckMessage = getModCheckMessage();
+		if (!modCheckMessage || !channelName || !username) return;
+		const ownModCheckMessage = messages.messageList.find(
+			(msg) =>
+				msg.channelSlug === channelName &&
+				msg.sender?.username?.toLowerCase() === username.toLowerCase() &&
+				msg.content.trim() === modCheckMessage
+		);
+		if (ownModCheckMessage) {
+			markModCheckSentForChannel(channelName);
+			pendingModCheckChannelsRef.current.delete(channelName);
+		}
+	}, [channelName, messages.messageList, username]);
+
+	// Sprint 30: send mod-check probe so mod-badge fallback can hydrate
+	// canModerateChannel. Without this, right-click "Delete message" never
+	// becomes available unless the user has typed in chat at least once.
+	useEffect(() => {
+		const modCheckMessage = getModCheckMessage();
+		if (
+			!modCheckMessage ||
+			!channelName ||
+			!broadcasterUserId ||
+			canModerateChannel ||
+			!hasKickScope(tokenScopes, "chat:write") ||
+			hasSentModCheckForChannel(channelName) ||
+			pendingModCheckChannelsRef.current.has(channelName)
+		) {
+			return;
+		}
+		pendingModCheckChannelsRef.current.add(channelName);
+		window.electron.kick
+			.sendChatMessage({
+				broadcaster_user_id: broadcasterUserId,
+				content: modCheckMessage,
+				type: "user",
+			})
+			.catch(() => {
+				pendingModCheckChannelsRef.current.delete(channelName);
+			});
+	}, [broadcasterUserId, canModerateChannel, channelName, tokenScopes]);
 
 	// ── Detect mod badge fallback ──
 	useEffect(() => {
@@ -951,14 +1013,21 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	};
 
 	// Sprint 14: composer textarea auto-grow up to 3 lines, scroll inside after.
-	useEffect(() => {
+	// Sprint 30: composer her büyüdüğünde chat list scroll-to-bottom — composer
+	// 2-3 satıra çıkınca son mesaj alta gizlenmesin.
+	useLayoutEffect(() => {
 		const el = composerRef.current;
 		if (!el) return;
 		el.style.height = "auto";
 		// 3 satir + padding ~= 64px (line-height 1.45 * 13px * 3 + ~6 padding)
 		const next = Math.min(el.scrollHeight, 64);
 		el.style.height = next + "px";
-	}, [messageText, replyTarget]);
+		// Composer yüksekliği değişti -> chat list yüksekliği değişti -> en
+		// alttaki mesajı yeniden görünür hale getir (paused değilse).
+		if (!paused && listRef.current) {
+			listRef.current.scrollTop = listRef.current.scrollHeight;
+		}
+	}, [messageText, replyTarget, paused]);
 
 	// ── Refresh emotes ──
 	const handleRefresh = () => {

@@ -2393,16 +2393,19 @@ html.modern-shell-root[data-theme="light"] {
 	color: var(--ms-fg-3);
 }
 [data-app-shell="modern"][data-theme="light"] .tb-tab {
-	color: var(--ms-fg-3);
+	color: var(--ms-fg-2);
+	background: color-mix(in oklch, var(--ms-bg-3) 70%, transparent);
+	border-color: var(--ms-bd-2);
 }
 [data-app-shell="modern"][data-theme="light"] .tb-tab:hover {
 	background: var(--ms-bg-3);
-	color: var(--ms-fg-2);
+	color: var(--ms-fg-1);
+	border-color: color-mix(in oklch, var(--ms-ac-mint) 55%, var(--ms-bd-2));
 }
 [data-app-shell="modern"][data-theme="light"] .tb-tab.is-active {
-	background: var(--ms-bg-3);
+	background: color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
 	color: var(--ms-fg-1);
-	border-color: var(--ms-bd-2);
+	border-color: var(--ms-ac-mint);
 }
 [data-app-shell="modern"][data-theme="light"] .tb-tab-close {
 	color: var(--ms-fg-3);
@@ -4890,28 +4893,34 @@ html.modern-shell-root[data-theme="light"] {
 	color: var(--fg-3);
 }
 
+/* Sprint 30: channel tabs — make them visually distinct as chips in both
+   themes (user feedback: "kanal tablerini belirgin yap demiştim hala
+   anlamıyorum orada tab olduklarını"). Always-visible border + soft surface
+   bg so secondary channels read as clickable chips, not plain text. */
 [data-app-shell="modern"] .tb-tab {
-	padding: 3px 8px;
+	padding: 3px 9px;
 	border-radius: var(--r-2);
-	border: 1px solid transparent;
+	border: 1px solid var(--bd-2);
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	color: var(--fg-3);
-	background: none;
+	color: var(--fg-2);
+	background: color-mix(in oklch, var(--bg-3) 60%, transparent);
 	cursor: pointer;
 	font: inherit;
+	transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
 [data-app-shell="modern"] .tb-tab:hover {
 	background: var(--bg-3);
-	color: var(--fg-2);
+	color: var(--fg-1);
+	border-color: color-mix(in oklch, var(--ac-mint) 50%, var(--bd-2));
 }
 
 [data-app-shell="modern"] .tb-tab.is-active {
-	background: var(--bg-3);
+	background: color-mix(in oklch, var(--ac-mint) 16%, transparent);
 	color: var(--fg-1);
-	border-color: var(--bd-2);
+	border-color: var(--ac-mint);
 }
 
 [data-app-shell="modern"] .tb-tab .dot {
