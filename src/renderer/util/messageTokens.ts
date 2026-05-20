@@ -30,6 +30,30 @@ const splitPreservingSpaces = (content: string): string[] => {
  *   - Diger kelimeler    -> Eger index.byName icinde varsa (case-sensitive),
  *                          7TV/Kick/Sub emote token; aksi halde plain text.
  */
+const buildKickFallback = (id: string, name: string, raw: string): EmoteEntry =>
+	({
+		id,
+		name,
+		provider: "kick-channel",
+		scope: "channel",
+		animated: false,
+		zeroWidth: false,
+		urls: {
+			"1x": `https://files.kick.com/emotes/${id}/fullsize`,
+		},
+		insertText: raw,
+	} as EmoteEntry);
+
+const resolveKickEntry = (
+	id: string,
+	name: string,
+	raw: string,
+	index: EmoteIndex
+): EmoteEntry =>
+	index.byName.get(name) ||
+	index.byNameInsensitive.get(name.toLowerCase()) ||
+	buildKickFallback(id, name, raw);
+
 export const tokenizeMessage = (
 	content: string,
 	index: EmoteIndex
@@ -42,29 +66,44 @@ export const tokenizeMessage = (
 			tokens.push({ kind: "space", value: word });
 			continue;
 		}
-		const kickMatch = matchKickEmote(word);
-		if (kickMatch) {
-			// Kick [emote:ID:NAME] formatinda case-insensitive eslesme
-			// kabul edilebilir cunku ID zaten kanonik. Once exact, sonra lower.
-			const entry =
-				index.byName.get(kickMatch.name) ||
-				index.byNameInsensitive.get(kickMatch.name.toLowerCase()) ||
-				({
-					id: kickMatch.id,
-					name: kickMatch.name,
-					provider: "kick-channel",
-					scope: "channel",
-					animated: false,
-					zeroWidth: false,
-					urls: {
-						"1x": `https://files.kick.com/emotes/${kickMatch.id}/fullsize`,
-					},
-					insertText: word,
-				} as EmoteEntry);
-			tokens.push({ kind: "emote", emote: entry, raw: word });
+		// Tek kelimenin icinde 1+ Kick bracket olabilir (boslukla ayrilmamis):
+		//   "[emote:1:A][emote:2:B]"  veya  "before[emote:1:A]after"
+		// Tum bracket'lari sira ile sok ve aralardaki metni text token olarak ekle.
+		const re = /\[emote:(\d+):([^\]]+)\]/g;
+		let m: RegExpExecArray | null;
+		let lastIdx = 0;
+		let foundAny = false;
+		while ((m = re.exec(word)) !== null) {
+			foundAny = true;
+			if (m.index > lastIdx) {
+				const before = word.slice(lastIdx, m.index);
+				// Aradaki parca da plain emote ismi olabilir (case-sensitive)
+				const between = index.byName.get(before);
+				if (between) {
+					tokens.push({ kind: "emote", emote: between, raw: before });
+				} else {
+					tokens.push({ kind: "text", value: before });
+				}
+			}
+			const id = m[1];
+			const name = m[2];
+			const raw = m[0];
+			tokens.push({ kind: "emote", emote: resolveKickEntry(id, name, raw, index), raw });
+			lastIdx = m.index + raw.length;
+		}
+		if (foundAny) {
+			if (lastIdx < word.length) {
+				const tail = word.slice(lastIdx);
+				const tailEmote = index.byName.get(tail);
+				if (tailEmote) {
+					tokens.push({ kind: "emote", emote: tailEmote, raw: tail });
+				} else {
+					tokens.push({ kind: "text", value: tail });
+				}
+			}
 			continue;
 		}
-		// Sade kelime: case-sensitive tam eslesme zorunlu (Kappa != kappa)
+		// Kelimede hic bracket yok: case-sensitive tam eslesme (Kappa != kappa)
 		const emote = index.byName.get(word);
 		if (emote) {
 			tokens.push({ kind: "emote", emote, raw: word });

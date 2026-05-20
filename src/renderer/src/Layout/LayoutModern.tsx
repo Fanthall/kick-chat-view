@@ -61,10 +61,38 @@ const computeUptime = (startedAt?: string): string => {
 };
 
 /**
- * Fix 5: In-memory unread count per slug since last switch (volatile stub).
+ * Sprint 9 Fix: persistent unread tracking per slug, backed by localStorage.
+ * Tracks seen message IDs (volatile, in-memory) + cumulative unread counter
+ * that survives Redux truncation. Counter persists across reloads via
+ * `chatViewUnreadCounts` localStorage key.
  */
-const unreadMap = new Map<string, number>();
-let lastMessageCount: Record<string, number> = {};
+const UNREAD_STORAGE_KEY = "chatViewUnreadCounts";
+
+const loadUnreadFromStorage = (): Map<string, number> => {
+	try {
+		const raw = localStorage.getItem(UNREAD_STORAGE_KEY);
+		if (!raw) return new Map();
+		const parsed = JSON.parse(raw) as Record<string, number>;
+		return new Map(Object.entries(parsed));
+	} catch {
+		return new Map();
+	}
+};
+
+const saveUnreadToStorage = (map: Map<string, number>) => {
+	try {
+		const obj: Record<string, number> = {};
+		map.forEach((v, k) => {
+			if (v > 0) obj[k] = v;
+		});
+		localStorage.setItem(UNREAD_STORAGE_KEY, JSON.stringify(obj));
+	} catch {
+		/* quota or serialization — ignore */
+	}
+};
+
+const unreadMap: Map<string, number> = loadUnreadFromStorage();
+const seenIdsByChannel = new Map<string, Set<string>>();
 
 // ─── LayoutModern ─────────────────────────────────────────────────────────────
 
@@ -153,25 +181,42 @@ const LayoutModern: FunctionComponent = () => {
 		return { isOwner, isMod };
 	}, [streamMeta, messages.messageList]);
 
-	// Fix 5: rough unread count per channel
+	// Sprint 9 Fix: persistent unread counts — per-channel seen-id tracking.
+	// Yeni gelen mesaj id'leri set'e ekleniyor; aktif olmayan kanallar icin
+	// counter increment ediliyor + localStorage'a yazilarak reload'da korunuyor.
 	const unreadCounts = useMemo(() => {
 		const counts: Record<string, number> = {};
+		let mutated = false;
 		channels.forEach((ch) => {
-			if (ch.slug === activeSlug) {
-				unreadMap.set(ch.slug, 0);
-			}
+			const seen = seenIdsByChannel.get(ch.slug) ?? new Set<string>();
 			const slugMessages = messages.messageList.filter(
 				(m) => m.channelSlug === ch.slug
 			);
-			const prev = lastMessageCount[ch.slug] ?? slugMessages.length;
-			if (ch.slug !== activeSlug) {
-				const delta = Math.max(0, slugMessages.length - prev);
-				counts[ch.slug] = (unreadMap.get(ch.slug) ?? 0) + delta;
-			} else {
-				counts[ch.slug] = 0;
+			let newCount = 0;
+			for (const msg of slugMessages) {
+				const id = msg.id || `${msg.created_at ?? ""}-${msg.sender?.username ?? ""}-${msg.content?.slice(0, 32) ?? ""}`;
+				if (!seen.has(id)) {
+					seen.add(id);
+					if (ch.slug !== activeSlug) newCount++;
+				}
 			}
-			lastMessageCount[ch.slug] = slugMessages.length;
+			seenIdsByChannel.set(ch.slug, seen);
+			if (ch.slug === activeSlug) {
+				if ((unreadMap.get(ch.slug) ?? 0) !== 0) {
+					unreadMap.set(ch.slug, 0);
+					mutated = true;
+				}
+				counts[ch.slug] = 0;
+			} else if (newCount > 0) {
+				const next = (unreadMap.get(ch.slug) ?? 0) + newCount;
+				unreadMap.set(ch.slug, next);
+				counts[ch.slug] = next;
+				mutated = true;
+			} else {
+				counts[ch.slug] = unreadMap.get(ch.slug) ?? 0;
+			}
 		});
+		if (mutated) saveUnreadToStorage(unreadMap);
 		return counts;
 	}, [channels, activeSlug, messages.messageList]);
 
@@ -201,6 +246,7 @@ const LayoutModern: FunctionComponent = () => {
 		(slug: string) => {
 			if (!slug || slug === activeSlug) return;
 			unreadMap.set(slug, 0);
+			saveUnreadToStorage(unreadMap);
 			setActiveChannelSlug(slug);
 			setActiveSlug(slug);
 			dispatch(chatListener(slug));
@@ -214,6 +260,8 @@ const LayoutModern: FunctionComponent = () => {
 			if (!slug) return;
 			removeChannel(slug);
 			unreadMap.delete(slug);
+			seenIdsByChannel.delete(slug);
+			saveUnreadToStorage(unreadMap);
 			const remaining = getChannelList();
 			if (slug === activeSlug) {
 				const next = remaining[0]?.slug ?? "";
