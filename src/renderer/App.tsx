@@ -219,6 +219,83 @@ export default function App() {
 			});
 	}, [isUserWindow, isKickConnection]);
 
+	// Sprint 42: webhook receiver çalışıyorsa + publicUrl set ise + ilgili
+	// event'lere subscribe değilsek otomatik subscribe et. Pop-out'larda
+	// çalışmaz. Subscription ID'leri localStorage'a persist edilir.
+	useEffect(() => {
+		if (
+			isUserWindow ||
+			isActivityWindow ||
+			isModerationWindow ||
+			isKickConnection
+		) {
+			return;
+		}
+		const tryAutoSubscribe = async () => {
+			try {
+				const webhook = (window.electron as any)?.webhook;
+				if (!webhook) return;
+				const info = await webhook.getReceiverInfo?.();
+				const running = info?.running;
+				const publicUrl = localStorage.getItem(
+					"chatViewWebhookPublicUrl"
+				);
+				if (!running || !publicUrl) return;
+				const flagKey = "chatViewWebhookAutoSubscribed";
+				if (localStorage.getItem(flagKey) === "true") return;
+				// Subscribe edilecek event listesi.
+				const events: { name: string; version: number }[] = [
+					{ name: "kicks.gifted", version: 1 },
+					{ name: "channel.subscription.new", version: 1 },
+					{ name: "channel.subscription.renewal", version: 1 },
+					{ name: "channel.subscription.gifts", version: 1 },
+				];
+				// Follow toggle açıksa channel.followed da subscribe et.
+				if (
+					localStorage.getItem("chatViewShowFollowers") !== "false"
+				) {
+					events.push({ name: "channel.followed", version: 1 });
+				}
+				const res: any = await window.electron.kick.subscribeToEvents({
+					events,
+					method: "webhook",
+				} as any);
+				const newIds: string[] = (res?.data || [])
+					.map((d: any) => d?.subscription_id || d?.id)
+					.filter(Boolean);
+				const existingRaw = localStorage.getItem(
+					"chatViewWebhookSubscriptionIds"
+				);
+				let existing: string[] = [];
+				try {
+					existing = existingRaw ? JSON.parse(existingRaw) : [];
+				} catch {
+					/* ignore */
+				}
+				const merged = Array.from(new Set([...existing, ...newIds]));
+				localStorage.setItem(
+					"chatViewWebhookSubscriptionIds",
+					JSON.stringify(merged)
+				);
+				localStorage.setItem(flagKey, "true");
+				console.log(
+					"[webhook auto-subscribe] success",
+					events.map((e) => e.name).join(", "),
+					"ids:",
+					newIds.length
+				);
+			} catch (err) {
+				console.log("[webhook auto-subscribe] failed", err);
+			}
+		};
+		// Bekle: receiver bilgisi async, publicUrl localStorage'tan sync ama
+		// kullanıcı henüz girmemiş olabilir. 2 sn sonra dene; başarısızsa
+		// kullanıcı Settings'ten manuel başlatır.
+		const timer = setTimeout(tryAutoSubscribe, 2000);
+		return () => clearTimeout(timer);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isUserWindow, isActivityWindow, isModerationWindow, isKickConnection]);
+
 	// Sprint 40: webhook event listener (kicks.gifted vb.) — yalnız ana pencere.
 	useEffect(() => {
 		if (

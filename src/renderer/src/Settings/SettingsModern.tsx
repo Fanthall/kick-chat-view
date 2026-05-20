@@ -841,6 +841,9 @@ const WebhookReceiverBlock: FunctionComponent = () => {
 				setRunning(true);
 				const newInfo = await (window.electron as any)?.webhook?.getReceiverInfo?.();
 				if (newInfo) setInfo(newInfo);
+				// Sprint 42: receiver başladığında auto-subscribe bayrağını sıfırla
+				// ki App.tsx mount'taki tryAutoSubscribe yeniden denesin.
+				localStorage.removeItem("chatViewWebhookAutoSubscribed");
 				toast.success("Webhook receiver başlatıldı.");
 			} else {
 				toast.error("Receiver başlatılamadı.");
@@ -863,6 +866,8 @@ const WebhookReceiverBlock: FunctionComponent = () => {
 	const handlePublicUrlChange = (v: string) => {
 		setPublicUrl(v);
 		localStorage.setItem(WEBHOOK_PUBLIC_URL_KEY, v);
+		// Sprint 42: publicUrl değişince auto-subscribe yeniden denensin.
+		localStorage.removeItem("chatViewWebhookAutoSubscribed");
 	};
 
 	const persistIds = (ids: string[]) => {
