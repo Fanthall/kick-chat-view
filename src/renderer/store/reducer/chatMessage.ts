@@ -568,7 +568,48 @@ const ChatMessageReducers = (
 				: state.channelBadgesByChannel,
 		};
 	} else if (action.type === ChatMessageTypes.SET_HOST_ACTION) {
-		return { ...state, hostInfo: [...state.hostInfo, action.hostInfo] };
+		// Sprint 39: host/raid olayı geldiğinde sadece hostInfo'ya değil,
+		// activity listesine ve chat akışına da banner basıyoruz —
+		// kullanıcı bunları ayrıca aramak zorunda kalmasın.
+		const hostInfo = action.hostInfo;
+		const hostId = `host-${hostInfo.channelSlug || "x"}-${hostInfo.host_username}-${Date.now()}`;
+		const createdAt = Date.now();
+		const activityItem: ActivityItem = {
+			id: hostId,
+			channelSlug: hostInfo.channelSlug,
+			kind: "host_raid",
+			actor: { username: hostInfo.host_username },
+			username: hostInfo.host_username,
+			amount: hostInfo.number_viewers,
+			message: hostInfo.optional_message,
+			createdAt,
+			create_at: createdAt,
+			raw: hostInfo,
+		};
+		const hostBanner: UserMessage = {
+			id: hostId,
+			channelSlug: hostInfo.channelSlug,
+			chatroom_id: 0,
+			content:
+				`${hostInfo.host_username}, ${hostInfo.number_viewers} izleyici ile raid yaptı` +
+				(hostInfo.optional_message ? ` — ${hostInfo.optional_message}` : ""),
+			type: "host-banner",
+			created_at: new Date(createdAt).toISOString(),
+			sender: {
+				id: 0,
+				username: hostInfo.host_username,
+				slug: hostInfo.host_username.toLowerCase(),
+				identity: { color: "#f59e0b", badges: [] },
+			},
+		};
+		return {
+			...state,
+			hostInfo: [...state.hostInfo, hostInfo],
+			activityList: appendActivityItem(state.activityList, activityItem),
+			messageList: state.messageList.some((m) => m.id === hostId)
+				? state.messageList
+				: trimList(state.messageList.concat(hostBanner)),
+		};
 	} else if (action.type === ChatMessageTypes.REMOVE_HOST_ACTION) {
 		return {
 			...state,

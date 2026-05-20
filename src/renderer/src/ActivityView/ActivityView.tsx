@@ -24,6 +24,7 @@ const ACTIVITY_LABELS: Record<ActivityKind, string> = {
 	subscription_gift: "GIFT",
 	reward_redemption: "REWARD",
 	kicks_gifted: "KICKs",
+	host_raid: "RAID",
 };
 
 const ACTIVITY_ACCENTS: Record<ActivityKind, string> = {
@@ -32,6 +33,7 @@ const ACTIVITY_ACCENTS: Record<ActivityKind, string> = {
 	subscription_gift: "#ffb84d",
 	reward_redemption: "#26d39b",
 	kicks_gifted: "#61a8ff",
+	host_raid: "#f59e0b",
 };
 
 const toActivityStatus = (value: any): ActivityStatus => {

@@ -83,17 +83,19 @@ const KIND_TO_FILTER: Record<ActivityKind, FilterId> = {
 	subscription_gift: "gift",
 	kicks_gifted: "kicks",
 	reward_redemption: "reward",
+	host_raid: "all",
 };
 
 // ─── Icon + accent per kind ──────────────────────────────────────────────────
-type AccentCls = "sub" | "gift" | "kicks" | "reward";
+type AccentCls = "sub" | "gift" | "kicks" | "reward" | "host";
 
-const KIND_META: Record<ActivityKind, { iconName: "crown" | "gift" | "bolt" | "coin"; cls: AccentCls }> = {
+const KIND_META: Record<ActivityKind, { iconName: "crown" | "gift" | "bolt" | "coin" | "user"; cls: AccentCls }> = {
 	subscription_new: { iconName: "crown", cls: "sub" },
 	subscription_renewal: { iconName: "crown", cls: "sub" },
 	subscription_gift: { iconName: "gift", cls: "gift" },
 	kicks_gifted: { iconName: "bolt", cls: "kicks" },
 	reward_redemption: { iconName: "coin", cls: "reward" },
+	host_raid: { iconName: "user", cls: "host" },
 };
 
 const toActivityStatus = (value: unknown): ActivityStatus => {
@@ -165,6 +167,18 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 				<b>{actorName}</b> sent{" "}
 				<b className="mono num">{fmtNum(activity.amount)}</b> KICKs
 				{activity.giftName ? <span> · {activity.giftName}</span> : null}
+			</>
+		);
+	} else if (activity.kind === "host_raid") {
+		lineNode = (
+			<>
+				<b>{actorName}</b> raid yaptı
+				{activity.amount != null && (
+					<>
+						{" "}
+						— <b className="mono num">{fmtNum(activity.amount)}</b> izleyici
+					</>
+				)}
 			</>
 		);
 	} else if (activity.kind === "reward_redemption") {
@@ -289,6 +303,21 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 								{activity.pinnedTimeSeconds != null
 									? <> · {activity.pinnedTimeSeconds}s pinli.</>
 									: "."}
+							</>
+						)}
+						{activity.kind === "host_raid" && (
+							<>
+								<b>{actorName}</b> kanalına{" "}
+								{activity.amount != null ? (
+									<>
+										<b className="mono num">{fmtNum(activity.amount)}</b>{" "}
+										izleyici ile
+									</>
+								) : null}{" "}
+								raid yaptı.
+								{activity.message ? (
+									<> Mesaj: <i>&ldquo;{activity.message}&rdquo;</i></>
+								) : null}
 							</>
 						)}
 						{activity.kind === "reward_redemption" && (
