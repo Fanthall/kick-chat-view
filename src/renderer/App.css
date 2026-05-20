@@ -26,6 +26,12 @@ body {
 	justify-content: flex-start;
 	align-items: stretch;
 }
+
+/* Sprint 9: modern shell — full-bleed, no body padding/gradient frame. */
+body:has([data-app-shell="modern"]) {
+	padding: 0;
+	background: var(--ms-bg-0, #0c0d10);
+}
 #root {
 	width: 100% !important;
 	height: 100% !important;
