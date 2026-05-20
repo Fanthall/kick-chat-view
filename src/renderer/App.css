@@ -6231,3 +6231,65 @@ html.modern-shell-root[data-theme="light"] {
 	max-height: 240px;
 	overflow-y: auto;
 }
+
+/* Sprint 28b: Chat row + light theme contrast fixes.
+
+   1) Chat row: 56px sabit time sutunu Geist Mono ile fazla genis idi,
+      sol tarafa bos alan birakiyordu. `auto` ile content-aware genislik. */
+[data-app-shell="modern"] .chat-row {
+	grid-template-columns: auto minmax(0, 1fr) auto !important;
+	column-gap: 8px !important;
+	padding: 3px 8px 3px 12px !important;
+}
+
+/* 2) Light theme'de inline sender color (rastgele pastel renkler) okunmuyor.
+      filter ile koyulastir + saturate bumpla — minimum-contrast saglar.
+      Inline `color: ...` style'i bozulmadan, filtre ile gorsel yogunluk artar. */
+[data-app-shell="modern"][data-theme="light"] .chat-name {
+	filter: brightness(0.55) saturate(1.5) contrast(1.15);
+}
+
+/* 3) Topbar light theme — tema rengi olan acik yesil (mint) light bg'de
+      okunmuyor. Active tab + is-on icin daha koyu mint + bg surface var,
+      ve tab text rengi explicit dark fg-1. */
+[data-app-shell="modern"][data-theme="light"] .tb-tab,
+[data-app-shell="modern"][data-theme="light"] .tb-name {
+	color: var(--ms-fg-1, #1c2230) !important;
+}
+[data-app-shell="modern"][data-theme="light"] .tb-tab.is-active {
+	background: color-mix(in oklch, var(--ms-ac-mint, #2f9d7c) 18%, transparent);
+	color: var(--ms-fg-1, #1c2230);
+	border-color: var(--ms-ac-mint, #2f9d7c);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn {
+	color: var(--ms-fg-2, #495063);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn:hover {
+	background: color-mix(in oklch, var(--ms-fg-1, #1c2230) 6%, transparent);
+	color: var(--ms-fg-1, #1c2230);
+}
+[data-app-shell="modern"][data-theme="light"] .topbar .icon-btn.is-on {
+	color: var(--ms-ac-mint, #2f9d7c);
+}
+[data-app-shell="modern"][data-theme="light"] .tb-stat,
+[data-app-shell="modern"][data-theme="light"] .tb-role,
+[data-app-shell="modern"][data-theme="light"] .tb-role-badge {
+	color: var(--ms-fg-2, #495063);
+}
+
+/* Mint primary butonlar (Apply timeout, ban-kaldir vs) light'ta text kontrasti */
+[data-app-shell="modern"][data-theme="light"] .mod-timeout-apply,
+[data-app-shell="modern"][data-theme="light"] .uw-strip-apply,
+[data-app-shell="modern"][data-theme="light"] .uw-strip-unban,
+[data-app-shell="modern"][data-theme="light"] .mod-target-unban,
+[data-app-shell="modern"][data-theme="light"] .uw-btn-primary {
+	color: #ffffff !important;
+	background: var(--ms-ac-mint, #2f9d7c) !important;
+}
+[data-app-shell="modern"][data-theme="light"] .mod-timeout-apply:disabled,
+[data-app-shell="modern"][data-theme="light"] .uw-strip-apply:disabled,
+[data-app-shell="modern"][data-theme="light"] .uw-strip-unban:disabled,
+[data-app-shell="modern"][data-theme="light"] .uw-btn-primary:disabled {
+	color: #ffffff !important;
+	opacity: 0.4 !important;
+}
