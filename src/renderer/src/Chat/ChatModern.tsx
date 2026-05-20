@@ -134,7 +134,10 @@ interface ChatRowProps {
 	onPin: (msg: UserMessage) => void;
 	onTimeout: (msg: UserMessage) => void;
 	onRemove: (msg: UserMessage) => void;
+	/** Single-click on username: set as moderation target (no window). */
 	onUsernameClick: (msg: UserMessage) => void;
+	/** Double-click on username: open user detail window. */
+	onUsernameDoubleClick: (msg: UserMessage) => void;
 	onContextMenu: (msg: UserMessage, x: number, y: number) => void;
 	canModerate: boolean;
 }
@@ -150,6 +153,7 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 	onTimeout,
 	onRemove,
 	onUsernameClick,
+	onUsernameDoubleClick,
 	onContextMenu,
 	canModerate,
 }) => {
@@ -228,7 +232,12 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 					className="chat-name"
 					style={{ color: senderColor, cursor: "pointer" }}
 					onClick={() => onUsernameClick(message)}
-					aria-label={`Open user info for ${senderUsername}`}
+					onDoubleClick={(e) => {
+						e.preventDefault();
+						onUsernameDoubleClick(message);
+					}}
+					title={`Click to set as mod target · double-click to open profile`}
+					aria-label={`${senderUsername} — click to select, double-click for details`}
 				>
 					{senderUsername}
 				</span>
@@ -810,13 +819,13 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							onTimeout={(m) => runModerationAction("timeout", m)}
 							onRemove={(m) => runModerationAction("delete", m)}
 							onUsernameClick={(m) => {
-								// Sprint 11: clicking a username sets the mod target
-								// AND (if mod) opens the classic user window.
+								// Sprint 11 → 12: single click ONLY sets mod target.
+								// User detail window now opens on double-click below.
 								if (m.sender) {
 									onSelectModUser?.(m.sender);
 								}
-								openUserWindow(m);
 							}}
+							onUsernameDoubleClick={(m) => openUserWindow(m)}
 							onContextMenu={(m, x, y) => setUserMenu({ message: m, x, y })}
 							canModerate={canModerateChannel}
 						/>
