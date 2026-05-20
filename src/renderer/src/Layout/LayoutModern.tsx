@@ -32,6 +32,7 @@ import {
 	setActiveChannelSlug,
 } from "../../util/channelSettings";
 import { chatListener } from "../../util/chatConnection";
+import { useProfilePic } from "../../util/useProfilePic";
 import Icon from "../Component/Icon/Icon";
 import ChatModern from "../Chat/ChatModern";
 import ActivityViewModern from "../ActivityView/ActivityViewModern";
@@ -312,6 +313,8 @@ const LayoutModern: FunctionComponent = () => {
 
 	// Fix 4 avatar letter
 	const avatarLetter = activeSlug ? activeSlug[0].toUpperCase() : "?";
+	// Sprint 15: kanal logosu (profile_pic via Kick API, cached)
+	const activeChannelPic = useProfilePic(activeSlug);
 
 	// Secondary channels (not active)
 	const secondaryChannels = channels.filter((c) => c.slug !== activeSlug);
@@ -325,9 +328,21 @@ const LayoutModern: FunctionComponent = () => {
 			<header className="topbar" role="banner" data-testid="topbar-modern">
 				{/* Left zone: .tb-channel */}
 				<div className="tb-channel">
-					{/* Fix 4: avatar with first letter */}
+					{/* Fix 4: avatar with first letter; Sprint 15: profile_pic when available */}
 					<div className="tb-ava" aria-hidden="true" data-testid="tb-avatar">
-						{avatarLetter}
+						{activeChannelPic ? (
+							<img
+								src={activeChannelPic}
+								alt=""
+								loading="lazy"
+								referrerPolicy="no-referrer"
+								onError={(e) => {
+									(e.currentTarget as HTMLImageElement).style.display = "none";
+								}}
+							/>
+						) : (
+							avatarLetter
+						)}
 					</div>
 					<div className="tb-meta">
 						<div className="tb-meta-top">

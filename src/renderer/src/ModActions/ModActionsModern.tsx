@@ -32,6 +32,7 @@ import {
 	LOCAL_MODERATION_SETTINGS_CHANGED,
 	removeSuspendedUser,
 } from "../../util/localModerationStorage";
+import { useProfilePic } from "../../util/useProfilePic";
 import Icon from "../Component/Icon/Icon";
 
 // ─── Chat control keys ────────────────────────────────────────────────────────
@@ -161,7 +162,34 @@ interface ModActionsModernProps {
 	selectedUser?: User;
 	/** Optional clear handler so the X / clear button can reset state. */
 	onClearSelected?: () => void;
+	/** Sprint 14: true when rendered inside a pop-out BrowserWindow. */
+	isPopOut?: boolean;
 }
+
+// Sprint 15: avatar helper — fetches profile_pic by slug, falls back to letter.
+const ModTargetAvatar: FunctionComponent<{ slug: string; letter: string }> = ({
+	slug,
+	letter,
+}) => {
+	const pic = useProfilePic(slug);
+	return (
+		<div className="mod-target-ava" aria-hidden="true">
+			{pic ? (
+				<img
+					src={pic}
+					alt=""
+					loading="lazy"
+					referrerPolicy="no-referrer"
+					onError={(e) => {
+						(e.currentTarget as HTMLImageElement).style.display = "none";
+					}}
+				/>
+			) : (
+				letter
+			)}
+		</div>
+	);
+};
 
 const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	onClose,
@@ -169,6 +197,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	isMod = false,
 	selectedUser: explicitSelectedUser,
 	onClearSelected,
+	isPopOut = false,
 }) => {
 	const canModerate = isOwner || isMod;
 	const [collapsed, setCollapsed] = useState<Record<SectionId, boolean>>(loadCollapsed);
@@ -324,6 +353,19 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					Moderation
 				</h2>
 				<div className="panel-hd-actions">
+					{!isPopOut && (
+						<button
+							className="icon-btn"
+							title="Open in new window"
+							aria-label="Open moderation panel in new window"
+							type="button"
+							onClick={() => {
+								window.electron?.panelWindow?.open("moderation");
+							}}
+						>
+							<Icon name="popOut" size={13} />
+						</button>
+					)}
 					{onClose && (
 						<button
 							className="icon-btn"
@@ -364,9 +406,10 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					>
 					{selectedUser ? (
 						<div className="mod-target" data-testid="mod-target-card">
-							<div className="mod-target-ava" aria-hidden="true">
-								{selectedUser.username[0]?.toUpperCase() ?? "?"}
-							</div>
+							<ModTargetAvatar
+								slug={selectedUser.slug || selectedUser.username}
+								letter={selectedUser.username[0]?.toUpperCase() ?? "?"}
+							/>
 							<div className="mod-target-info">
 								<div className="mod-target-name">
 									{selectedUser.username}

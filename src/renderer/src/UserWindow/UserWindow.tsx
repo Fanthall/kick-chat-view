@@ -22,6 +22,7 @@ import { toast } from "react-toastify";
 import { UserWindowPayload } from "../../../shared/userWindow";
 import { ModMessage, UserMessage } from "../../util/chatInterface";
 import { hasKickScope, parseKickScopes } from "../../util/kickScopes";
+import { useProfilePic } from "../../util/useProfilePic";
 import {
 	DEFAULT_TIMEOUT_SECONDS,
 	formatTimeoutDuration,
@@ -84,6 +85,32 @@ const TIMEOUT_PRESETS = [
 	{ label: "10m", seconds: 600 },
 	{ label: "30m", seconds: 1800 },
 ];
+
+// ─── Avatar helper (Sprint 15) ───────────────────────────────────────────────
+
+const UserAvatar: FunctionComponent<{ slug: string; initials: string }> = ({
+	slug,
+	initials,
+}) => {
+	const pic = useProfilePic(slug);
+	return (
+		<div className="uw-avatar" aria-hidden="true">
+			{pic ? (
+				<img
+					src={pic}
+					alt=""
+					loading="lazy"
+					referrerPolicy="no-referrer"
+					onError={(e) => {
+						(e.currentTarget as HTMLImageElement).style.display = "none";
+					}}
+				/>
+			) : (
+				initials
+			)}
+		</div>
+	);
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -456,9 +483,10 @@ const UserWindow: FunctionComponent = () => {
 			<div className="uw-main">
 				{/* ─ Header ─ */}
 				<header className="uw-header">
-					<div className="uw-avatar" aria-hidden="true">
-						{getInitials(user.username)}
-					</div>
+					<UserAvatar
+						slug={user.slug || user.username}
+						initials={getInitials(user.username)}
+					/>
 
 					<div className="uw-header-info">
 						<div className="uw-header-row1">

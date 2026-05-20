@@ -4004,6 +4004,16 @@ body:has([data-app-shell="modern"]) {
 [data-app-shell="modern"] .tb-ava.is-live::after {
 	display: block;
 }
+/* Sprint 15: profile_pic image fills avatar container */
+[data-app-shell="modern"] .tb-ava img,
+[data-app-shell="modern"] .mod-target-ava img,
+[data-app-shell="modern"] .uw-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: inherit;
+	display: block;
+}
 
 @keyframes tb-pulse {
 	0%   { box-shadow: 0 0 0 0 color-mix(in oklch, var(--live) 50%, transparent); }
