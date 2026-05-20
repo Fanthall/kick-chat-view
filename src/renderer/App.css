@@ -4348,6 +4348,64 @@ body:has([data-app-shell="modern"]) {
 	grid-template-columns: minmax(520px, 1fr);
 }
 
+/* Sprint 13: <1180px narrow viewport — panel'ler grid'den cikar,
+   drawer overlay'le acilir. Grid 1 sutuna duser, scroll gereksiz. */
+@media (max-width: 1179px) {
+	[data-app-shell="modern"] .main {
+		grid-template-columns: 1fr !important;
+		overflow-x: hidden;
+	}
+}
+
+/* Sprint 13: drawer backdrop + panel */
+[data-app-shell="modern"] .drawer-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.45);
+	backdrop-filter: blur(2px);
+	z-index: 90;
+	animation: ms-drawer-fade 0.15s ease-out;
+}
+[data-app-shell="modern"] .drawer-panel {
+	position: fixed;
+	right: 0;
+	top: 56px; /* topbar height */
+	bottom: 0;
+	width: min(380px, 92vw);
+	background: var(--ms-bg-1, #131418);
+	border-left: 1px solid var(--ms-bd-2, #2d323b);
+	box-shadow: -16px 0 40px rgba(0, 0, 0, 0.45);
+	display: flex;
+	flex-direction: column;
+	z-index: 100;
+	overflow: hidden;
+	animation: ms-drawer-slide 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+[data-app-shell="modern"] .drawer-panel > * {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+}
+[data-app-shell="modern"] .drawer-close {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 2;
+	width: 26px;
+	height: 26px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+}
+@keyframes ms-drawer-fade {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+@keyframes ms-drawer-slide {
+	from { transform: translateX(20px); opacity: 0; }
+	to { transform: translateX(0); opacity: 1; }
+}
+
 /* Sprint 9: custom thin scrollbar (Designs/styles.css parity) */
 [data-app-shell="modern"] .scroll {
 	overflow: auto;

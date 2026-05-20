@@ -108,9 +108,37 @@ const LayoutModern: FunctionComponent = () => {
 	);
 	// Fix 8: settings is now a modal overlay
 	const [settingsOpen, setSettingsOpen] = useState(false);
-	// Fix 7: panel visibility
+	// Fix 7: panel visibility (wide viewports)
 	const [showActivity, setShowActivity] = useState(true);
 	const [showModeration, setShowModeration] = useState(true);
+
+	// Sprint 13: narrow-viewport drawer state. <1180px panel'ler grid'den
+	// cikar, topbar butonlari drawer overlay olarak acar (Designs parity).
+	const [isNarrow, setIsNarrow] = useState<boolean>(() =>
+		typeof window !== "undefined" ? window.innerWidth < 1180 : false
+	);
+	const [drawerPanel, setDrawerPanel] = useState<"activity" | "moderation" | undefined>(
+		undefined
+	);
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const onResize = () => {
+			const narrow = window.innerWidth < 1180;
+			setIsNarrow(narrow);
+			if (!narrow) setDrawerPanel(undefined);
+		};
+		window.addEventListener("resize", onResize);
+		return () => window.removeEventListener("resize", onResize);
+	}, []);
+	// Esc kapanma
+	useEffect(() => {
+		if (!drawerPanel) return;
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setDrawerPanel(undefined);
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, [drawerPanel]);
 	// Fix 2: add-channel popover
 	const [addPopoverOpen, setAddPopoverOpen] = useState(false);
 	const addBtnRef = useRef<HTMLButtonElement>(null);
@@ -419,22 +447,52 @@ const LayoutModern: FunctionComponent = () => {
 				{/* Right zone: .tb-actions — Fix 7 */}
 				<div className="tb-actions" data-testid="tb-actions">
 					<button
-						className={`icon-btn ${showActivity ? "is-on" : ""}`}
+						className={`icon-btn ${
+							isNarrow
+								? drawerPanel === "activity"
+									? "is-on"
+									: ""
+								: showActivity
+								? "is-on"
+								: ""
+						}`}
 						title="Activity"
 						aria-label="Toggle activity panel"
 						type="button"
 						data-testid="tb-btn-activity"
-						onClick={() => setShowActivity((v) => !v)}
+						onClick={() => {
+							if (isNarrow) {
+								setDrawerPanel((v) => (v === "activity" ? undefined : "activity"));
+							} else {
+								setShowActivity((v) => !v);
+							}
+						}}
 					>
 						<Icon name="activity" size={15} />
 					</button>
 					<button
-						className={`icon-btn ${showModeration ? "is-on" : ""}`}
+						className={`icon-btn ${
+							isNarrow
+								? drawerPanel === "moderation"
+									? "is-on"
+									: ""
+								: showModeration
+								? "is-on"
+								: ""
+						}`}
 						title="Moderation"
 						aria-label="Toggle moderation panel"
 						type="button"
 						data-testid="tb-btn-moderation"
-						onClick={() => setShowModeration((v) => !v)}
+						onClick={() => {
+							if (isNarrow) {
+								setDrawerPanel((v) =>
+									v === "moderation" ? undefined : "moderation"
+								);
+							} else {
+								setShowModeration((v) => !v);
+							}
+						}}
 					>
 						<Icon name="shield" size={15} />
 					</button>
@@ -493,15 +551,15 @@ const LayoutModern: FunctionComponent = () => {
 					<ChatModern onSelectModUser={setSelectedModUser} />
 				</section>
 
-				{/* Activity panel */}
-				{showActivity && (
+				{/* Activity panel — narrow viewport'ta grid'den cikar, drawer'da render */}
+				{!isNarrow && showActivity && (
 					<aside className="panel" aria-label="Activity">
 						<ActivityViewModern />
 					</aside>
 				)}
 
-				{/* Moderation panel */}
-				{showModeration && (
+				{/* Moderation panel — narrow viewport'ta grid'den cikar, drawer'da render */}
+				{!isNarrow && showModeration && (
 					<aside className="panel" aria-label="Moderation">
 						<ModActionsModern
 							isOwner={roleInfo.isOwner}
@@ -512,6 +570,43 @@ const LayoutModern: FunctionComponent = () => {
 					</aside>
 				)}
 			</div>
+
+			{/* Sprint 13: drawer overlay (yalniz isNarrow + drawerPanel set) */}
+			{isNarrow && drawerPanel && (
+				<>
+					<div
+						className="drawer-backdrop"
+						onClick={() => setDrawerPanel(undefined)}
+						aria-hidden="true"
+					/>
+					<aside
+						className="drawer-panel"
+						role="dialog"
+						aria-modal="true"
+						aria-label={drawerPanel === "activity" ? "Activity" : "Moderation"}
+					>
+						<button
+							type="button"
+							className="drawer-close icon-btn"
+							onClick={() => setDrawerPanel(undefined)}
+							aria-label="Close panel"
+							title="Close (Esc)"
+						>
+							<Icon name="x" size={14} />
+						</button>
+						{drawerPanel === "activity" ? (
+							<ActivityViewModern />
+						) : (
+							<ModActionsModern
+								isOwner={roleInfo.isOwner}
+								isMod={roleInfo.isMod}
+								selectedUser={selectedModUser}
+								onClearSelected={() => setSelectedModUser(undefined)}
+							/>
+						)}
+					</aside>
+				</>
+			)}
 
 			{/* Fix 8: Settings modal */}
 			{settingsOpen && (
