@@ -5,7 +5,6 @@ import { getSevenTvKickUser } from "../services/sevenTv";
 import { sevenTvEvents } from "../services/sevenTvEvents";
 import MessageActionsFunc from "../store/actions/chatMessage";
 import { FanthalDispatch } from "../store/store";
-import { normalizeKickWebhookActivity } from "./kickActivity";
 import {
 	BanToMessage,
 	DeleteMessage,
@@ -31,6 +30,8 @@ interface EventType {
 
 const activeSockets = new Map<string, WebSocket>();
 const channelEmoteLoaders = new Set<string>();
+// Sprint 46: per-channel last followers count cache for delta computation.
+const lastFollowersCount = new Map<string, number>();
 const channelEmoteLoadedAt = new Map<string, number>();
 const channelEmoteUserIds = new Map<string, number>();
 const channelSevenTvSetIds = new Map<string, Set<string>>();
@@ -285,6 +286,18 @@ export const chatListener = (slug?: string) => {
 						socket.send(
 							`{"event":"pusher:subscribe","data":{"auth":"","channel":"chatrooms.${res.data.chatroom.id}.v2"}}`
 						);
+						// Sprint 45: channel_<id> Pusher kanalında KicksGifted
+						// event'i yayınlanıyor (gift_transaction_id + sender +
+						// gift.amount + mesaj). Multi-channel — tüm izlenen
+						// kanallar için çalışır.
+						socket.send(
+							`{"event":"pusher:subscribe","data":{"auth":"","channel":"channel_${res.data.id}"}}`
+						);
+						// Sprint 49: chatroom_<chatroom_id> Pusher kanalında
+						// RewardRedeemedEvent yayınlanıyor. Multi-channel.
+						socket.send(
+							`{"event":"pusher:subscribe","data":{"auth":"","channel":"chatroom_${res.data.chatroom.id}"}}`
+						);
 					})
 					.catch((err) => {
 						console.log("Kick channel load failed", err);
@@ -419,8 +432,86 @@ export const chatListener = (slug?: string) => {
 						})
 					);
 					break;
-				case "App\\Events\\FollowersUpdated":
+				case "App\\Events\\FollowersUpdated": {
+					// Sprint 46: Pusher chatroom Pusher'ı FollowersUpdated
+					// event'i yayınlıyor. Çoğu kanal sadece toplam count
+					// veriyor (bireysel isim yok). Delta hesabıyla "+N
+					// takipçi" notification basabiliyoruz; ancak isim
+					// genelde gelmez (webhook channel.followed gerekir).
+					try {
+						const payload = JSON.parse(parsedEvent.data || "{}");
+						// Olası alanlar: followersCount, followers, count
+						const newCount: number | undefined =
+							payload?.followersCount ??
+							payload?.followers_count ??
+							payload?.count ??
+							payload?.followers;
+						const prev = lastFollowersCount.get(channelName);
+						if (typeof newCount === "number" && Number.isFinite(newCount)) {
+							const delta =
+								typeof prev === "number" ? newCount - prev : 0;
+							lastFollowersCount.set(channelName, newCount);
+							// Settings'te kapalıysa hiç dispatch yapma.
+							const showFollowers =
+								localStorage.getItem("chatViewShowFollowers") !==
+								"false";
+							if (showFollowers && delta > 0) {
+								const now = Date.now();
+								const id = `follow-count-${channelName}-${now}`;
+								const text =
+									delta === 1
+										? `Yeni takipçi geldi (toplam ${newCount})`
+										: `+${delta} takipçi (toplam ${newCount})`;
+								dispatch(
+									MessageActionsFunc.addActivity({
+										id,
+										channelSlug: channelName,
+										kind: "follow",
+										actor: { username: "Yeni takipçi" },
+										username: "Yeni takipçi",
+										amount: delta,
+										message: `Toplam: ${newCount}`,
+										createdAt: now,
+										create_at: now,
+										raw: payload,
+									})
+								);
+								dispatch(
+									MessageActionsFunc.newMessage({
+										id: `follow-banner-${id}`,
+										channelSlug: channelName,
+										chatroom_id: 0,
+										content: text,
+										type: "follow-banner",
+										created_at: new Date(now).toISOString(),
+										sender: {
+											id: 0,
+											username: "Yeni takipçi",
+											slug: "yeni-takipci",
+											identity: {
+												color: "#22d3ee",
+												badges: [],
+											},
+										},
+									} as any)
+								);
+							}
+						}
+						if (
+							localStorage.getItem("chatViewVerboseLogging") === "true"
+						) {
+							console.log(
+								"[FollowersUpdated]",
+								channelName,
+								"payload:",
+								payload
+							);
+						}
+					} catch (followErr) {
+						console.log("FollowersUpdated parse failed", followErr);
+					}
 					break;
+				}
 				case "App\\Events\\StreamHostEvent":
 					const parsedHostInfo: HostInfo = JSON.parse(parsedEvent.data);
 					dispatch(
@@ -432,52 +523,184 @@ export const chatListener = (slug?: string) => {
 						})
 					);
 					break;
-				default: {
-					// Sprint 38: KICKs olayları Pusher v1 chatroom kanalında
-					// resmi olarak listelenmemiş; Kick zaman zaman yeni event
-					// adları ekliyor. Event adında "kicks" geçiyorsa
-					// kickActivity.normalizeKickWebhookActivity ile dene ve
-					// activity listesine ekle.
+				case "RewardRedeemedEvent": {
+					// Sprint 49: chatroom_<id> kanalında reward redemption.
 					try {
-						const evtName: string = parsedEvent.event || "";
-						if (/kicks/i.test(evtName)) {
-							const rawPayload = JSON.parse(parsedEvent.data || "{}");
-							// Webhook normalize'ı "kicks.gifted" event type ile
-							// çağrılıyor; payload Pusher format olsa da en yakın
-							// match.
-							const item = normalizeKickWebhookActivity(
-								"kicks.gifted",
-								{ ...rawPayload, channel: { slug: channelName } }
-							);
-							if (item) {
-								dispatch(
-									MessageActionsFunc.addActivity({
-										...item,
-										channelSlug: channelName,
-									})
-								);
-							}
-							if (
-								localStorage.getItem("chatViewVerboseLogging") === "true"
-							) {
-								console.log(
-									"[KICKs Pusher] event:",
-									evtName,
-									"payload:",
-									rawPayload
-								);
-							}
-						} else if (
+						const p = JSON.parse(parsedEvent.data || "{}");
+						const username: string = p?.username || "Anonim";
+						const userId: number | undefined =
+							typeof p?.user_id === "number" ? p.user_id : undefined;
+						const createdMs = Date.now();
+						const id = `reward-${channelName}-${userId || username}-${createdMs}`;
+						dispatch(
+							MessageActionsFunc.addActivity({
+								id,
+								channelSlug: channelName,
+								kind: "reward_redemption",
+								actor: { id: userId, username },
+								username,
+								title: p?.reward_title,
+								message: p?.user_input,
+								status: "pending",
+								createdAt: createdMs,
+								create_at: createdMs,
+								raw: p,
+							})
+						);
+						if (
 							localStorage.getItem("chatViewVerboseLogging") === "true"
 						) {
-							console.log("[Pusher unknown event]", evtName);
+							console.log(
+								"[RewardRedeemed]",
+								channelName,
+								p?.reward_title,
+								username
+							);
 						}
-					} catch (innerErr) {
-						console.log(
-							"Kick KICKs event parse failed",
-							parsedEvent.event,
-							innerErr
+					} catch (rewErr) {
+						console.log("RewardRedeemedEvent parse failed", rewErr);
+					}
+					break;
+				}
+				case "KicksGifted": {
+					// Sprint 45: channel_<id> Pusher kanalında bireysel KICKs
+					// gönderim event'i. Webhook gerek yok, multi-channel çalışır.
+					try {
+						const p = JSON.parse(parsedEvent.data || "{}");
+						const sender = p?.sender || {};
+						const gift = p?.gift || {};
+						const createdMs = p?.created_at
+							? new Date(p.created_at).getTime()
+							: Date.now();
+						const id =
+							p?.gift_transaction_id ||
+							`kicks-${channelName}-${sender.id}-${createdMs}`;
+						const username: string = sender.username || "Anonim";
+						const amount: number =
+							typeof gift.amount === "number" ? gift.amount : 0;
+						const message: string | undefined = p?.message;
+						dispatch(
+							MessageActionsFunc.addActivity({
+								id,
+								channelSlug: channelName,
+								kind: "kicks_gifted",
+								actor: {
+									id: sender.id,
+									username,
+									profilePicture: sender.profile_picture,
+								},
+								username,
+								amount,
+								giftName: gift.name,
+								giftType: gift.type,
+								giftTier: gift.tier,
+								pinnedTimeSeconds:
+									typeof gift.pinned_time === "number"
+										? Math.round(gift.pinned_time / 1_000_000_000)
+										: undefined,
+								message,
+								createdAt: createdMs,
+								create_at: createdMs,
+								raw: p,
+							})
 						);
+						const banner = {
+							id: `kicks-banner-${id}`,
+							channelSlug: channelName,
+							chatroom_id: 0,
+							content:
+								`${username}, ${amount} KICKs gönderdi` +
+								(gift.name ? ` — ${gift.name}` : "") +
+								(message ? `: ${message}` : ""),
+							type: "kicks-banner",
+							created_at: new Date(createdMs).toISOString(),
+							sender: {
+								id: sender.id ?? 0,
+								username,
+								slug: username.toLowerCase(),
+								identity: {
+									color: sender.username_color || "#61a8ff",
+									badges: [],
+								},
+							},
+						};
+						dispatch(MessageActionsFunc.newMessage(banner as any));
+					} catch (kicksErr) {
+						console.log("KicksGifted parse failed", kicksErr);
+					}
+					break;
+				}
+				default: {
+					// Sprint 49: reward redemption event'i Pusher'da
+					// belgelenmedi; payload'da reward + user var mı diye
+					// proaktif kontrol et. Belirsiz isimli event'leri
+					// verbose log'a yaz.
+					try {
+						const evtName: string = parsedEvent.event || "";
+						const p = JSON.parse(parsedEvent.data || "{}");
+						const isReward =
+							/reward|redemption/i.test(evtName) ||
+							(p?.reward && (p?.user || p?.redeemer)) ||
+							!!p?.redemption;
+						if (isReward) {
+							const user = p?.user || p?.redeemer || {};
+							const reward = p?.reward || {};
+							const redemption = p?.redemption || {};
+							const username: string =
+								user.username || user.name || "Anonim";
+							const createdMs = p?.created_at
+								? new Date(p.created_at).getTime()
+								: Date.now();
+							const id =
+								redemption.id ||
+								p?.id ||
+								`reward-${channelName}-${username}-${createdMs}`;
+							dispatch(
+								MessageActionsFunc.addActivity({
+									id,
+									channelSlug: channelName,
+									kind: "reward_redemption",
+									actor: {
+										id: user.id || user.user_id,
+										username,
+									},
+									username,
+									amount: reward.cost,
+									title: reward.title,
+									message:
+										redemption.user_input || p?.user_input,
+									status:
+										redemption.status === "accepted" ||
+										redemption.status === "rejected"
+											? redemption.status
+											: "pending",
+									createdAt: createdMs,
+									create_at: createdMs,
+									raw: p,
+								})
+							);
+							if (
+								localStorage.getItem("chatViewVerboseLogging") ===
+								"true"
+							) {
+								console.log(
+									"[Reward Pusher]",
+									channelName,
+									"event:",
+									evtName,
+									"payload:",
+									p
+								);
+							}
+							break;
+						}
+					} catch {
+						/* fall through */
+					}
+					if (
+						localStorage.getItem("chatViewVerboseLogging") === "true"
+					) {
+						console.log("[Pusher unknown event]", parsedEvent.event);
 					}
 					break;
 				}

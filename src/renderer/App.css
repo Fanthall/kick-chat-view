@@ -3505,6 +3505,49 @@ html.modern-shell-root[data-theme="light"] {
 	color: var(--ms-ac-mint, #2fd3a0);
 	font-weight: 600;
 }
+/* Sprint 50b: Reward action butonları — pill-style, mint accept / live reject. */
+[data-app-shell="modern"] .act-reward-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px dashed var(--ms-bd-2);
+}
+[data-app-shell="modern"] .act-reward-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 30px;
+	padding: 0 14px;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.08s;
+	border: 1px solid transparent;
+}
+[data-app-shell="modern"] .act-reward-btn:active {
+	transform: translateY(1px);
+}
+[data-app-shell="modern"] .act-reward-btn.accept {
+	background: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 18%, transparent);
+	color: var(--ms-ac-mint, #2fd3a0);
+	border-color: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 50%, transparent);
+}
+[data-app-shell="modern"] .act-reward-btn.accept:hover {
+	background: color-mix(in oklch, var(--ms-ac-mint, #2fd3a0) 30%, transparent);
+	border-color: var(--ms-ac-mint, #2fd3a0);
+}
+[data-app-shell="modern"] .act-reward-btn.reject {
+	background: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 16%, transparent);
+	color: var(--ms-ac-live, #ef4f5f);
+	border-color: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 45%, transparent);
+}
+[data-app-shell="modern"] .act-reward-btn.reject:hover {
+	background: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 28%, transparent);
+	border-color: var(--ms-ac-live, #ef4f5f);
+}
+
 [data-app-shell="modern"] .act-message-card {
 	background: color-mix(in oklch, var(--ms-bg-2) 60%, transparent);
 	border: 1px solid var(--ms-bd-1);

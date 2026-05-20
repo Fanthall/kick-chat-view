@@ -397,46 +397,9 @@ ipcMain.on("panel-window:clear-mod-target", () => {
 	}
 });
 
-/* ─── Sprint 40: webhook receiver IPC ───────────────────────────────────── */
-import {
-	startWebhookServer,
-	stopWebhookServer,
-	getWebhookReceiverInfo,
-	WEBHOOK_PORT_DEFAULT,
-} from "./webhookServer";
-
-let webhookRunning = false;
-let webhookCurrentPort = WEBHOOK_PORT_DEFAULT;
-
-ipcMain.handle("webhook:get-receiver-info", () => {
-	return { ...getWebhookReceiverInfo(webhookCurrentPort), running: webhookRunning };
-});
-
-ipcMain.handle("webhook:is-running", () => webhookRunning);
-
-ipcMain.handle("webhook:start", async (_e, port?: number) => {
-	const target = port || webhookCurrentPort || WEBHOOK_PORT_DEFAULT;
-	try {
-		await startWebhookServer(() => mainWindow, target);
-		webhookRunning = true;
-		webhookCurrentPort = target;
-		return { ok: true, port: target };
-	} catch (err: any) {
-		webhookRunning = false;
-		console.log("[webhook] start failed", err?.message || err);
-		return { ok: false, port: target };
-	}
-});
-
-ipcMain.handle("webhook:stop", async () => {
-	await stopWebhookServer();
-	webhookRunning = false;
-	return { ok: true };
-});
-
-app.on("before-quit", () => {
-	void stopWebhookServer();
-});
+/* Sprint 47: Webhook receiver kaldırıldı (Pusher chatroom + channel_<id>
+   tüm event'leri sağlıyor). webhookServer.ts dosyası silindi; IPC
+   handler / auto-start / quit hook'lar artık gereksiz. */
 
 if (process.env.NODE_ENV === "production") {
 	const sourceMapSupport = require("source-map-support");
@@ -535,30 +498,12 @@ app.on("window-all-closed", () => {
 });
 
 app.whenReady()
-	.then(async () => {
+	.then(() => {
 		createWindow();
 		app.on("activate", () => {
 			// On macOS it's common to re-create a window in the app when the
 			// dock icon is clicked and there are no other windows open.
 			if (mainWindow === null) createWindow();
 		});
-		// Sprint 43: webhook receiver app startup'ta otomatik başlasın.
-		// Public URL kullanıcı sonradan Settings'ten girer; server boşta
-		// dinlemeye başlar ve subscribe attempt yapıldığında devreye girer.
-		try {
-			await startWebhookServer(() => mainWindow, WEBHOOK_PORT_DEFAULT);
-			webhookRunning = true;
-			webhookCurrentPort = WEBHOOK_PORT_DEFAULT;
-			console.log(
-				"[webhook] auto-started on port",
-				WEBHOOK_PORT_DEFAULT
-			);
-		} catch (err: any) {
-			webhookRunning = false;
-			console.log(
-				"[webhook] auto-start failed",
-				err?.message || err
-			);
-		}
 	})
 	.catch(console.log);

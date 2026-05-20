@@ -79,6 +79,14 @@ beforeEach(() => {
 					tokenScope: "channel:rewards:write kicks:read",
 					introspection: { data: { scope: "", scopes: [] } },
 				}),
+				// Sprint 50c: ActivityViewModern now also reads getUsers +
+				// getChannelBySlug to compute "isOwnerOfActiveChannel".
+				getUsers: jest.fn().mockResolvedValue({
+					data: [{ user_id: 1000 }],
+				}),
+				getChannelBySlug: jest.fn().mockResolvedValue({
+					data: [{ broadcaster_user_id: 1000 }],
+				}),
 				getChannelRewardRedemptions: jest.fn().mockResolvedValue({ data: [] }),
 				getKicksLeaderboard: mockGetKicksLeaderboard,
 				acceptChannelRewardRedemptions: mockAcceptRedemptions,
@@ -262,9 +270,8 @@ describe("ActivityViewModern — expand drawer", () => {
 		fireEvent.click(screen.getByText(/subscribed/i));
 
 		// Expand drawer should now be visible
-		expect(screen.getByText("Event ID")).toBeInTheDocument();
-		expect(screen.getByText("Actor")).toBeInTheDocument();
-		expect(screen.getByText("Created")).toBeInTheDocument();
+		// Sprint 48: yalnız "Saat" satırı (Etkinlik ID, Gönderen, Hediye, Tarih kaldırıldı)
+		expect(screen.getByText("Saat")).toBeInTheDocument();
 	});
 
 	it("clicking expanded row collapses drawer", () => {
@@ -276,11 +283,11 @@ describe("ActivityViewModern — expand drawer", () => {
 		);
 
 		fireEvent.click(screen.getByText(/subscribed/i));
-		expect(screen.getByText("Event ID")).toBeInTheDocument();
+		expect(screen.getByText("Saat")).toBeInTheDocument();
 
 		// Click again to collapse
 		fireEvent.click(screen.getByText(/subscribed/i));
-		expect(screen.queryByText("Event ID")).not.toBeInTheDocument();
+		expect(screen.queryByText("Saat")).not.toBeInTheDocument();
 	});
 });
 
@@ -367,7 +374,7 @@ describe("ActivityViewModern — bulk gift recipients", () => {
 		// Open row
 		fireEvent.click(screen.getByText(/gifted/i));
 
-		expect(screen.getByText("Recipients")).toBeInTheDocument();
+		expect(screen.getByText(/Alıcılar/)).toBeInTheDocument();
 		expect(screen.getByText("alice")).toBeInTheDocument();
 		expect(screen.getByText("bob")).toBeInTheDocument();
 		expect(screen.getByText("carol")).toBeInTheDocument();

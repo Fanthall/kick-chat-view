@@ -17,6 +17,7 @@ import React, {
 	useState,
 } from "react";
 import MessageActionsFunc from "../../store/actions/chatMessage";
+import { buildUserWindowPayload } from "../../util/userWindowPayload";
 import {
 	useFanthalDispatch,
 	useFanthalSelector,
@@ -62,9 +63,32 @@ function fmtTime(ts?: number): string {
 	return `${Math.floor(diff / 86_400_000)}d`;
 }
 
+// Sprint 48: Süre formatla — saniye girişi, "1 dk 30 sn" / "10 dk" / "2 sa 5 dk".
+function fmtDuration(seconds?: number): string {
+	if (seconds == null || !Number.isFinite(seconds) || seconds <= 0) return "-";
+	const s = Math.round(seconds);
+	const h = Math.floor(s / 3600);
+	const m = Math.floor((s % 3600) / 60);
+	const sec = s % 60;
+	const parts: string[] = [];
+	if (h > 0) parts.push(`${h} sa`);
+	if (m > 0) parts.push(`${m} dk`);
+	if (sec > 0 && h === 0) parts.push(`${sec} sn`);
+	return parts.join(" ");
+}
+
 function fmtDate(ts?: number): string {
 	if (!ts) return "-";
-	return new Date(ts).toISOString().replace("T", " ").slice(0, 19) + " UTC";
+	// Sprint 48: lokal saat dilimi (toLocaleString) — UTC değil. Kullanıcı TR
+	// bölgesinde +3 ile çıkıyor.
+	return new Date(ts).toLocaleString("tr-TR", {
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+	});
 }
 
 // ─── Filter definitions ──────────────────────────────────────────────────────
@@ -113,6 +137,7 @@ interface ActivityRowProps {
 	onToggle: () => void;
 	canManageRewards: boolean;
 	onRewardAction: (activity: ActivityItem, status: "accepted" | "rejected") => void;
+	onOpenUser: (activity: ActivityItem) => void;
 }
 
 const ActivityRow: FunctionComponent<ActivityRowProps> = ({
@@ -121,6 +146,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 	onToggle,
 	canManageRewards,
 	onRewardAction,
+	onOpenUser,
 }) => {
 	const { t } = useTranslation();
 	const meta = KIND_META[activity.kind];
@@ -202,10 +228,15 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 		<div
 			className={`act-row${expanded ? " is-expanded" : ""}`}
 			onClick={onToggle}
+			onDoubleClick={(e) => {
+				e.stopPropagation();
+				onOpenUser(activity);
+			}}
 			role="button"
 			tabIndex={0}
 			aria-expanded={expanded}
 			onKeyDown={(e) => e.key === "Enter" && onToggle()}
+			title="Çift tık: kullanıcı detayı"
 		>
 			<div className={`act-icon ${meta.cls}`} aria-hidden="true">
 				<Icon name={meta.iconName} size={14} />
@@ -310,7 +341,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 								{activity.giftName ? <> — <b>{activity.giftName}</b></> : null}
 								{activity.giftTier != null ? <> (tier {activity.giftTier})</> : null}
 								{activity.pinnedTimeSeconds != null
-									? <> · {activity.pinnedTimeSeconds}s pinli.</>
+									? <> · <b>{fmtDuration(activity.pinnedTimeSeconds)}</b> sabitlendi.</>
 									: "."}
 							</>
 						)}
@@ -347,69 +378,53 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 							</>
 						)}
 					</div>
-					{/* Sprint 35: varsa raw.message / raw.text alanını ayrı kart */}
+					{/* Sprint 48: Tek düzen "Mesaj" kartı — sub/gift/kicks/reward
+					    hepsinde kullanıcının yazdığı mesaj varsa burada gösterilir.
+					    activity.message veya raw.message/text/user_input. */}
 					{(() => {
 						const rawAny = activity.raw as any;
-						const rawMsg: string | undefined =
-							typeof rawAny?.message === "string"
-								? rawAny.message
-								: typeof rawAny?.text === "string"
-								? rawAny.text
-								: undefined;
-						if (!rawMsg || rawMsg === activity.message) return null;
+						const msg: string | undefined =
+							(typeof activity.message === "string" && activity.message) ||
+							(typeof rawAny?.message === "string" && rawAny.message) ||
+							(typeof rawAny?.text === "string" && rawAny.text) ||
+							(typeof rawAny?.user_input === "string" && rawAny.user_input) ||
+							undefined;
+						if (!msg) return null;
 						return (
 							<div className="act-message-card">
 								<div className="act-kv-k" style={{ marginBottom: 4 }}>
-									{t("activity.expand.user-input")}
+									Mesaj
 								</div>
 								<div className="act-message-body">
-									&ldquo;{rawMsg}&rdquo;
+									&ldquo;{msg}&rdquo;
 								</div>
 							</div>
 						);
 					})()}
 					<div className="act-kv">
-						<div className="act-kv-k">{t("activity.expand.event-id")}</div>
-						<div className="act-kv-v">{activity.id ?? "-"}</div>
-					</div>
-					<div className="act-kv">
-						<div className="act-kv-k">{t("activity.expand.actor")}</div>
+						<div className="act-kv-k">Saat</div>
 						<div className="act-kv-v">
-							{actorName}
-							{activity.actor?.id ? ` · #${activity.actor.id}` : ""}
+							{activity.createdAt
+								? new Date(activity.createdAt).toLocaleTimeString("tr-TR")
+								: "-"}
 						</div>
 					</div>
-					<div className="act-kv">
-						<div className="act-kv-k">{t("activity.expand.created")}</div>
-						<div className="act-kv-v">{fmtDate(activity.createdAt)}</div>
-					</div>
-					{activity.expiresAt ? (
-						<div className="act-kv">
-							<div className="act-kv-k">{t("activity.expand.expires")}</div>
-							<div className="act-kv-v">{fmtDate(activity.expiresAt)}</div>
-						</div>
-					) : null}
-					{activity.kind === "kicks_gifted" && activity.giftName ? (
-						<>
+					{/* Sprint 48: Gönderen + Hediye satırları kaldırıldı (üstte
+					    summary'de zaten yazıyor). KICKs için Sabitlendi süresi
+					    fmtDuration ile formatlanıyor. */}
+					{activity.kind === "kicks_gifted" &&
+						activity.pinnedTimeSeconds != null && (
 							<div className="act-kv">
-								<div className="act-kv-k">{t("activity.expand.gift")}</div>
+								<div className="act-kv-k">Sabitlendi</div>
 								<div className="act-kv-v">
-									{activity.giftName}
-									{activity.giftTier != null ? ` · tier ${activity.giftTier}` : ""}
+									{fmtDuration(activity.pinnedTimeSeconds)}
 								</div>
 							</div>
-							{activity.pinnedTimeSeconds != null && (
-								<div className="act-kv">
-									<div className="act-kv-k">{t("activity.expand.pinned")}</div>
-									<div className="act-kv-v">{activity.pinnedTimeSeconds}s</div>
-								</div>
-							)}
-						</>
-					) : null}
+						)}
 					{activity.kind === "subscription_gift" && targetUsernames.length > 0 ? (
 						<div className="act-kv" style={{ gridTemplateColumns: "90px 1fr" }}>
 							<div className="act-kv-k">
-								{t("activity.expand.recipients")}{" "}
+								Alıcılar{" "}
 								<span style={{ color: "var(--ms-fg-4)" }}>
 									({targetUsernames.length})
 								</span>
@@ -423,42 +438,33 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 							</div>
 						</div>
 					) : null}
-					{activity.kind === "reward_redemption" && activity.message ? (
-						<div className="act-kv">
-							<div className="act-kv-k">{t("activity.expand.user-input")}</div>
-							<div
-								className="act-kv-v"
-								style={{ whiteSpace: "normal", fontFamily: "inherit", fontSize: 12 }}
-							>
-								&ldquo;{activity.message}&rdquo;
-							</div>
-						</div>
-					) : null}
 					{activity.kind === "reward_redemption" &&
 						toActivityStatus(activity.status) === "pending" &&
 						canManageRewards && (
-							<div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+							<div className="act-reward-actions">
 								<button
-									className="btn primary"
-									style={{ padding: "5px 10px" }}
+									type="button"
+									className="act-reward-btn accept"
 									onClick={(e) => {
 										e.stopPropagation();
 										onRewardAction(activity, "accepted");
 									}}
 									aria-label="Accept reward redemption"
 								>
-									<Icon name="check" size={12} /> {t("activity.accept")}
+									<Icon name="check" size={13} />
+									<span>Kabul et</span>
 								</button>
 								<button
-									className="btn danger"
-									style={{ padding: "5px 10px" }}
+									type="button"
+									className="act-reward-btn reject"
 									onClick={(e) => {
 										e.stopPropagation();
 										onRewardAction(activity, "rejected");
 									}}
 									aria-label="Reject reward redemption"
 								>
-									<Icon name="x" size={12} /> {t("activity.reject")}
+									<Icon name="x" size={13} />
+									<span>Reddet</span>
 								</button>
 							</div>
 						)}
@@ -674,28 +680,56 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 		[messages.activityList, activeChannelSlug]
 	);
 
-	// Load token scopes (same pattern as classic ActivityView)
+	// Load token scopes + broadcaster ownership for active channel.
+	const [oauthUserId, setOauthUserId] = useState<number | undefined>();
+	const [activeBroadcasterId, setActiveBroadcasterId] = useState<
+		number | undefined
+	>();
+
 	useEffect(() => {
-		window.electron.kick
-			.getAuthStatus()
-			.then((authStatus) => {
-				setTokenScopes(
-					parseKickScopes(
-						authStatus?.grantedScopes,
-						authStatus?.tokenScope,
-						authStatus?.introspection?.data?.scope,
-						authStatus?.introspection?.data?.scopes
-					)
-				);
-			})
-			.catch(() => setTokenScopes([]));
+		Promise.all([
+			window.electron.kick.getAuthStatus().catch(() => undefined),
+			window.electron.kick.getUsers().catch(() => undefined),
+		]).then(([authStatus, userRes]: any[]) => {
+			setTokenScopes(
+				parseKickScopes(
+					authStatus?.grantedScopes,
+					authStatus?.tokenScope,
+					authStatus?.introspection?.data?.scope,
+					authStatus?.introspection?.data?.scopes
+				)
+			);
+			setOauthUserId(userRes?.data?.[0]?.user_id);
+		});
 	}, []);
+
+	useEffect(() => {
+		if (!activeChannelSlug) {
+			setActiveBroadcasterId(undefined);
+			return;
+		}
+		window.electron.kick
+			.getChannelBySlug(activeChannelSlug)
+			.then((res: any) =>
+				setActiveBroadcasterId(res?.data?.[0]?.broadcaster_user_id)
+			)
+			.catch(() => setActiveBroadcasterId(undefined));
+	}, [activeChannelSlug]);
+
+	const isOwnerOfActiveChannel =
+		!!oauthUserId &&
+		!!activeBroadcasterId &&
+		oauthUserId === activeBroadcasterId;
 
 	// Reward redemption polling (same pattern as classic)
 	const canReadRewards =
 		hasKickScope(tokenScopes, "channel:rewards:read") ||
 		hasKickScope(tokenScopes, "channel:rewards:write");
-	const canManageRewards = hasKickScope(tokenScopes, "channel:rewards:write");
+	// Sprint 50c: yalnız aktif kanalın sahibi + scope sahibi accept/reject
+	// görmeli. İzleyici scope sahibi olsa bile başka kanalda yetkili değil.
+	const canManageRewards =
+		hasKickScope(tokenScopes, "channel:rewards:write") &&
+		isOwnerOfActiveChannel;
 	const hasKicksScope = hasKickScope(tokenScopes, "kicks:read");
 
 	useEffect(() => {
@@ -785,6 +819,34 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 			setExpandedId((cur) => (cur === key ? null : key));
 		},
 		[]
+	);
+
+	// Sprint 49: Activity row çift tıklayınca kullanıcı detay penceresi açılsın.
+	const handleOpenUser = useCallback(
+		(activity: ActivityItem) => {
+			const username = activity.actor?.username || activity.username;
+			if (!username) return;
+			try {
+				const synthUser = {
+					id: activity.actor?.id ?? 0,
+					username,
+					slug: activity.actor?.slug || username.toLowerCase(),
+					identity: { color: "#7c8089", badges: [] },
+				};
+				const payload = buildUserWindowPayload({
+					user: synthUser,
+					messages: messages.messageList,
+					modActions: messages.modAction,
+					openedFrom: "chat",
+					channelName: activeChannelSlug || undefined,
+					canModerateChannel: false,
+				});
+				window.electron.userWindow.open(payload);
+			} catch (err: any) {
+				console.log("Activity → UserWindow open failed", err);
+			}
+		},
+		[messages.messageList, messages.modAction, activeChannelSlug]
 	);
 
 	return (
@@ -889,6 +951,7 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 										onToggle={() => handleToggle(activity.id || key)}
 										canManageRewards={canManageRewards}
 										onRewardAction={handleRewardAction}
+										onOpenUser={handleOpenUser}
 									/>
 								);
 							})
