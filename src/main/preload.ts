@@ -219,42 +219,7 @@ const electronHandler = {
 			};
 		},
 	},
-	/**
-	 * Sprint 40: webhook receiver bridge.
-	 * Public URL kullanıcının tünelinden gelir (ngrok / cloudflare-tunnel);
-	 * bu local receiver yalnız main process'in açtığı HTTP server'a IPC
-	 * pencere oluyor.
-	 */
-	webhook: {
-		getReceiverInfo(): Promise<{ port: number; path: string; localUrl: string }> {
-			return ipcRenderer.invoke("webhook:get-receiver-info");
-		},
-		isRunning(): Promise<boolean> {
-			return ipcRenderer.invoke("webhook:is-running");
-		},
-		start(port?: number): Promise<{ ok: boolean; port: number }> {
-			return ipcRenderer.invoke("webhook:start", port);
-		},
-		stop(): Promise<{ ok: boolean }> {
-			return ipcRenderer.invoke("webhook:stop");
-		},
-		onEvent(
-			func: (event: {
-				eventType: string;
-				messageId: string;
-				subscriptionId?: string;
-				timestamp: string;
-				payload: unknown;
-				verified: boolean;
-			}) => void
-		) {
-			const subscription = (_e: IpcRendererEvent, payload: any) => func(payload);
-			ipcRenderer.on("webhook:event", subscription);
-			return () => {
-				ipcRenderer.removeListener("webhook:event", subscription);
-			};
-		},
-	},
+	// Sprint 47: webhook bridge kaldırıldı (Pusher tüm event'leri sağlıyor).
 };
 
 contextBridge.exposeInMainWorld("electron", electronHandler);

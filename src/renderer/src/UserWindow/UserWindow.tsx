@@ -15,6 +15,7 @@ import React, {
 	FunctionComponent,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import { FiCopy, FiX, FiMessageSquare } from "react-icons/fi";
@@ -212,6 +213,68 @@ const UserWindow: FunctionComponent = () => {
 				setGrantedScopes([]);
 			});
 	}, [payload?.channelName]);
+
+	// Sprint 50: payload.messages session buffer'dan filtreleniyor; kullanıcı
+	// uzun süredir yazmadıysa boş kalır. Bu durumda Kick'in chatroom messages
+	// API'sini çekip kullanıcının son ~10 mesajını ekleyelim.
+	const augmentedRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!payload) return;
+		const slug = payload.channelName;
+		if (!slug) return;
+		const key = `${slug}:${payload.user.id || payload.user.username}`;
+		if (augmentedRef.current === key) return; // sadece bir kez
+		const haveCount = payload.messages?.length || 0;
+		if (haveCount >= 10) {
+			augmentedRef.current = key;
+			return;
+		}
+		augmentedRef.current = key;
+		// chatroom id'yi getChannelData (kick API v2) üzerinden çek.
+		(async () => {
+			try {
+				// Renderer service getChannelData kanal slug'ından chatroom.id veriyor.
+				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				const { getChannelData, getChannelMessages } = require(
+					"../../services/kick"
+				);
+				const chRes: any = await getChannelData(slug);
+				const chatroomId: number | undefined = chRes?.data?.chatroom?.id;
+				if (!chatroomId) return;
+				const msgRes: any = await getChannelMessages(chatroomId);
+				const apiMessages: any[] = msgRes?.data?.data?.messages || [];
+				const uname = (payload.user.username || "").toLowerCase();
+				const uid = payload.user.id;
+				const userMsgs = apiMessages
+					.filter((m: any) => {
+						const senderName = (m?.sender?.username || "").toLowerCase();
+						const senderId = m?.sender?.id;
+						return senderName === uname || (uid && senderId === uid);
+					})
+					.map((m: any) => ({
+						...m,
+						channelSlug: slug,
+					}));
+				if (userMsgs.length === 0) return;
+				setPayload((cur) => {
+					if (!cur) return cur;
+					const existingIds = new Set(cur.messages.map((m) => m.id));
+					const merged = [...cur.messages];
+					for (const m of userMsgs) {
+						if (!existingIds.has(m.id)) merged.push(m);
+					}
+					merged.sort(
+						(a, b) =>
+							new Date(b.created_at).getTime() -
+							new Date(a.created_at).getTime()
+					);
+					return { ...cur, messages: merged.slice(0, 50) };
+				});
+			} catch (err) {
+				console.log("UserWindow message fetch failed", err);
+			}
+		})();
+	}, [payload?.channelName, payload?.user?.id, payload?.user?.username]);
 
 	// ── Derived values ────────────────────────────────────────────────────────
 
