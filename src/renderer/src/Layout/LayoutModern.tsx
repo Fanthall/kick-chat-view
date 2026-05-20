@@ -37,8 +37,11 @@ import Icon from "../Component/Icon/Icon";
 import ChatModern from "../Chat/ChatModern";
 import ActivityViewModern from "../ActivityView/ActivityViewModern";
 import ModActionsModern from "../ModActions/ModActionsModern";
+import SettingsModern from "../Settings/SettingsModern";
 
 const SHELL_ATTR = "modern";
+
+type ModernScreen = "chat" | "settings";
 
 const formatUptime = (startedAtIso?: string): string => {
 	if (!startedAtIso) return "";
@@ -62,6 +65,7 @@ const LayoutModern: FunctionComponent = () => {
 	const [activeSlug, setActiveSlug] = useState<string>(
 		() => getActiveChannelSlug() || ""
 	);
+	const [screen, setScreen] = useState<ModernScreen>("chat");
 
 	const streamMeta = activeSlug
 		? messages.streamMetaByChannel[activeSlug]
@@ -201,10 +205,11 @@ const LayoutModern: FunctionComponent = () => {
 
 				{/* Icon-only action row */}
 				<button
-					className="ms-icon-btn"
+					className={`ms-icon-btn ${screen === "settings" ? "ms-icon-btn-active" : ""}`}
 					aria-label="Ayarlar"
 					title="Ayarlar"
 					type="button"
+					onClick={() => setScreen((s) => (s === "settings" ? "chat" : "settings"))}
 				>
 					<Icon name="settings" size={16} />
 				</button>
@@ -218,48 +223,65 @@ const LayoutModern: FunctionComponent = () => {
 				</button>
 			</header>
 
-			{/* 3-col stage */}
-			<div
-				style={{
-					display: "grid",
-					gridTemplateColumns: "minmax(0,1fr) 340px 340px",
-					gap: "var(--ms-sp-2)",
-					padding: "var(--ms-sp-2)",
-					overflow: "hidden",
-				}}
-			>
-				<section
+			{/* Content stage */}
+			{screen === "settings" ? (
+				<div
 					style={{
+						flex: 1,
+						minHeight: 0,
+						overflow: "auto",
+						padding: "var(--ms-sp-2)",
 						background: "var(--ms-bg-1)",
 						borderRadius: "var(--ms-r-3)",
-						overflow: "hidden",
-						minWidth: 0,
+						margin: "var(--ms-sp-2)",
 					}}
-					aria-label="Chat"
+					aria-label="Ayarlar"
 				>
-					<ChatModern />
-				</section>
-				<aside
+					<SettingsModern />
+				</div>
+			) : (
+				<div
 					style={{
-						background: "var(--ms-bg-1)",
-						borderRadius: "var(--ms-r-3)",
+						display: "grid",
+						gridTemplateColumns: "minmax(0,1fr) 340px 340px",
+						gap: "var(--ms-sp-2)",
+						padding: "var(--ms-sp-2)",
 						overflow: "hidden",
 					}}
-					aria-label="Aktivite"
 				>
-					<ActivityViewModern />
-				</aside>
-				<aside
-					style={{
-						background: "var(--ms-bg-1)",
-						borderRadius: "var(--ms-r-3)",
-						overflow: "hidden",
-					}}
-					aria-label="Moderasyon"
-				>
-					<ModActionsModern />
-				</aside>
-			</div>
+					<section
+						style={{
+							background: "var(--ms-bg-1)",
+							borderRadius: "var(--ms-r-3)",
+							overflow: "hidden",
+							minWidth: 0,
+						}}
+						aria-label="Chat"
+					>
+						<ChatModern />
+					</section>
+					<aside
+						style={{
+							background: "var(--ms-bg-1)",
+							borderRadius: "var(--ms-r-3)",
+							overflow: "hidden",
+						}}
+						aria-label="Aktivite"
+					>
+						<ActivityViewModern />
+					</aside>
+					<aside
+						style={{
+							background: "var(--ms-bg-1)",
+							borderRadius: "var(--ms-r-3)",
+							overflow: "hidden",
+						}}
+						aria-label="Moderasyon"
+					>
+						<ModActionsModern />
+					</aside>
+				</div>
+			)}
 		</div>
 	);
 };

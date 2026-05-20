@@ -3097,3 +3097,418 @@ body {
 	background: #052420;
 }
 
+/* ============================================================
+   Sprint 6a — SettingsModern styles
+   Scoped under [data-app-shell="modern"]
+   ============================================================ */
+
+[data-app-shell="modern"] .set-shell {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	color: var(--ms-fg-1, #f2f7f5);
+	font-size: var(--ms-fs-13, 13px);
+}
+
+[data-app-shell="modern"] .set-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 14px 16px 10px;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(128,159,177,0.16));
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .set-main {
+	display: flex;
+	flex: 1 1 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+[data-app-shell="modern"] .set-nav {
+	flex: 0 0 200px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 8px;
+	border-right: 1px solid var(--ms-bd-1, rgba(128,159,177,0.16));
+	overflow-y: auto;
+}
+
+[data-app-shell="modern"] .set-nav-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 0;
+	background: transparent;
+	color: var(--ms-fg-2, #cfdbe2);
+	font-size: var(--ms-fs-13, 13px);
+	font-weight: 500;
+	cursor: pointer;
+	text-align: left;
+	position: relative;
+	transition: background 0.12s, color 0.12s;
+}
+
+[data-app-shell="modern"] .set-nav-item:hover {
+	background: rgba(47, 211, 160, 0.08);
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+[data-app-shell="modern"] .set-nav-item.is-active {
+	background: color-mix(in oklch, var(--ac-mint, #2fd3a0) 14%, transparent);
+	color: var(--ac-mint, #2fd3a0);
+	font-weight: 600;
+}
+
+[data-app-shell="modern"] .set-nav-warn-dot {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--ac-warn, #f2c94c);
+}
+
+[data-app-shell="modern"] .set-content {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow-y: auto;
+	padding: 16px 20px;
+}
+
+[data-app-shell="modern"] .set-content h3 {
+	margin: 0 0 4px;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+[data-app-shell="modern"] .set-content .sub {
+	margin-bottom: 16px;
+	font-size: 12px;
+	color: var(--ms-fg-3, #8aa1ab);
+}
+
+[data-app-shell="modern"] .set-block {
+	margin-bottom: 12px;
+	border: 1px solid var(--ms-bd-1, rgba(128,159,177,0.16));
+	border-radius: var(--ms-r-3, 8px);
+	overflow: hidden;
+	background: var(--ms-bg-1, rgba(7,13,18,0.74));
+}
+
+[data-app-shell="modern"] .set-block-section-label {
+	padding: 8px 14px;
+	font-size: 11px;
+	color: var(--ms-fg-3, #8aa1ab);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(128,159,177,0.14));
+}
+
+[data-app-shell="modern"] .set-block-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(128,159,177,0.10));
+}
+
+[data-app-shell="modern"] .set-block-row:last-child {
+	border-bottom: 0;
+}
+
+[data-app-shell="modern"] .set-block-row.danger {
+	background: rgba(255, 77, 109, 0.04);
+}
+
+[data-app-shell="modern"] .set-block-row .l {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+	flex: 1 1 0;
+}
+
+[data-app-shell="modern"] .set-block-row .l b {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+[data-app-shell="modern"] .set-block-row .l span {
+	font-size: 11.5px;
+	color: var(--ms-fg-3, #8aa1ab);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+[data-app-shell="modern"] .set-block-empty {
+	padding: 12px 14px;
+	font-size: 12px;
+	color: var(--ms-fg-3, #8aa1ab);
+}
+
+/* ── Toggle pill ── */
+[data-app-shell="modern"] .set-toggle {
+	width: 32px;
+	height: 18px;
+	border-radius: 9px;
+	background: var(--ms-bd-2, rgba(128,159,177,0.24));
+	border: 0;
+	position: relative;
+	cursor: pointer;
+	flex: 0 0 32px;
+	transition: background 0.15s;
+}
+
+[data-app-shell="modern"] .set-toggle[aria-checked="true"] {
+	background: var(--ac-mint, #2fd3a0);
+}
+
+[data-app-shell="modern"] .set-toggle-thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: var(--ms-fg-3, #8aa1ab);
+	transition: left 0.15s, background 0.15s;
+	pointer-events: none;
+}
+
+[data-app-shell="modern"] .set-toggle[aria-checked="true"] .set-toggle-thumb {
+	left: 16px;
+	background: #052420;
+}
+
+/* ── Stepper ── */
+[data-app-shell="modern"] .set-stepper {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	background: var(--ms-bg-2, rgba(11,19,26,0.9));
+	border: 1px solid var(--ms-bd-2, rgba(128,159,177,0.24));
+	border-radius: var(--ms-r-2, 6px);
+	flex: 0 0 auto;
+}
+
+[data-app-shell="modern"] .set-stepper button {
+	width: 24px;
+	height: 28px;
+	border: 0;
+	background: transparent;
+	color: var(--ms-fg-2, #cfdbe2);
+	cursor: pointer;
+	font-size: 14px;
+}
+
+[data-app-shell="modern"] .set-stepper button:hover {
+	background: rgba(255,255,255,0.06);
+}
+
+[data-app-shell="modern"] .set-stepper-val {
+	padding: 0 10px;
+	min-width: 48px;
+	text-align: center;
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+[data-app-shell="modern"] .set-stepper-unit {
+	border-left: 1px solid var(--ms-bd-2, rgba(128,159,177,0.24));
+	padding: 0 8px;
+	font-size: 11.5px;
+	color: var(--ms-fg-3, #8aa1ab);
+}
+
+/* ── Buttons ── */
+[data-app-shell="modern"] .set-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 5px 12px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 1px solid var(--ms-bd-2, rgba(128,159,177,0.24));
+	background: transparent;
+	color: var(--ms-fg-1, #f2f7f5);
+	font-size: 12px;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: background 0.12s, border-color 0.12s;
+}
+
+[data-app-shell="modern"] .set-btn:hover {
+	background: rgba(255,255,255,0.06);
+	border-color: rgba(128,159,177,0.4);
+}
+
+[data-app-shell="modern"] .set-btn.primary {
+	background: var(--ac-mint, #2fd3a0);
+	color: #052420;
+	border-color: transparent;
+	font-weight: 600;
+}
+
+[data-app-shell="modern"] .set-btn.primary:hover {
+	background: #3de0ad;
+}
+
+[data-app-shell="modern"] .set-btn.ghost {
+	background: transparent;
+	border-color: var(--ms-bd-2, rgba(128,159,177,0.24));
+	color: var(--ms-fg-2, #cfdbe2);
+}
+
+[data-app-shell="modern"] .set-btn.danger {
+	color: #ff8da1;
+	border-color: rgba(255,77,109,0.32);
+}
+
+[data-app-shell="modern"] .set-btn.danger:hover {
+	background: rgba(255,77,109,0.12);
+}
+
+/* ── Input ── */
+[data-app-shell="modern"] .set-input {
+	height: 30px;
+	padding: 0 10px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 1px solid var(--ms-bd-2, rgba(128,159,177,0.24));
+	background: var(--ms-bg-2, rgba(11,19,26,0.9));
+	color: var(--ms-fg-1, #f2f7f5);
+	font-size: 12px;
+	outline: none;
+	min-width: 0;
+}
+
+[data-app-shell="modern"] .set-input:focus {
+	border-color: rgba(47,211,160,0.6);
+	box-shadow: 0 0 0 2px rgba(47,211,160,0.1);
+}
+
+/* ── Scope rows ── */
+[data-app-shell="modern"] .scope-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 9px 14px;
+	border-bottom: 1px solid var(--ms-bd-1, rgba(128,159,177,0.10));
+}
+
+[data-app-shell="modern"] .scope-row:last-child {
+	border-bottom: 0;
+}
+
+[data-app-shell="modern"] .scope-ic {
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 10px;
+	font-weight: 800;
+	flex: 0 0 18px;
+	margin-top: 1px;
+}
+
+[data-app-shell="modern"] .scope-ic.ok {
+	background: color-mix(in oklch, var(--ac-mint, #2fd3a0) 20%, transparent);
+	color: var(--ac-mint, #2fd3a0);
+}
+
+[data-app-shell="modern"] .scope-ic.miss {
+	background: color-mix(in oklch, var(--ac-warn, #f2c94c) 20%, transparent);
+	color: var(--ac-warn, #f2c94c);
+}
+
+[data-app-shell="modern"] .scope-name {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ms-fg-1, #f2f7f5);
+	font-variant-numeric: tabular-nums;
+}
+
+[data-app-shell="modern"] .scope-affects {
+	font-size: 11.5px;
+	color: var(--ms-fg-3, #8aa1ab);
+	margin-top: 2px;
+}
+
+/* ── Scope warn banner ── */
+[data-app-shell="modern"] .set-scope-warn-banner {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	margin-bottom: 14px;
+	border-radius: var(--ms-r-3, 8px);
+	border: 1px solid color-mix(in oklch, var(--ac-warn, #f2c94c) 30%, transparent);
+	background: color-mix(in oklch, var(--ac-warn, #f2c94c) 10%, transparent);
+	font-size: 12.5px;
+	color: var(--ms-fg-1, #f2f7f5);
+}
+
+/* ── Advanced: mono topic IDs ── */
+[data-app-shell="modern"] .set-topic-mono {
+	font-family: "SFMono-Regular", ui-monospace, monospace;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--ac-mint, #2fd3a0);
+}
+
+/* ── pbadge extensions ── */
+[data-app-shell="modern"] .pbadge {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1.4;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+[data-app-shell="modern"] .pbadge.kick {
+	background: rgba(83, 218, 166, 0.18);
+	color: #53daa6;
+}
+
+[data-app-shell="modern"] .pbadge.s7tv {
+	background: rgba(113, 107, 255, 0.18);
+	color: #9e9bff;
+}
+
+[data-app-shell="modern"] .pbadge.bttv {
+	background: rgba(231, 76, 60, 0.18);
+	color: #f08172;
+}
+
+[data-app-shell="modern"] .pbadge.ffz {
+	background: rgba(128, 159, 177, 0.18);
+	color: #9bb2bd;
+}
+
+[data-app-shell="modern"] .pbadge.sub {
+	background: color-mix(in oklch, var(--ac-mint, #2fd3a0) 18%, transparent);
+	color: var(--ac-mint, #2fd3a0);
+}
+
+/* ── ms-icon-btn active state ── */
+[data-app-shell="modern"] .ms-icon-btn-active {
+	background: color-mix(in oklch, var(--ac-mint, #2fd3a0) 14%, transparent) !important;
+	color: var(--ac-mint, #2fd3a0) !important;
+}
+
