@@ -76,6 +76,8 @@ interface SuspendedEntry {
 	actorUsername?: string;
 	/** Sprint 19: kullanici detayi acmak icin gerekli ModMessage referansi. */
 	sourceAction?: ModMessage;
+	/** Sprint 29: aksiyon zamani (sort DESC + tarih gosterimi). */
+	createdAt?: number;
 }
 
 /** Parse the raw localStorage string "username:reason:until" or just "username". */
@@ -361,6 +363,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 		const entries: SuspendedEntry[] = [];
 		for (const action of latestByUser.values()) {
 			const actorUsername = action.banned_by?.username;
+			const createdAt = Number(action.created_at) || undefined;
 			if (action.type === "ban") {
 				entries.push({
 					raw: action.user!.username,
@@ -369,6 +372,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					until: "Permanent",
 					actorUsername,
 					sourceAction: action,
+					createdAt,
 				});
 			} else if (action.type === "to") {
 				const until = formatUntil(action.expires_at);
@@ -380,17 +384,16 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					until,
 					actorUsername,
 					sourceAction: action,
+					createdAt,
 				});
 			}
 			// "unban" / "delete" -> not suspended; skipped naturally because
 			// latestByUser keeps only the most recent action per user.
 		}
-		// Sort: bans first (permanent), then by remaining time desc.
-		return entries.sort((a, b) => {
-			if (a.until === "Permanent" && b.until !== "Permanent") return -1;
-			if (a.until !== "Permanent" && b.until === "Permanent") return 1;
-			return 0;
-		});
+		// Sprint 29: yeni gelen aksiyonlar EN UST'te. created_at DESC.
+		// (Permanent ban vs timeout sirasi koruma istemiyoruz; tarih ana
+		// kriter; user istegi: "en yeni en ustte, scrolda hep en ust".)
+		return entries.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [messages.modAction, activeChannelSlug]);
 
@@ -976,10 +979,17 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 								action.banned_by?.username ||
 								action.unbanned_by?.username ||
 								"system";
+							// Sprint 29: gun + saat birlikte (uzun listede tarih
+							// gozukmedikce belirsizdi).
 							const tStr = action.created_at
-								? new Date(Number(action.created_at)).toLocaleTimeString(
+								? new Date(Number(action.created_at)).toLocaleString(
 										undefined,
-										{ hour: "2-digit", minute: "2-digit" }
+										{
+											day: "2-digit",
+											month: "2-digit",
+											hour: "2-digit",
+											minute: "2-digit",
+										}
 								  )
 								: "";
 							return (
@@ -1088,7 +1098,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 									{entry.reason && (
 										<span className="reason">{entry.reason}</span>
 									)}
-									{entry.actorUsername && (
+									{(entry.actorUsername || entry.createdAt) && (
 										<span
 											className="reason"
 											style={{
@@ -1096,7 +1106,15 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 												color: "var(--ms-fg-4, var(--fg-4))",
 											}}
 										>
-											by @{entry.actorUsername}
+											{entry.actorUsername && `by @${entry.actorUsername}`}
+											{entry.actorUsername && entry.createdAt && " · "}
+											{entry.createdAt &&
+												new Date(entry.createdAt).toLocaleString(undefined, {
+													day: "2-digit",
+													month: "2-digit",
+													hour: "2-digit",
+													minute: "2-digit",
+												})}
 										</span>
 									)}
 								</div>
