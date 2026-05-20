@@ -438,10 +438,11 @@ const KicksLeaderboard: FunctionComponent<KicksLeaderboardProps> = ({ hasScope }
 
 	return (
 		<div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-			<div className="lb-tabs">
+			<div className="lb-tabs" role="tablist" aria-label="Leaderboard period">
 				{periods.map((p) => (
 					<button
 						key={p.id}
+						role="tab"
 						className={`lb-tab${period === p.id ? " is-active" : ""}`}
 						onClick={() => setPeriod(p.id)}
 						aria-selected={period === p.id}
@@ -693,8 +694,9 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 			</div>
 
 			{/* Sub-tab strip: Events | KICKs Leaderboard */}
-			<div className="act-subtab-strip">
+			<div className="act-subtab-strip" role="tablist" aria-label="Activity sub-tabs">
 				<button
+					role="tab"
 					className={`act-subtab${subTab === "events" ? " is-active" : ""}`}
 					onClick={() => setSubTab("events")}
 					aria-selected={subTab === "events"}
@@ -702,6 +704,7 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 					Events
 				</button>
 				<button
+					role="tab"
 					className={`act-subtab${subTab === "leaderboard" ? " is-active" : ""}`}
 					onClick={() => setSubTab("leaderboard")}
 					aria-selected={subTab === "leaderboard"}

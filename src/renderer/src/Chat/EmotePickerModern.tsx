@@ -18,6 +18,7 @@ import React, {
 	useState,
 } from "react";
 import { LuRefreshCw, LuSearch, LuSmile, LuStar, LuX } from "react-icons/lu";
+import { useFocusTrap } from "../../util/useFocusTrap";
 import {
 	EmoteEntry,
 	EmoteProvider,
@@ -219,6 +220,10 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const titleId = "ep-modal-title";
+
+	// Sprint 7 — Focus trap: cycles focus inside modal, restores on Escape/close
+	useFocusTrap(containerRef, open, onClose);
 
 	// Sync favorites from storage events
 	useEffect(() => {
@@ -347,13 +352,16 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 		>
 			<div
 				ref={containerRef}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby={titleId}
 				className="modal epicker"
 				onMouseDown={(e) => e.stopPropagation()}
 				data-testid="ep-modal"
 			>
 				{/* Header */}
 				<div className="modal-hd">
-					<h2>
+					<h2 id={titleId}>
 						<LuSmile size={15} aria-hidden />
 						Emote picker
 					</h2>
@@ -361,6 +369,7 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 						type="button"
 						className="icon-btn"
 						aria-label="Close emote picker"
+						title="Close (Esc)"
 						onClick={onClose}
 						data-testid="ep-close"
 					>

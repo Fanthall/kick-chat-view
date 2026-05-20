@@ -1,5 +1,5 @@
 import { NextUIProvider } from "@nextui-org/react";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./dist/output.css";
@@ -26,27 +26,63 @@ import {
 	normalizeFfzSet,
 	normalizeSevenTvSet,
 } from "./util/emoteIndex";
-// Sprint 2 — Modern shell developer preview flag (Karar 1: runtime user-toggle YOK).
-// Opt-in: URL hash `?shell=modern` veya localStorage `chatViewShellPreview=modern`.
-// Default: classic Layout.
-const isModernShellOptIn = (): boolean => {
+
+// Sprint 7 — Shell preference resolution.
+// Priority: URL param > localStorage explicit > default (modern).
+// Legacy key migration: chatViewShellPreview → chatViewShellPreference.
+function getShellPreference(): "classic" | "modern" {
 	try {
-		const hash = window.location.hash || "";
-		const q = hash.includes("?") ? hash.split("?")[1] : "";
-		const params = new URLSearchParams(q);
-		if (params.get("shell") === "modern") return true;
-		if (localStorage.getItem("chatViewShellPreview") === "modern") return true;
+		// URL override (highest priority) — works for both search params and hash routing
+		if (typeof window !== "undefined") {
+			const url = new URL(window.location.href);
+			const param = url.searchParams.get("shell");
+			if (param === "classic" || param === "modern") return param;
+			// Hash routing param (Electron file:// often uses hash)
+			const hash = window.location.hash || "";
+			if (hash.includes("shell=classic")) return "classic";
+			if (hash.includes("shell=modern")) return "modern";
+		}
+		// localStorage explicit override
+		const stored = localStorage.getItem("chatViewShellPreference");
+		if (stored === "classic") return "classic";
+		if (stored === "modern") return "modern";
 	} catch {
-		// noop — guvenli fallback
+		// noop — safe fallback
 	}
-	return false;
-};
+	// Default: modern (flipped in Sprint 7; was classic)
+	return "modern";
+}
 
 export default function App() {
 	const dispatch = useFanthalDispatch();
 	const isUserWindow = window.location.hash.startsWith("#/user-window");
 	const isKickConnection = window.location.hash.startsWith("#/kick-connection");
-	const useModernShell = isModernShellOptIn();
+	const [shellPreference, setShellPreference] = useState<"classic" | "modern">(
+		getShellPreference
+	);
+	const useModernShell = shellPreference === "modern";
+	useEffect(() => {
+		// Sprint 7 — Migrate legacy key chatViewShellPreview → chatViewShellPreference
+		try {
+			const legacy = localStorage.getItem("chatViewShellPreview");
+			if (legacy && !localStorage.getItem("chatViewShellPreference")) {
+				localStorage.setItem("chatViewShellPreference", legacy);
+				localStorage.removeItem("chatViewShellPreview");
+			}
+		} catch {
+			// noop
+		}
+	}, []);
+	// Listen for shell preference changes dispatched by SettingsModern Advanced toggle
+	useEffect(() => {
+		const handleShellChange = () => {
+			setShellPreference(getShellPreference());
+		};
+		window.addEventListener("chat-view-shell-preference-changed", handleShellChange);
+		return () => {
+			window.removeEventListener("chat-view-shell-preference-changed", handleShellChange);
+		};
+	}, []);
 	useEffect(() => {
 		if (isUserWindow || isKickConnection) return;
 		// TODO: sağ üstte ayarlardan eklenecek

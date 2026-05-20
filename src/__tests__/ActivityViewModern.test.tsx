@@ -416,7 +416,8 @@ describe("ActivityViewModern — KICKs leaderboard", () => {
 			</Provider>
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /KICKs Leaderboard/i }));
+		// Sprint 7: sub-tab buttons now have role="tab" (a11y improvement)
+		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
 
 		await waitFor(() => {
 			expect(screen.getByText("alpha")).toBeInTheDocument();
@@ -432,13 +433,15 @@ describe("ActivityViewModern — KICKs leaderboard", () => {
 			</Provider>
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /KICKs Leaderboard/i }));
+		// Sprint 7: sub-tab buttons now have role="tab"
+		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
 
 		await waitFor(() => {
 			expect(screen.getByText("alpha")).toBeInTheDocument();
 		});
 
-		fireEvent.click(screen.getByRole("button", { name: "Month" }));
+		// Period tabs also have role="tab"
+		fireEvent.click(screen.getByRole("tab", { name: "Month" }));
 
 		await waitFor(() => {
 			expect(screen.getByText("gamma")).toBeInTheDocument();
@@ -458,7 +461,8 @@ describe("ActivityViewModern — KICKs leaderboard", () => {
 			</Provider>
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /KICKs Leaderboard/i }));
+		// Sprint 7: sub-tab buttons now have role="tab"
+		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
 
 		// Scope missing state should eventually appear
 		expect(

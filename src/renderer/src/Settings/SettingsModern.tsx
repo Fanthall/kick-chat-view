@@ -796,9 +796,12 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 	const [verboseLogging, setVerboseLogging] = useState(
 		() => localStorage.getItem("chatViewVerboseLogging") === "true"
 	);
-	const [modernShell, setModernShell] = useState(
-		() => localStorage.getItem("chatViewShellPreference") === "modern"
-	);
+	// Sprint 7: default is modern; toggle reads stored value or falls back to true
+	const [modernShell, setModernShell] = useState(() => {
+		const stored = localStorage.getItem("chatViewShellPreference");
+		if (stored === "classic") return false;
+		return true; // modern (default)
+	});
 
 	const handleTopicToggle = (topic: string) => {
 		setTopics((prev) =>
@@ -947,9 +950,10 @@ const SettingsModern: FunctionComponent = () => {
 		});
 	}, [kickUserInfo, messages.messageList]);
 
-	const handleShellToggle = (modern: boolean) => {
-		// App.tsx reads localStorage.chatViewShellPreview; update both keys for compatibility
-		localStorage.setItem("chatViewShellPreview", modern ? "modern" : "classic");
+	const handleShellToggle = (_modern: boolean) => {
+		// Sprint 7: App.tsx now reads chatViewShellPreference (modern is default).
+		// AdvancedSection already writes chatViewShellPreference directly;
+		// no additional action needed here.
 	};
 
 	return (
