@@ -5,6 +5,7 @@ import { getSevenTvKickUser } from "../services/sevenTv";
 import { sevenTvEvents } from "../services/sevenTvEvents";
 import MessageActionsFunc from "../store/actions/chatMessage";
 import { FanthalDispatch } from "../store/store";
+import { normalizeKickWebhookActivity } from "./kickActivity";
 import {
 	BanToMessage,
 	DeleteMessage,
@@ -431,8 +432,55 @@ export const chatListener = (slug?: string) => {
 						})
 					);
 					break;
-				default:
+				default: {
+					// Sprint 38: KICKs olayları Pusher v1 chatroom kanalında
+					// resmi olarak listelenmemiş; Kick zaman zaman yeni event
+					// adları ekliyor. Event adında "kicks" geçiyorsa
+					// kickActivity.normalizeKickWebhookActivity ile dene ve
+					// activity listesine ekle.
+					try {
+						const evtName: string = parsedEvent.event || "";
+						if (/kicks/i.test(evtName)) {
+							const rawPayload = JSON.parse(parsedEvent.data || "{}");
+							// Webhook normalize'ı "kicks.gifted" event type ile
+							// çağrılıyor; payload Pusher format olsa da en yakın
+							// match.
+							const item = normalizeKickWebhookActivity(
+								"kicks.gifted",
+								{ ...rawPayload, channel: { slug: channelName } }
+							);
+							if (item) {
+								dispatch(
+									MessageActionsFunc.addActivity({
+										...item,
+										channelSlug: channelName,
+									})
+								);
+							}
+							if (
+								localStorage.getItem("chatViewVerboseLogging") === "true"
+							) {
+								console.log(
+									"[KICKs Pusher] event:",
+									evtName,
+									"payload:",
+									rawPayload
+								);
+							}
+						} else if (
+							localStorage.getItem("chatViewVerboseLogging") === "true"
+						) {
+							console.log("[Pusher unknown event]", evtName);
+						}
+					} catch (innerErr) {
+						console.log(
+							"Kick KICKs event parse failed",
+							parsedEvent.event,
+							innerErr
+						);
+					}
 					break;
+				}
 				}
 			} catch (err) {
 				console.log("Kick websocket event parse failed", parsedEvent.event, err);

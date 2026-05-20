@@ -203,6 +203,21 @@ const electronHandler = {
 				ipcRenderer.removeListener("panel-window:refresh-request", subscription);
 			};
 		},
+		/**
+		 * Sprint 37: main renderer subscribes to "mod target cleared" events
+		 * forwarded from any pop-out window — keeps the local selection state
+		 * in sync when the X button is pressed in the pop-out.
+		 */
+		onModTargetCleared(func: () => void) {
+			const subscription = () => func();
+			ipcRenderer.on("panel-window:mod-target-cleared", subscription);
+			return () => {
+				ipcRenderer.removeListener(
+					"panel-window:mod-target-cleared",
+					subscription
+				);
+			};
+		},
 	},
 };
 

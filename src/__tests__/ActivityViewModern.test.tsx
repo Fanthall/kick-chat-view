@@ -284,9 +284,12 @@ describe("ActivityViewModern — expand drawer", () => {
 	});
 });
 
-// ─── Test 4: Raw JSON toggle ──────────────────────────────────────────────────
-describe("ActivityViewModern — raw JSON toggle", () => {
-	it("raw JSON toggle shows and hides pre block", () => {
+// Sprint 38: Raw JSON toggle + ham JSON dump tamamen kaldırıldı. Önceki
+// "raw JSON toggle" ve "maskSensitive on raw JSON" testleri artık geçerli
+// değil — onların yerine activity expand artık yalnız human-readable
+// summary gösteriyor (Sprint 35 ile eklendi).
+describe("ActivityViewModern — expand summary (Sprint 38)", () => {
+	it("expand panel renders without any JSON pre block or toggle", () => {
 		const store = buildStore([rewardActivity]);
 		render(
 			<Provider store={store}>
@@ -294,50 +297,13 @@ describe("ActivityViewModern — raw JSON toggle", () => {
 			</Provider>
 		);
 
-		// Open drawer
 		fireEvent.click(screen.getByText(/Hydrate/i));
 
-		// Find the json toggle button by its class
-		const toggleBtn = document.querySelector("button.act-json-toggle") as HTMLButtonElement;
-		expect(toggleBtn).toBeInTheDocument();
+		// JSON toggle button ve <pre class="act-json"> artık DOM'da yok.
+		expect(
+			document.querySelector("button.act-json-toggle")
+		).not.toBeInTheDocument();
 		expect(document.querySelector(".act-json")).not.toBeInTheDocument();
-
-		// Show JSON
-		fireEvent.click(toggleBtn!);
-		expect(document.querySelector(".act-json")).toBeInTheDocument();
-
-		// Hide JSON
-		fireEvent.click(document.querySelector("button.act-json-toggle") as HTMLButtonElement);
-		expect(document.querySelector(".act-json")).not.toBeInTheDocument();
-	});
-});
-
-// ─── Test 5: maskSensitive on raw JSON ───────────────────────────────────────
-describe("ActivityViewModern — maskSensitive on raw JSON", () => {
-	it("redacts token-like strings from displayed raw JSON", () => {
-		// rewardActivity has raw.secret_token = "abcdefghijklmnopqrstuvwxyz1234567890" (36 chars)
-		const store = buildStore([rewardActivity]);
-		render(
-			<Provider store={store}>
-				<ActivityViewModern />
-			</Provider>
-		);
-
-		// Open drawer, then show JSON via class selector
-		fireEvent.click(screen.getByText(/Hydrate/i));
-		const toggleBtn = document.querySelector("button.act-json-toggle") as HTMLButtonElement;
-		expect(toggleBtn).toBeInTheDocument();
-		fireEvent.click(toggleBtn!);
-
-		const pre = document.querySelector(".act-json");
-		expect(pre).toBeInTheDocument();
-
-		// Token-like value should be redacted (36 char alphanum string)
-		expect(pre!.textContent).not.toContain("abcdefghijklmnopqrstuvwxyz1234567890");
-		expect(pre!.textContent).toContain("********");
-
-		// Non-token string should still appear
-		expect(pre!.textContent).toContain("testuser");
 	});
 });
 
@@ -409,66 +375,19 @@ describe("ActivityViewModern — bulk gift recipients", () => {
 });
 
 // ─── Test 8: KICKs leaderboard sub-tab ───────────────────────────────────────
-describe("ActivityViewModern — KICKs leaderboard", () => {
-	it("switches to leaderboard tab and shows week entries", async () => {
+// Sprint 38b: "KICKs Sıralama" alt tab kaldırıldı — Kick UI'da
+// karşılığı olmadığı için Sprint 4'te eklenen leaderboard subtab
+// silindi. Önceki 3 leaderboard testi geçersiz.
+describe("ActivityViewModern — leaderboard removed (Sprint 38b)", () => {
+	it("does not render KICKs Leaderboard sub-tab anymore", () => {
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
 				<ActivityViewModern />
 			</Provider>
 		);
-
-		// Sprint 7: sub-tab buttons now have role="tab" (a11y improvement)
-		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
-
-		await waitFor(() => {
-			expect(screen.getByText("alpha")).toBeInTheDocument();
-			expect(screen.getByText("beta")).toBeInTheDocument();
-		});
-	});
-
-	it("switches period tab to Month and shows month entries", async () => {
-		const store = buildStore([]);
-		render(
-			<Provider store={store}>
-				<ActivityViewModern />
-			</Provider>
-		);
-
-		// Sprint 7: sub-tab buttons now have role="tab"
-		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
-
-		await waitFor(() => {
-			expect(screen.getByText("alpha")).toBeInTheDocument();
-		});
-
-		// Period tabs also have role="tab"
-		fireEvent.click(screen.getByRole("tab", { name: "Month" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("gamma")).toBeInTheDocument();
-		});
-		expect(screen.queryByText("alpha")).not.toBeInTheDocument();
-	});
-
-	it("shows scope missing empty state when kicks:read absent", () => {
-		(window.electron.kick.getAuthStatus as jest.Mock).mockResolvedValue({
-			grantedScopes: [],
-			tokenScope: "",
-		});
-		const store = buildStore([]);
-		render(
-			<Provider store={store}>
-				<ActivityViewModern />
-			</Provider>
-		);
-
-		// Sprint 7: sub-tab buttons now have role="tab"
-		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
-
-		// Scope missing state should eventually appear
 		expect(
-			screen.getByText(/kicks:read/i)
-		).toBeInTheDocument();
+			screen.queryByRole("tab", { name: /KICKs Leaderboard/i })
+		).not.toBeInTheDocument();
 	});
 });

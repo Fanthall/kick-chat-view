@@ -176,6 +176,7 @@ const ModerationWindowShell: FunctionComponent = () => {
 							isOwner={roleInfo.isOwner}
 							isMod={roleInfo.isMod}
 							selectedUser={selectedModUser}
+							onClearSelected={() => setSelectedModUser(undefined)}
 							isPopOut
 						/>
 					</div>

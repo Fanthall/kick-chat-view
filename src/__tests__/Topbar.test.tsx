@@ -163,6 +163,8 @@ describe("Topbar — stats row", () => {
 		expect(screen.getByTestId("tb-uptime").textContent).toBe("--");
 	});
 
+	// Sprint 38: kategori chip kaldırıldı; kategori artık .tb-meta-stream
+	// satırında (kanal adının altında) tb-stream-category testid ile var.
 	it("shows category name from streamMeta", () => {
 		renderLayout({
 			streamMetaByChannel: {
@@ -175,7 +177,9 @@ describe("Topbar — stats row", () => {
 				},
 			},
 		});
-		expect(screen.getByTestId("tb-category").textContent).toBe("Just Chatting");
+		expect(screen.getByTestId("tb-stream-category").textContent).toBe(
+			"Just Chatting"
+		);
 	});
 });
 

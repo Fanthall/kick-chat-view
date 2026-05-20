@@ -739,6 +739,33 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 					>
 					{selectedUser ? (
 						<div className="mod-target" data-testid="mod-target-card">
+							{/* Sprint 37: clear selected user (X) — selected kartının
+							    sağ üst köşesinde. onClearSelected pop-out içinde de
+							    çağrılır; pop-out'tan ana pencereye temizleme isteği
+							    ipcRenderer üzerinden gönderiliyor. */}
+							{onClearSelected && (
+								<button
+									type="button"
+									className="mod-target-clear"
+									title={t("mod.clear-selected") || "Seçimi temizle"}
+									aria-label="Clear selected user"
+									data-testid="mod-target-clear"
+									onClick={() => {
+										onClearSelected();
+										if (isPopOut) {
+											try {
+												window.electron?.ipcRenderer?.sendMessage(
+													"panel-window:clear-mod-target" as any
+												);
+											} catch {
+												/* ignore */
+											}
+										}
+									}}
+								>
+									<Icon name="x" size={11} />
+								</button>
+							)}
 							<ModTargetAvatar
 								slug={selectedUser.slug || selectedUser.username}
 								letter={selectedUser.username[0]?.toUpperCase() ?? "?"}

@@ -118,7 +118,6 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 	onRewardAction,
 }) => {
 	const { t } = useTranslation();
-	const [showJson, setShowJson] = useState(false);
 	const meta = KIND_META[activity.kind];
 
 	const targetUsernames = useMemo(
@@ -175,11 +174,6 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 			</>
 		);
 	}
-
-	const maskedRaw = useMemo(
-		() => JSON.stringify(maskJsonValue(activity.raw as unknown), null, 2),
-		[activity.raw]
-	);
 
 	return (
 		<div
@@ -425,21 +419,8 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 								</button>
 							</div>
 						)}
-					<button
-						className="act-json-toggle"
-						onClick={(e) => {
-							e.stopPropagation();
-							setShowJson((v) => !v);
-						}}
-						aria-expanded={showJson}
-						aria-label={showJson ? t("activity.json.hide") : t("activity.json.show")}
-					>
-						<Icon name={showJson ? "chevd" : "chevron"} size={10} />
-						{showJson ? t("activity.json.hide") : t("activity.json.show")}
-					</button>
-					{showJson && (
-						<pre className="act-json">{maskedRaw}</pre>
-					)}
+					{/* Sprint 38: Ham JSON dump tamamen kaldırıldı — human-readable
+					    özet artık expand'ın üstünde, JSON'a UI ihtiyacı yok. */}
 				</div>
 			)}
 		</div>
@@ -791,26 +772,10 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 				</div>
 			</div>
 
-			{/* Sub-tab strip: Events | KICKs Leaderboard */}
-			<div className="act-subtab-strip" role="tablist" aria-label="Activity sub-tabs">
-				<button
-					role="tab"
-					className={`act-subtab${subTab === "events" ? " is-active" : ""}`}
-					onClick={() => setSubTab("events")}
-					aria-selected={subTab === "events"}
-				>
-					{t("activity.tab.events")}
-				</button>
-				<button
-					role="tab"
-					className={`act-subtab${subTab === "leaderboard" ? " is-active" : ""}`}
-					onClick={() => setSubTab("leaderboard")}
-					aria-selected={subTab === "leaderboard"}
-				>
-					<Icon name="bolt" size={11} />
-					{t("activity.tab.leaderboard-full")}
-				</button>
-			</div>
+			{/* Sprint 38b: "KICKs Sıralama" alt tabı kaldırıldı — Kick UI'da
+			    karşılığı olmayan ve kullanıcının ihtiyaç duymadığı bir özellik
+			    olduğu için Olaylar sub-tab navigasyonu da gereksiz. Sadece
+			    Olaylar listesi kalıyor. */}
 
 			{subTab === "events" && (
 				<>
@@ -874,11 +839,6 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 				</>
 			)}
 
-			{subTab === "leaderboard" && (
-				<div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexDirection: "column" }}>
-					<KicksLeaderboard hasScope={hasKicksScope} />
-				</div>
-			)}
 		</div>
 	);
 };

@@ -3737,6 +3737,28 @@ html.modern-shell-root[data-theme="light"] {
 	background: var(--ms-bg-2, #181a20);
 	border: 1px solid var(--ms-bd-2, #2d323b);
 	border-radius: var(--ms-r-2, 6px);
+	position: relative;
+}
+/* Sprint 37: mod-target sağ üst köşede X clear butonu. */
+[data-app-shell="modern"] .mod-target-clear {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	width: 22px;
+	height: 22px;
+	display: grid;
+	place-items: center;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	color: var(--ms-fg-3, #828690);
+	cursor: pointer;
+	transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+[data-app-shell="modern"] .mod-target-clear:hover {
+	background: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 18%, transparent);
+	color: var(--ms-ac-live, #ef4f5f);
+	border-color: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 35%, transparent);
 }
 [data-app-shell="modern"] .mod-target-ava {
 	width: 36px;
