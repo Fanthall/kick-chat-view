@@ -1219,25 +1219,39 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 					// Sprint 35: subscription + gift-sub banner rows — Pusher
 					// SubscriptionEvent / GiftedSubscriptionsEvent reducer
 					// tarafından bu synthetic mesajlara dönüştürülüyor.
-					if (msg.type === "sub-banner" || msg.type === "gift-sub-banner") {
+					if (
+						msg.type === "sub-banner" ||
+						msg.type === "gift-sub-banner" ||
+						msg.type === "host-banner"
+					) {
 						const isGift = msg.type === "gift-sub-banner";
+						const isHost = msg.type === "host-banner";
+						const variantClass = isHost
+							? " is-host"
+							: isGift
+							? " is-gift"
+							: "";
+						const icon = isHost ? "🚀" : isGift ? "🎁" : "👑";
 						return (
 							<div
 								key={`chat-row-${msg.id}`}
-								className={`chat-sub-banner${
-									isGift ? " is-gift" : ""
-								}`}
+								className={`chat-sub-banner${variantClass}`}
 								role="status"
 								aria-live="polite"
 							>
 								<span className="csb-icon" aria-hidden>
-									{isGift ? "🎁" : "👑"}
+									{icon}
 								</span>
 								<div className="csb-body">
 									<div className="csb-line">
 										<span className="csb-actor">{msg.sender.username}</span>
 										<span className="csb-text">
-											{isGift
+											{isHost
+												? msg.content.replace(
+														`${msg.sender.username}, `,
+														""
+												  )
+												: isGift
 												? msg.content.replace(
 														`${msg.sender.username}, `,
 														""

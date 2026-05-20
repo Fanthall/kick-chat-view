@@ -267,6 +267,9 @@ const LayoutModern: FunctionComponent = () => {
 	const unreadCounts = useMemo(() => {
 		const counts: Record<string, number> = {};
 		let mutated = false;
+		const ownName = (
+			localStorage.getItem("username") || ""
+		).toLowerCase();
 		channels.forEach((ch) => {
 			const seen = seenIdsByChannel.get(ch.slug) ?? new Set<string>();
 			const slugMessages = messages.messageList.filter(
@@ -277,7 +280,20 @@ const LayoutModern: FunctionComponent = () => {
 				const id = msg.id || `${msg.created_at ?? ""}-${msg.sender?.username ?? ""}-${msg.content?.slice(0, 32) ?? ""}`;
 				if (!seen.has(id)) {
 					seen.add(id);
-					if (ch.slug !== activeSlug) newCount++;
+					if (ch.slug !== activeSlug) {
+						// Sprint 39: Synthetic banner satırlarını (sub-banner,
+						// gift-sub-banner, host-banner) ve kendi mesajlarımı
+						// (mod-check probe vb.) unread'e sayma. Aksi halde
+						// kanal değiştirince yanlış sayı geliyor.
+						const t = (msg.type || "").toLowerCase();
+						const senderName = (msg.sender?.username || "").toLowerCase();
+						const isBanner =
+							t === "sub-banner" ||
+							t === "gift-sub-banner" ||
+							t === "host-banner";
+						const isOwn = ownName && senderName === ownName;
+						if (!isBanner && !isOwn) newCount++;
+					}
 				}
 			}
 			seenIdsByChannel.set(ch.slug, seen);

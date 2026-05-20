@@ -102,7 +102,8 @@ export type ActivityKind =
 	| "subscription_renewal"
 	| "subscription_gift"
 	| "reward_redemption"
-	| "kicks_gifted";
+	| "kicks_gifted"
+	| "host_raid";
 
 export type ActivityStatus = "pending" | "accepted" | "rejected";
 
