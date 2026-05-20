@@ -23,6 +23,7 @@ import {
 	LuEyeOff,
 	LuExternalLink,
 	LuGift,
+	LuPenLine,
 	LuInfo,
 	LuMic,
 	LuPin,
@@ -57,6 +58,7 @@ export type IconName =
 	| "code"
 	| "coin"
 	| "crown"
+	| "edit"
 	| "eye"
 	| "eyeOff"
 	| "gift"
@@ -93,6 +95,7 @@ const ICON_MAP: Record<IconName, React.ComponentType<{ size?: number }>> = {
 	code: LuTerminal,
 	coin: LuCoins,
 	crown: LuCrown,
+	edit: LuPenLine,
 	eye: LuEye,
 	eyeOff: LuEyeOff,
 	gift: LuGift,

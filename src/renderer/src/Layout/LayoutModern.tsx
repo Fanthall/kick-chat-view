@@ -39,6 +39,8 @@ import ActivityViewModern from "../ActivityView/ActivityViewModern";
 import ModActionsModern from "../ModActions/ModActionsModern";
 import SettingsModern from "../Settings/SettingsModern";
 import AddChannelPopover from "./AddChannelPopover";
+import StreamEditModal from "./StreamEditModal";
+import { hasKickScope, parseKickScopes } from "../../util/kickScopes";
 
 const SHELL_ATTR = "modern";
 
@@ -109,6 +111,8 @@ const LayoutModern: FunctionComponent = () => {
 	);
 	// Fix 8: settings is now a modal overlay
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	// Sprint 16: stream edit modal (kalem ikonu -> title/category guncelle)
+	const [streamEditOpen, setStreamEditOpen] = useState(false);
 	// Fix 7: panel visibility (wide viewports)
 	const [showActivity, setShowActivity] = useState(true);
 	const [showModeration, setShowModeration] = useState(true);
@@ -216,6 +220,21 @@ const LayoutModern: FunctionComponent = () => {
 			: false;
 		return { isOwner, isMod };
 	}, [streamMeta, messages.messageList]);
+
+	// Sprint 16: stream edit yetkisi
+	// Owner + channel:write scope -> edit kalem butonu gorulur
+	const grantedScopes = useMemo(() => {
+		const s = kickAuthStatus.current;
+		if (!s) return [] as string[];
+		return parseKickScopes(
+			s.grantedScopes,
+			s.tokenScope,
+			s.introspection?.data?.scope,
+			s.introspection?.data?.scopes
+		);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [kickAuthStatus.current]);
+	const canEditStream = roleInfo.isOwner && hasKickScope(grantedScopes, "channel:write");
 
 	// Sprint 9 Fix: persistent unread counts — per-channel seen-id tracking.
 	// Yeni gelen mesaj id'leri set'e ekleniyor; aktif olmayan kanallar icin
@@ -565,6 +584,18 @@ const LayoutModern: FunctionComponent = () => {
 					>
 						<Icon name="refresh" size={15} />
 					</button>
+					{canEditStream && (
+						<button
+							className={`icon-btn ${streamEditOpen ? "is-on" : ""}`}
+							title="Edit stream title & category"
+							aria-label="Edit stream"
+							type="button"
+							data-testid="tb-btn-edit-stream"
+							onClick={() => setStreamEditOpen(true)}
+						>
+							<Icon name="edit" size={15} />
+						</button>
+					)}
 					<button
 						className={`icon-btn ${settingsOpen ? "is-on" : ""}`}
 						title="Settings"
@@ -691,6 +722,16 @@ const LayoutModern: FunctionComponent = () => {
 						</div>
 					</div>
 				</div>
+			)}
+
+			{/* Sprint 16: stream edit modal — owner + channel:write scope only */}
+			{streamEditOpen && activeSlug && (
+				<StreamEditModal
+					isOpen={streamEditOpen}
+					onClose={() => setStreamEditOpen(false)}
+					channelSlug={activeSlug}
+					meta={streamMeta}
+				/>
 			)}
 		</div>
 	);
