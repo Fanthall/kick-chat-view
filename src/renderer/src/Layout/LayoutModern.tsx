@@ -41,6 +41,11 @@ import SettingsModern from "../Settings/SettingsModern";
 import AddChannelPopover from "./AddChannelPopover";
 import StreamEditModal from "./StreamEditModal";
 import { hasKickScope, parseKickScopes } from "../../util/kickScopes";
+import {
+	getBlockedEmotes,
+	getSuspendedUsers,
+	LOCAL_MODERATION_SETTINGS_CHANGED,
+} from "../../util/localModerationStorage";
 
 const SHELL_ATTR = "modern";
 
@@ -154,6 +159,24 @@ const LayoutModern: FunctionComponent = () => {
 	const [selectedModUser, setSelectedModUser] = useState<
 		import("../../util/chatInterface").User | undefined
 	>(undefined);
+
+	// Sprint 17: track localStorage-backed suspended users + blocked emotes so
+	// pop-out windows can be synced (each Electron BrowserWindow has its own
+	// localStorage; we forward the lists via panel-window IPC).
+	const [suspendedUsers, setSuspendedUsers] = useState<string[]>(() => getSuspendedUsers());
+	const [blockedEmotes, setBlockedEmotes] = useState<string[]>(() => getBlockedEmotes());
+	useEffect(() => {
+		const sync = () => {
+			setSuspendedUsers(getSuspendedUsers());
+			setBlockedEmotes(getBlockedEmotes());
+		};
+		window.addEventListener(LOCAL_MODERATION_SETTINGS_CHANGED, sync);
+		window.addEventListener("storage", sync);
+		return () => {
+			window.removeEventListener(LOCAL_MODERATION_SETTINGS_CHANGED, sync);
+			window.removeEventListener("storage", sync);
+		};
+	}, []);
 
 	// Fix 1: uptime — recompute every 60s
 	const [uptimeTick, setUptimeTick] = useState(0);
@@ -309,6 +332,9 @@ const LayoutModern: FunctionComponent = () => {
 						modAction: messages.modAction,
 						messageList: messages.messageList,
 						roleInfo,
+						selectedModUser,
+						suspendedUsers,
+						blockedEmotes,
 						snapshotAt: now,
 					});
 				}
@@ -316,7 +342,44 @@ const LayoutModern: FunctionComponent = () => {
 		);
 		return () => unsub?.();
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [messages.activityList, messages.modAction, messages.messageList, roleInfo]);
+	}, [messages.activityList, messages.modAction, messages.messageList, roleInfo, selectedModUser, suspendedUsers, blockedEmotes]);
+
+	// Sprint 17: live-sync — pop-out window'lara state degisikliklerini debounced
+	// push'la, sadece "Refresh" butonuna bagli olmasin. sendPayload main relay'i
+	// pop-out acik degilse no-op yapar; surekli push wasteful degil.
+	useEffect(() => {
+		if (!window.electron?.panelWindow) return;
+		const id = setTimeout(() => {
+			const slug = getActiveChannelSlug();
+			const now = Date.now();
+			window.electron.panelWindow.sendPayload({
+				panel: "moderation",
+				channelSlug: slug || undefined,
+				modAction: messages.modAction,
+				messageList: messages.messageList,
+				roleInfo,
+				selectedModUser,
+				suspendedUsers,
+				blockedEmotes,
+				snapshotAt: now,
+			});
+			window.electron.panelWindow.sendPayload({
+				panel: "activity",
+				channelSlug: slug || undefined,
+				activityList: messages.activityList,
+				snapshotAt: now,
+			});
+		}, 150);
+		return () => clearTimeout(id);
+	}, [
+		messages.activityList,
+		messages.modAction,
+		messages.messageList,
+		roleInfo,
+		selectedModUser,
+		suspendedUsers,
+		blockedEmotes,
+	]);
 
 	// Fix 8: Escape closes settings modal
 	useEffect(() => {

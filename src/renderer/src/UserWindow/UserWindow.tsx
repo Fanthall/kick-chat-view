@@ -135,12 +135,16 @@ const UserWindow: FunctionComponent = () => {
 	// ── Payload subscription ──────────────────────────────────────────────────
 
 	useEffect(() => {
-		return window.electron.userWindow.onPayload((nextPayload) => {
+		const unsubscribe = window.electron.userWindow.onPayload((nextPayload) => {
 			setPayload(nextPayload);
 			document.title = `${nextPayload.user.username} - User Details`;
 			const loaded = loadNotes(nextPayload.user.username);
 			setNotes(loaded);
 		});
+		// Sprint 16 fix: tell main we're ready; main re-sends the stored payload.
+		// Solves did-finish-load -> send race that lost the initial payload.
+		window.electron.userWindow.requestPayload?.();
+		return unsubscribe;
 	}, []);
 
 	// ── Channel + scope resolution ────────────────────────────────────────────

@@ -155,6 +155,15 @@ const electronHandler = {
 				ipcRenderer.removeListener("user-window:payload", subscription);
 			};
 		},
+		/**
+		 * Sprint 16 fix: explicit "ready" signal from the popup once the React
+		 * subscriber is attached. Solves the race where did-finish-load fired
+		 * before useEffect could register the onPayload listener (payload was
+		 * lost). Main responds by re-sending the stored payload.
+		 */
+		requestPayload(): void {
+			ipcRenderer.send("user-window:ready");
+		},
 	},
 	kickConnectionWindow: {
 		open(): Promise<void> {

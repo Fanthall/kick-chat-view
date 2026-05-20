@@ -180,6 +180,26 @@ export default function App() {
 			});
 	}, [isUserWindow, isKickConnection]);
 
+	// Sprint 16: pop-out + modern shell pencereleri tam-bleed render edilir
+	// (98% wrapper + 17px paddingRight + overflowY:scroll classic shell icindi).
+	const isPopOutWindow =
+		isUserWindow || isActivityWindow || isModerationWindow || isKickConnection;
+	const fullBleed = isPopOutWindow || useModernShell;
+
+	const innerView = isActivityWindow ? (
+		<ActivityWindowShell />
+	) : isModerationWindow ? (
+		<ModerationWindowShell />
+	) : isUserWindow ? (
+		<UserWindow />
+	) : isKickConnection ? (
+		<KickConnection />
+	) : useModernShell ? (
+		<LayoutModern />
+	) : (
+		<Layout />
+	);
+
 	return (
 		<NextUIProvider
 			className="w-full h-full"
@@ -188,33 +208,33 @@ export default function App() {
 				backgroundColor: "transparent",
 			}}
 		>
-			<main
-				className="dark text-foreground bg-background w-full h-full"
-				style={{
-					backgroundColor: "transparent",
-					overflowY: "scroll",
-					paddingRight: 17 /* Increase/decrease this value for cross-browser compatibility */,
-					boxSizing: "content-box" /* So the width will be 100% + 17px */,
-				}}
-			>
-				<div className="flex justify-start items-center flex-col w-full h-full">
-					<div className="w-[98%] h-[98%]">
-						{isActivityWindow ? (
-							<ActivityWindowShell />
-						) : isModerationWindow ? (
-							<ModerationWindowShell />
-						) : isUserWindow ? (
-							<UserWindow />
-						) : isKickConnection ? (
-							<KickConnection />
-						) : useModernShell ? (
-							<LayoutModern />
-						) : (
-							<Layout />
-						)}
+			{fullBleed ? (
+				<main
+					className="dark text-foreground bg-background w-full h-full"
+					style={{
+						backgroundColor: "transparent",
+						overflow: "hidden",
+						margin: 0,
+						padding: 0,
+					}}
+				>
+					{innerView}
+				</main>
+			) : (
+				<main
+					className="dark text-foreground bg-background w-full h-full"
+					style={{
+						backgroundColor: "transparent",
+						overflowY: "scroll",
+						paddingRight: 17 /* classic shell scroll padding */,
+						boxSizing: "content-box",
+					}}
+				>
+					<div className="flex justify-start items-center flex-col w-full h-full">
+						<div className="w-[98%] h-[98%]">{innerView}</div>
 					</div>
-				</div>
-			</main>
+				</main>
+			)}
 			<ToastContainer
 				autoClose={4500}
 				closeOnClick

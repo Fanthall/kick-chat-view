@@ -7,7 +7,7 @@
  * optionally when the user clicks "Refresh". Live-sync is deferred.
  */
 
-import type { ActivityItem, ModMessage, UserMessage } from "../renderer/util/chatInterface";
+import type { ActivityItem, ModMessage, User, UserMessage } from "../renderer/util/chatInterface";
 
 /** Which panel is rendered in the pop-out. */
 export type PanelKind = "activity" | "moderation";
@@ -43,6 +43,21 @@ export interface PanelWindowPayload {
 
 	/** Role info for moderation panel. */
 	roleInfo?: PanelRoleInfo;
+
+	/** Sprint 17: explicitly-selected moderation target (chat row click). */
+	selectedModUser?: User;
+
+	/**
+	 * Sprint 17: suspended user list forwarded from main renderer's
+	 * localStorage. Pop-out has its own localStorage so we sync explicitly.
+	 */
+	suspendedUsers?: string[];
+
+	/**
+	 * Sprint 17: blocked emote list forwarded from main renderer's
+	 * localStorage. Same reason as suspendedUsers.
+	 */
+	blockedEmotes?: string[];
 
 	/** ISO timestamp of when the snapshot was taken. */
 	snapshotAt: number;

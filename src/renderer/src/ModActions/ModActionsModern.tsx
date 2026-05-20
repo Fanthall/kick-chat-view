@@ -17,13 +17,14 @@ import React, {
 	FunctionComponent,
 	useCallback,
 	useEffect,
+	useMemo,
 	useState,
 } from "react";
 import { toast } from "react-toastify";
 import {
 	useFanthalSelector,
 } from "../../store/hooks/hooks";
-import { User } from "../../util/chatInterface";
+import { ModMessage, User } from "../../util/chatInterface";
 import { getActiveChannelSlug } from "../../util/channelSettings";
 import { getDefaultTimeoutSeconds } from "../../util/chatCommands";
 import { buildBadgesHtml } from "../../util/chatHtml";
@@ -216,13 +217,84 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	// it was auto-selecting any user after a mod event, regardless of intent.
 	const selectedUser: User | undefined = explicitSelectedUser;
 
-	// Suspended users
-	const [suspendedList, setSuspendedList] = useState<SuspendedEntry[]>(() =>
-		getSuspendedUsers().map(parseSuspended)
-	);
+	// Sprint 18: Suspended users — derived from chat mod actions (ban / timeout)
+	// rather than the manually-maintained Settings list. Shows users currently
+	// restricted in the active channel, with reason + remaining duration.
 
+	// Re-render on ticking clock so timeout countdowns stay fresh (every 10s).
+	const [, setTick] = useState(0);
+	useEffect(() => {
+		const id = setInterval(() => setTick((v) => v + 1), 10_000);
+		return () => clearInterval(id);
+	}, []);
+
+	const suspendedList: SuspendedEntry[] = useMemo(() => {
+		const channelFilter = (item: { channelSlug?: string }) =>
+			!activeChannelSlug || item.channelSlug === activeChannelSlug;
+		const filtered = messages.modAction.filter(channelFilter);
+		// Group by lowercase username; keep latest action per user.
+		const latestByUser = new Map<string, ModMessage>();
+		for (const action of filtered) {
+			const uname = action.user?.username?.toLowerCase();
+			if (!uname) continue;
+			const prev = latestByUser.get(uname);
+			if (!prev || Number(action.created_at) > Number(prev.created_at)) {
+				latestByUser.set(uname, action);
+			}
+		}
+		const now = Date.now();
+		const formatUntil = (expiresAt?: string): string => {
+			if (!expiresAt) return "Permanent";
+			const ts = new Date(expiresAt).getTime();
+			if (!Number.isFinite(ts)) return "Permanent";
+			const diffMs = ts - now;
+			if (diffMs <= 0) return "expired";
+			const sec = Math.floor(diffMs / 1000);
+			if (sec < 60) return `${sec}s`;
+			const min = Math.floor(sec / 60);
+			const remSec = sec % 60;
+			if (min < 60) return remSec > 0 ? `${min}m ${remSec}s` : `${min}m`;
+			const h = Math.floor(min / 60);
+			const remMin = min % 60;
+			return remMin > 0 ? `${h}h ${remMin}m` : `${h}h`;
+		};
+		const entries: SuspendedEntry[] = [];
+		for (const action of latestByUser.values()) {
+			if (action.type === "ban") {
+				entries.push({
+					raw: action.user!.username,
+					username: action.user!.username,
+					reason: action.reason || "Banned",
+					until: "Permanent",
+				});
+			} else if (action.type === "to") {
+				const until = formatUntil(action.expires_at);
+				if (until === "expired") continue;
+				entries.push({
+					raw: action.user!.username,
+					username: action.user!.username,
+					reason: action.reason || "Timed out",
+					until,
+				});
+			}
+			// "unban" / "delete" -> not suspended; skipped naturally because
+			// latestByUser keeps only the most recent action per user.
+		}
+		// Sort: bans first (permanent), then by remaining time desc.
+		return entries.sort((a, b) => {
+			if (a.until === "Permanent" && b.until !== "Permanent") return -1;
+			if (a.until !== "Permanent" && b.until === "Permanent") return 1;
+			return 0;
+		});
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [messages.modAction, activeChannelSlug]);
+
+	// Legacy refresh hook kept for the LOCAL_MODERATION_SETTINGS_CHANGED event
+	// (pop-out window sync writes to localStorage and dispatches it) — we don't
+	// actually read from localStorage anymore, but a benign no-op listener
+	// avoids the dangling event subscriber.
 	const refreshSuspended = useCallback(() => {
-		setSuspendedList(getSuspendedUsers().map(parseSuspended));
+		setTick((v) => v + 1);
 	}, []);
 
 	useEffect(() => {
@@ -310,8 +382,26 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	}
 
 	function handleUnban(entry: SuspendedEntry) {
+		// Sprint 18: list now derived from modAction. Unban → actual Kick API
+		// unban call. Find the modAction entry to recover user_id.
+		const modEntry = messages.modAction.find(
+			(m) =>
+				m.user?.username?.toLowerCase() === entry.username.toLowerCase() &&
+				(!activeChannelSlug || m.channelSlug === activeChannelSlug)
+		);
+		const userId = modEntry?.user?.id;
+		if (!broadcasterUserId || !userId) {
+			toast.warn("Channel veya kullanici id'si bulunamadi.");
+			return;
+		}
+		window.electron.kick
+			.unbanUser({ broadcaster_user_id: broadcasterUserId, user_id: userId })
+			.then(() => toast.success(`@${entry.username} unbanlandi.`))
+			.catch((err: any) =>
+				toast.error(err?.message || "Unban basarisiz.")
+			);
+		// Backwards compat: classic susUsers listesinden de cikar (no-op if not present)
 		removeSuspendedUser(entry.raw);
-		// refreshSuspended is called via LOCAL_MODERATION_SETTINGS_CHANGED event
 	}
 
 	// ─── Badge HTML (CONSTRAINT-4: sanitized via buildBadgesHtml) ────────────────

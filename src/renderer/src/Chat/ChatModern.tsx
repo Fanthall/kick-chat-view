@@ -39,7 +39,11 @@ import {
 	useFanthalDispatch,
 	useFanthalSelector,
 } from "../../store/hooks/hooks";
-import { chatCommandDefinitions } from "../../util/chatCommands";
+import {
+	chatCommandDefinitions,
+	getDefaultTimeoutSeconds,
+	parseChatCommand,
+} from "../../util/chatCommands";
 import { User, UserMessage } from "../../util/chatInterface";
 import { getActiveChannelSlug } from "../../util/channelSettings";
 import { refreshChannelEmoteBundle } from "../../util/chatConnection";
@@ -649,6 +653,109 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		if (!ch) {
 			toast("Channel name is required.", { type: "warning" });
 			return;
+		}
+
+		// Sprint 18: slash command interception. If the composer starts with /,
+		// parse + execute locally instead of sending as a chat message.
+		if (content.startsWith("/")) {
+			const parsed = parseChatCommand(content);
+			if (parsed?.error) {
+				toast(parsed.error, { type: "warning" });
+				return;
+			}
+			if (parsed) {
+				const findUserMessage = (uname: string) =>
+					messages.messageList.find(
+						(m) =>
+							m.sender?.username?.toLowerCase() === uname.toLowerCase()
+					);
+				const targetMsg = parsed.targetUsername
+					? findUserMessage(parsed.targetUsername)
+					: undefined;
+				const targetUserId = targetMsg?.sender?.id;
+
+				if (parsed.command === "user") {
+					if (!targetMsg) {
+						toast(
+							`User "${parsed.targetUsername}" not found in current chat.`,
+							{ type: "warning" }
+						);
+						return;
+					}
+					openUserWindow(targetMsg);
+					setMessageText("");
+					return;
+				}
+
+				if (!broadcasterUserId) {
+					toast("Channel is still loading; try again in a moment.", {
+						type: "warning",
+					});
+					return;
+				}
+				if (!targetUserId) {
+					toast(
+						`User "${parsed.targetUsername}" not found in current chat.`,
+						{ type: "warning" }
+					);
+					return;
+				}
+
+				if (parsed.command === "ban") {
+					window.electron.kick
+						.banUser({
+							broadcaster_user_id: broadcasterUserId,
+							user_id: targetUserId,
+							reason: parsed.reason,
+						})
+						.then(() =>
+							toast(`Banned @${parsed.targetUsername}.`, { type: "success" })
+						)
+						.catch((err: any) =>
+							toast(err?.message || "Ban failed.", { type: "error" })
+						);
+					setMessageText("");
+					return;
+				}
+				if (parsed.command === "unban") {
+					window.electron.kick
+						.unbanUser({
+							broadcaster_user_id: broadcasterUserId,
+							user_id: targetUserId,
+						})
+						.then(() =>
+							toast(`Unbanned @${parsed.targetUsername}.`, {
+								type: "success",
+							})
+						)
+						.catch((err: any) =>
+							toast(err?.message || "Unban failed.", { type: "error" })
+						);
+					setMessageText("");
+					return;
+				}
+				if (parsed.command === "to" || parsed.command === "timeout") {
+					const duration = parsed.timeoutSeconds || getDefaultTimeoutSeconds();
+					window.electron.kick
+						.timeoutUser({
+							broadcaster_user_id: broadcasterUserId,
+							user_id: targetUserId,
+							duration,
+							reason: parsed.reason,
+						})
+						.then(() =>
+							toast(
+								`Timed out @${parsed.targetUsername} for ${duration}s.`,
+								{ type: "success" }
+							)
+						)
+						.catch((err: any) =>
+							toast(err?.message || "Timeout failed.", { type: "error" })
+						);
+					setMessageText("");
+					return;
+				}
+			}
 		}
 		const optimistic: UserMessage = {
 			id: `local-${Date.now()}`,

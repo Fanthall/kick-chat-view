@@ -46,6 +46,9 @@ const ModerationWindowShell: FunctionComponent = () => {
 	const [loading, setLoading] = useState(true);
 	const [roleInfo, setRoleInfo] = useState({ isOwner: false, isMod: false });
 	const [channelSlug, setChannelSlug] = useState<string | undefined>(undefined);
+	const [selectedModUser, setSelectedModUser] = useState<
+		import("../../util/chatInterface").User | undefined
+	>(undefined);
 
 	// Subscribe to incoming snapshot payloads from main renderer.
 	useEffect(() => {
@@ -90,6 +93,35 @@ const ModerationWindowShell: FunctionComponent = () => {
 				// Role info forwarded from main renderer.
 				if (payload.roleInfo) {
 					setRoleInfo(payload.roleInfo);
+				}
+
+				// Sprint 17: explicit moderation target forwarded from main.
+				setSelectedModUser(payload.selectedModUser);
+
+				// Sprint 17: pop-out has its own localStorage. Hydrate the
+				// suspended-users + blocked-emotes lists from the main snapshot
+				// so the existing getSuspendedUsers()/getBlockedEmotes() reads
+				// inside ModActionsModern keep working unchanged. Fires the
+				// LOCAL_MODERATION_SETTINGS_CHANGED event so any open ModActions
+				// rerenders against the fresh values.
+				try {
+					if (payload.suspendedUsers) {
+						localStorage.setItem(
+							"susUsers",
+							JSON.stringify(payload.suspendedUsers)
+						);
+					}
+					if (payload.blockedEmotes) {
+						localStorage.setItem(
+							"blockEmotes",
+							JSON.stringify(payload.blockedEmotes)
+						);
+					}
+					window.dispatchEvent(
+						new Event("local-moderation-settings-changed")
+					);
+				} catch {
+					/* ignore quota / serialization errors in pop-out */
 				}
 
 				setSnapshotAt(payload.snapshotAt);
@@ -143,6 +175,7 @@ const ModerationWindowShell: FunctionComponent = () => {
 						<ModActionsModern
 							isOwner={roleInfo.isOwner}
 							isMod={roleInfo.isMod}
+							selectedUser={selectedModUser}
 							isPopOut
 						/>
 					</div>

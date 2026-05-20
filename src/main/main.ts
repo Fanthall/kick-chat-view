@@ -260,6 +260,25 @@ ipcMain.handle("user-window:open", (_event, payload: UserWindowPayload) => {
 	createUserWindow(payload);
 });
 
+/**
+ * Sprint 16 fix: popup-side "ready" signal. The React UserWindow component
+ * sends this once it has registered its onPayload listener; we reply by
+ * re-sending the stored payload. This replaces the unreliable did-finish-load
+ * → send race where the IPC message could arrive before React mounted.
+ */
+ipcMain.on("user-window:ready", (event) => {
+	const sender = event.sender;
+	for (const [key, win] of userWindows.entries()) {
+		if (!win.isDestroyed() && win.webContents.id === sender.id) {
+			const payload = userWindowPayloads.get(key);
+			if (payload) {
+				sender.send("user-window:payload", payload);
+			}
+			return;
+		}
+	}
+});
+
 ipcMain.handle("user-window:update", (_event, payload: UserWindowPayload) => {
 	const existingWindow = userWindows.get(payload.key);
 	if (!existingWindow || existingWindow.isDestroyed()) return;

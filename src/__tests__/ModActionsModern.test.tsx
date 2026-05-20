@@ -75,9 +75,9 @@ const mockBanUser = jest.fn();
 const mockUnbanUser = jest.fn();
 
 beforeEach(() => {
-	mockTimeoutUser.mockReset();
-	mockBanUser.mockReset();
-	mockUnbanUser.mockReset();
+	mockTimeoutUser.mockReset().mockResolvedValue(undefined);
+	mockBanUser.mockReset().mockResolvedValue(undefined);
+	mockUnbanUser.mockReset().mockResolvedValue(undefined);
 
 	Object.defineProperty(window, "electron", {
 		configurable: true,
@@ -138,7 +138,8 @@ describe("ModActionsModern — no user selected", () => {
 
 describe("ModActionsModern — selected user card", () => {
 	it("renders user card with username and meta", () => {
-		const store = buildStore([baseModAction]);
+		// Sprint 18: empty modAction so suspended list doesn't duplicate "testuser"
+		const store = buildStore([]);
 		render(
 			<Provider store={store}>
 				<ModActionsModern isMod={true} selectedUser={baseUser} />
@@ -271,32 +272,39 @@ describe("ModActionsModern — keyboard shortcuts", () => {
 // ─── Test 7: Suspended user Unban button ─────────────────────────────────────
 
 describe("ModActionsModern — suspended users", () => {
-	it("Unban button calls removeSuspendedUser and removes entry from list", () => {
-		// Pre-populate suspended users in localStorage
-		localStorage.setItem("susUsers", JSON.stringify(["banneduser"]));
-
-		const store = buildStore([]);
-		const { rerender } = render(
+	it("Unban button calls kick.unbanUser with broadcaster + user IDs", () => {
+		// Sprint 18: suspended list is now derived from modAction (ban entries).
+		// Construct a ban action for "banneduser" and provide active stream meta
+		// so broadcasterUserId resolves.
+		const bannedUser = { id: 77, username: "banneduser", slug: "banneduser" };
+		const banAction: ModMessage = {
+			id: "mod-ban-banneduser",
+			type: "ban",
+			channelSlug: "test-channel",
+			status: "success",
+			user: bannedUser,
+			banned_by: { id: 1, username: "admin", slug: "admin" },
+			created_at: Date.now(),
+		};
+		const store = buildStore([banAction]);
+		render(
 			<Provider store={store}>
 				<ModActionsModern isMod={true} />
 			</Provider>
 		);
 
-		// User row should be visible
 		expect(screen.getByTestId("suspended-row-banneduser")).toBeInTheDocument();
 		expect(screen.getByText("banneduser")).toBeInTheDocument();
 
-		// Click unban
-		const unbanBtn = screen.getByRole("button", { name: /unban banneduser/i });
-		fireEvent.click(unbanBtn);
+		fireEvent.click(screen.getByRole("button", { name: /unban banneduser/i }));
 
-		// List should now be empty
-		expect(screen.queryByTestId("suspended-row-banneduser")).not.toBeInTheDocument();
-		expect(screen.getByText("No suspended users")).toBeInTheDocument();
-
-		// localStorage should be updated
-		const stored = JSON.parse(localStorage.getItem("susUsers") || "[]");
-		expect(stored).not.toContain("banneduser");
+		expect(mockUnbanUser).toHaveBeenCalledTimes(1);
+		expect(mockUnbanUser).toHaveBeenCalledWith(
+			expect.objectContaining({
+				broadcaster_user_id: 9999,
+				user_id: 77,
+			})
+		);
 	});
 });
 
@@ -319,8 +327,18 @@ describe("ModActionsModern — viewer mode (not mod/owner)", () => {
 	});
 
 	it("hides Unban button when isMod=false", () => {
-		localStorage.setItem("susUsers", JSON.stringify(["banneduser"]));
-		const store = buildStore([]);
+		// Sprint 18: suspended list now derived from modAction. Construct ban
+		// entry so row renders; verify Unban btn is hidden in viewer mode.
+		const banAction: ModMessage = {
+			id: "mod-ban-vw",
+			type: "ban",
+			channelSlug: "test-channel",
+			status: "success",
+			user: { id: 77, username: "banneduser", slug: "banneduser" },
+			banned_by: { id: 1, username: "admin", slug: "admin" },
+			created_at: Date.now(),
+		};
+		const store = buildStore([banAction]);
 		render(
 			<Provider store={store}>
 				<ModActionsModern isMod={false} />
