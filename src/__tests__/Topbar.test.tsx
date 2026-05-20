@@ -180,16 +180,17 @@ describe("Topbar — stats row", () => {
 });
 
 // ─── Test 6: Right action buttons aria-labels ─────────────────────────────────
+// Sprint 31: emote picker button removed (non-functional). Composer içindeki
+// smile butonu zaten emote picker'ı açıyor. 4 zorunlu buton kaldı.
 describe("Topbar — action buttons a11y", () => {
-	it("all 5 right action buttons have aria-label", () => {
+	it("right action buttons have aria-label", () => {
 		renderLayout();
 		const actionsDiv = screen.getByTestId("tb-actions");
 		const buttons = actionsDiv.querySelectorAll("button[aria-label]");
-		expect(buttons.length).toBeGreaterThanOrEqual(5);
+		expect(buttons.length).toBeGreaterThanOrEqual(4);
 		const labels = Array.from(buttons).map((b) => b.getAttribute("aria-label"));
 		expect(labels).toContain("Toggle activity panel");
 		expect(labels).toContain("Toggle moderation panel");
-		expect(labels).toContain("Open emote picker");
 		expect(labels).toContain("Refresh channel data");
 		expect(labels).toContain("Open settings");
 	});

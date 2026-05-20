@@ -474,6 +474,33 @@ const LayoutModern: FunctionComponent = () => {
 								</span>
 							)}
 						</div>
+						{/* Sprint 31: stream title + kategori — mod/normal user herkes
+						    aktif yayinin basligini ve kategorisini gorsun. Title
+						    yoksa veya kanal yoksa satir render edilmez. */}
+						{activeSlug && (streamMeta?.streamTitle || streamMeta?.category?.name) && (
+							<div className="tb-meta-stream" data-testid="tb-stream-info">
+								{streamMeta?.streamTitle && (
+									<span
+										className="tb-stream-title"
+										title={streamMeta.streamTitle}
+										data-testid="tb-stream-title"
+									>
+										{streamMeta.streamTitle}
+									</span>
+								)}
+								{streamMeta?.streamTitle && streamMeta?.category?.name && (
+									<span className="tb-stream-sep" aria-hidden> · </span>
+								)}
+								{streamMeta?.category?.name && (
+									<span
+										className="tb-stream-category"
+										data-testid="tb-stream-category"
+									>
+										{streamMeta.category.name}
+									</span>
+								)}
+							</div>
+						)}
 						{/* Fix 4+5: secondary channel chips row */}
 						<div className="tb-tabs" role="tablist" aria-label="Channel tabs">
 							{secondaryChannels.map((ch) => {
@@ -626,21 +653,16 @@ const LayoutModern: FunctionComponent = () => {
 					>
 						<Icon name="shield" size={15} />
 					</button>
+					{/* Sprint 31: topbar emote button kaldırıldı — composer içindeki
+					    smile butonu zaten emote picker'ı açıyor; topbar varyantının
+					    onClick handler'ı yoktu ve görsel kirlilik yaratıyordu. */}
 					<button
 						className="icon-btn"
-						title={`${t("topbar.emote-picker")} (Ctrl+E)`}
-						aria-label="Open emote picker"
-						type="button"
-						data-testid="tb-btn-emotes"
-					>
-						<Icon name="smile" size={15} />
-					</button>
-					<button
-						className="icon-btn"
-						title={t("topbar.refresh")}
+						title={activeSlug ? t("topbar.refresh") : t("topbar.no-channel")}
 						aria-label="Refresh channel data"
 						type="button"
 						data-testid="tb-btn-refresh"
+						disabled={!activeSlug}
 						onClick={() => {
 							if (activeSlug) {
 								dispatch(chatListener(activeSlug));
