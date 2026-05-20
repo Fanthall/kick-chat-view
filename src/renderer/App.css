@@ -6221,3 +6221,13 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .uw-strip-input {
 	width: 64px !important;
 }
+
+/* Sprint 28: Moderation panel — Recent actions ve Suspended users
+   bolumleri kendi icinde scroll. Recent actions FIFO 50 item; Suspended
+   listesi sinirsiz (kullanicidan istek: hep kalir). Section body max-height
+   ile scroll devreye girer; section header sabit kalir. */
+[data-app-shell="modern"] #mod-sec-history,
+[data-app-shell="modern"] #mod-sec-suspended {
+	max-height: 240px;
+	overflow-y: auto;
+}

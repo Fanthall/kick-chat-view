@@ -624,12 +624,14 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 			);
 	}
 
-	// Sprint 21: Son 10 mod aksiyonu (unban dahil) — kullaniciya tam log gosterir.
+	// Sprint 28: Son 50 mod aksiyonu — FIFO; section kendi icinde scroll
+	// edilebilir oldugundan uzun log gosterimi a UX bozulmadan calisir.
+	// Sinir bilincli: cok eski aksiyonlar (>50) sessizce dusurulur.
 	const recentActions = useMemo(() => {
 		return filteredModActions
 			.slice()
 			.sort((a, b) => Number(b.created_at) - Number(a.created_at))
-			.slice(0, 10);
+			.slice(0, 50);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [filteredModActions.length]);
 
