@@ -251,6 +251,86 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 					onClick={(ev) => ev.stopPropagation()}
 					onKeyDown={(e) => e.stopPropagation()}
 				>
+					{/* Sprint 35: human-readable summary at the top so user sees
+					    the gist before any technical detail. */}
+					<div className="act-summary">
+						{activity.kind === "subscription_new" && (
+							<>
+								<b>{actorName}</b> <b>{months} aylık abonelik</b> aldı.
+								{activity.streak != null && activity.streak > 1 ? (
+									<> Streak: <b>{activity.streak}</b> ay.</>
+								) : null}
+							</>
+						)}
+						{activity.kind === "subscription_renewal" && (
+							<>
+								<b>{actorName}</b> aboneliğini yeniledi —{" "}
+								<b>{months} ay</b>.
+								{activity.streak != null && activity.streak > 1 ? (
+									<> Streak: <b>{activity.streak}</b> ay.</>
+								) : null}
+							</>
+						)}
+						{activity.kind === "subscription_gift" && (
+							<>
+								<b>{actorName}</b>{" "}
+								<b>{activity.amount ?? targetUsernames.length}</b> kişiye{" "}
+								hediye abonelik gönderdi
+								{targetUsernames.length === 1
+									? <> → <b>{targetUsernames[0]}</b>.</>
+									: "."}
+								{(activity.raw as any)?.tier
+									? <> Tier <b>{(activity.raw as any).tier}</b>.</>
+									: null}
+								{activity.anonymous ? <> (Anonim)</> : null}
+							</>
+						)}
+						{activity.kind === "kicks_gifted" && (
+							<>
+								<b>{actorName}</b>{" "}
+								<b className="mono num">{fmtNum(activity.amount)}</b>{" "}
+								KICKs gönderdi
+								{activity.giftName ? <> — <b>{activity.giftName}</b></> : null}
+								{activity.giftTier != null ? <> (tier {activity.giftTier})</> : null}
+								{activity.pinnedTimeSeconds != null
+									? <> · {activity.pinnedTimeSeconds}s pinli.</>
+									: "."}
+							</>
+						)}
+						{activity.kind === "reward_redemption" && (
+							<>
+								<b>{actorName}</b>{" "}
+								<b>{activity.title || "ödülü"}</b> talep etti
+								{activity.amount != null
+									? <> ({fmtNum(activity.amount)} puan).</>
+									: "."}
+								{activity.message ? (
+									<> Mesaj: <i>&ldquo;{activity.message}&rdquo;</i></>
+								) : null}
+							</>
+						)}
+					</div>
+					{/* Sprint 35: varsa raw.message / raw.text alanını ayrı kart */}
+					{(() => {
+						const rawAny = activity.raw as any;
+						const rawMsg: string | undefined =
+							typeof rawAny?.message === "string"
+								? rawAny.message
+								: typeof rawAny?.text === "string"
+								? rawAny.text
+								: undefined;
+						if (!rawMsg || rawMsg === activity.message) return null;
+						return (
+							<div className="act-message-card">
+								<div className="act-kv-k" style={{ marginBottom: 4 }}>
+									{t("activity.expand.user-input")}
+								</div>
+								<div className="act-message-body">
+									&ldquo;{rawMsg}&rdquo;
+								</div>
+							</div>
+						);
+					})()}
 					<div className="act-kv">
 						<div className="act-kv-k">{t("activity.expand.event-id")}</div>
 						<div className="act-kv-v">{activity.id ?? "-"}</div>

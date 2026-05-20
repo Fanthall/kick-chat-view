@@ -1198,6 +1198,45 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				aria-label="Chat messages"
 			>
 				{messageList.map((msg) => {
+					// Sprint 35: subscription + gift-sub banner rows — Pusher
+					// SubscriptionEvent / GiftedSubscriptionsEvent reducer
+					// tarafından bu synthetic mesajlara dönüştürülüyor.
+					if (msg.type === "sub-banner" || msg.type === "gift-sub-banner") {
+						const isGift = msg.type === "gift-sub-banner";
+						return (
+							<div
+								key={`chat-row-${msg.id}`}
+								className={`chat-sub-banner${
+									isGift ? " is-gift" : ""
+								}`}
+								role="status"
+								aria-live="polite"
+							>
+								<span className="csb-icon" aria-hidden>
+									{isGift ? "🎁" : "👑"}
+								</span>
+								<div className="csb-body">
+									<div className="csb-line">
+										<span className="csb-actor">{msg.sender.username}</span>
+										<span className="csb-text">
+											{isGift
+												? msg.content.replace(
+														`${msg.sender.username}, `,
+														""
+												  )
+												: msg.content.replace(
+														`${msg.sender.username} `,
+														""
+												  )}
+										</span>
+									</div>
+									<div className="csb-time mono">
+										{Moment(msg.created_at).format("HH:mm")}
+									</div>
+								</div>
+							</div>
+						);
+					}
 					const badgesHtml = buildBadgesHtml(
 						msg.sender?.identity?.badges,
 						channelBadges

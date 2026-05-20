@@ -2844,6 +2844,54 @@ html.modern-shell-root[data-theme="light"] {
 	position: relative;
 	min-height: var(--ms-row-h, 30px);
 }
+/* Sprint 35: subscription / gift-sub banner satırı — chat akışı içinde
+   normal mesajdan farklı, vurgulu card-style. */
+[data-app-shell="modern"] .chat-sub-banner {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 4px 14px;
+	padding: 8px 12px;
+	border-radius: 8px;
+	background: color-mix(in oklch, var(--ms-ac-sub, #7c3aed) 14%, transparent);
+	border: 1px solid color-mix(in oklch, var(--ms-ac-sub, #7c3aed) 35%, transparent);
+}
+[data-app-shell="modern"] .chat-sub-banner.is-gift {
+	background: color-mix(in oklch, #ec4899 14%, transparent);
+	border-color: color-mix(in oklch, #ec4899 35%, transparent);
+}
+[data-app-shell="modern"] .chat-sub-banner .csb-icon {
+	font-size: 18px;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .chat-sub-banner .csb-body {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+[data-app-shell="modern"] .chat-sub-banner .csb-line {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: baseline;
+	font-size: 13px;
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .chat-sub-banner .csb-actor {
+	font-weight: 700;
+	color: var(--ms-ac-sub, #c4a8ff);
+}
+[data-app-shell="modern"] .chat-sub-banner.is-gift .csb-actor {
+	color: #f9a8d4;
+}
+[data-app-shell="modern"] .chat-sub-banner .csb-text {
+	color: var(--ms-fg-2);
+}
+[data-app-shell="modern"] .chat-sub-banner .csb-time {
+	font-size: 11px;
+	color: var(--ms-fg-4);
+	margin-top: 2px;
+}
+
 /* Sprint 31: zebra striping — bir hafif koyu, bir hafif açık satır.
    Mention / suspicious / removed / bot satırları kendi rengini korur
    (zebra onların üstüne uygulanmaz). Hover her durumda kazanır. */
@@ -3421,6 +3469,32 @@ html.modern-shell-root[data-theme="light"] {
 	flex-direction: column;
 	gap: 8px;
 }
+/* Sprint 35: human-readable summary at top of expand panel */
+[data-app-shell="modern"] .act-summary {
+	font-size: 12.5px;
+	color: var(--ms-fg-1);
+	line-height: 1.5;
+	padding-bottom: 6px;
+	border-bottom: 1px dashed var(--ms-bd-2);
+}
+[data-app-shell="modern"] .act-summary b {
+	color: var(--ms-ac-mint, #2fd3a0);
+	font-weight: 600;
+}
+[data-app-shell="modern"] .act-message-card {
+	background: color-mix(in oklch, var(--ms-bg-2) 60%, transparent);
+	border: 1px solid var(--ms-bd-1);
+	border-radius: 6px;
+	padding: 8px 10px;
+}
+[data-app-shell="modern"] .act-message-body {
+	font-size: 12px;
+	color: var(--ms-fg-1);
+	font-style: italic;
+	line-height: 1.45;
+	white-space: pre-wrap;
+}
+
 [data-app-shell="modern"] .act-kv {
 	display: grid;
 	grid-template-columns: 90px 1fr;
