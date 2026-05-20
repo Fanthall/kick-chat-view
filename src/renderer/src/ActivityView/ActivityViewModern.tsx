@@ -545,9 +545,11 @@ type SubTab = "events" | "leaderboard";
 
 interface ActivityViewModernProps {
 	onClose?: () => void;
+	/** Sprint 14: true when rendered inside a pop-out BrowserWindow. */
+	isPopOut?: boolean;
 }
 
-const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClose }) => {
+const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClose, isPopOut = false }) => {
 	const dispatch = useFanthalDispatch();
 	const messages = useFanthalSelector((state) => state.messages);
 	const [filter, setFilter] = useState<FilterId>("all");
@@ -679,6 +681,19 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 					<button className="icon-btn" title="Refresh" aria-label="Refresh activity" type="button">
 						<Icon name="refresh" size={13} />
 					</button>
+					{!isPopOut && (
+						<button
+							className="icon-btn"
+							title="Open in new window"
+							aria-label="Open activity panel in new window"
+							type="button"
+							onClick={() => {
+								window.electron?.panelWindow?.open("activity");
+							}}
+						>
+							<Icon name="popOut" size={13} />
+						</button>
+					)}
 					{onClose && (
 						<button
 							className="icon-btn"

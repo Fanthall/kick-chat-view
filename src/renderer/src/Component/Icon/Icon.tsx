@@ -21,6 +21,7 @@ import {
 	LuCrown,
 	LuEye,
 	LuEyeOff,
+	LuExternalLink,
 	LuGift,
 	LuInfo,
 	LuMic,
@@ -63,6 +64,7 @@ export type IconName =
 	| "mic"
 	| "pin"
 	| "plus"
+	| "popOut"
 	| "refresh"
 	| "reply"
 	| "search"
@@ -98,6 +100,7 @@ const ICON_MAP: Record<IconName, React.ComponentType<{ size?: number }>> = {
 	mic: LuMic,
 	pin: LuPin,
 	plus: LuPlus,
+	popOut: LuExternalLink,
 	refresh: LuRefreshCw,
 	reply: LuReply,
 	search: LuSearch,

@@ -19,6 +19,7 @@ import type {
 	KickSendChatMessageRequest,
 } from "./kickService";
 import type { UserWindowPayload } from "../shared/userWindow";
+import type { PanelWindowPayload } from "../shared/panelWindow";
 
 export type Channels = "ipc-example";
 
@@ -158,6 +159,40 @@ const electronHandler = {
 	kickConnectionWindow: {
 		open(): Promise<void> {
 			return ipcRenderer.invoke("kick-connection-window:open");
+		},
+	},
+	panelWindow: {
+		open(panel: "activity" | "moderation"): Promise<void> {
+			return ipcRenderer.invoke("panel-window:open", panel);
+		},
+		sendPayload(payload: PanelWindowPayload): Promise<void> {
+			return ipcRenderer.invoke("panel-window:send-payload", payload);
+		},
+		/** Called by pop-out renderer to request a fresh snapshot from main renderer. */
+		requestPayload(panel: "activity" | "moderation"): void {
+			ipcRenderer.send("panel-window:request-payload", panel);
+		},
+		/** Pop-out renderer subscribes to incoming snapshot payloads. */
+		onPayload(func: (payload: PanelWindowPayload) => void) {
+			const subscription = (
+				_event: IpcRendererEvent,
+				payload: PanelWindowPayload
+			) => func(payload);
+			ipcRenderer.on("panel-window:payload", subscription);
+			return () => {
+				ipcRenderer.removeListener("panel-window:payload", subscription);
+			};
+		},
+		/** Main renderer subscribes to refresh requests from pop-out. */
+		onRefreshRequest(func: (panel: "activity" | "moderation") => void) {
+			const subscription = (
+				_event: IpcRendererEvent,
+				panel: "activity" | "moderation"
+			) => func(panel);
+			ipcRenderer.on("panel-window:refresh-request", subscription);
+			return () => {
+				ipcRenderer.removeListener("panel-window:refresh-request", subscription);
+			};
 		},
 	},
 };

@@ -40,6 +40,7 @@ import {
 	unbanKickUser,
 } from "./kickService";
 import type { UserWindowPayload } from "../shared/userWindow";
+import type { PanelWindowPayload, PanelKind } from "../shared/panelWindow";
 import MenuBuilder from "./menu";
 import { resolveHtmlPath } from "./util";
 
@@ -58,6 +59,9 @@ let mainWindow: BrowserWindow | null = null;
 const userWindows = new Map<string, BrowserWindow>();
 const userWindowPayloads = new Map<string, UserWindowPayload>();
 let kickConnectionWindow: BrowserWindow | null = null;
+
+/** Sprint 14 — one pop-out per panel kind. */
+const panelWindows = new Map<PanelKind, BrowserWindow>();
 
 const sendUserWindowPayload = (key: string) => {
 	const userWindow = userWindows.get(key);
@@ -274,6 +278,81 @@ ipcMain.handle("user-window:close", (_event, key: string) => {
 
 ipcMain.handle("kick-connection-window:open", () => {
 	createKickConnectionWindow();
+});
+
+// ─── Sprint 14: Panel pop-out windows ────────────────────────────────────────
+
+const createPanelWindow = (panel: PanelKind) => {
+	const existing = panelWindows.get(panel);
+	if (existing && !existing.isDestroyed()) {
+		existing.focus();
+		return;
+	}
+
+	const titles: Record<PanelKind, string> = {
+		activity: "Activity — Kick Chat Viewer",
+		moderation: "Moderation — Kick Chat Viewer",
+	};
+
+	const panelWindow = new BrowserWindow({
+		show: false,
+		width: 480,
+		height: 720,
+		minWidth: 360,
+		minHeight: 520,
+		title: titles[panel],
+		parent: mainWindow ?? undefined,
+		webPreferences: {
+			preload: app.isPackaged
+				? path.join(__dirname, "preload.js")
+				: path.join(__dirname, "../../.erb/dll/preload.js"),
+		},
+	});
+
+	panelWindows.set(panel, panelWindow);
+
+	// Reuse same index.html with a dedicated hash route.
+	panelWindow.loadURL(
+		`${resolveHtmlPath("index.html")}#/${panel}-window`
+	);
+
+	panelWindow.on("ready-to-show", () => {
+		panelWindow.show();
+		panelWindow.focus();
+	});
+
+	panelWindow.on("closed", () => {
+		panelWindows.delete(panel);
+	});
+};
+
+ipcMain.handle("panel-window:open", (_event, panel: PanelKind) => {
+	createPanelWindow(panel);
+});
+
+/**
+ * Relay: main renderer sends a snapshot payload; main process forwards it
+ * to the matching pop-out window (if open).
+ *
+ * Channel: "panel-window:send-payload"  (renderer → main → pop-out)
+ */
+ipcMain.handle("panel-window:send-payload", (_event, payload: PanelWindowPayload) => {
+	const win = panelWindows.get(payload.panel);
+	if (!win || win.isDestroyed()) return;
+	win.webContents.send("panel-window:payload", payload);
+});
+
+/**
+ * Relay: pop-out renderer requests a fresh snapshot from the main renderer.
+ *
+ * Channel: "panel-window:request-payload"  (pop-out → main → main renderer)
+ * Main renderer listens for "panel-window:refresh-request" and responds by
+ * calling panelWindow.sendPayload() from the renderer side.
+ */
+ipcMain.on("panel-window:request-payload", (_event, panel: PanelKind) => {
+	if (mainWindow && !mainWindow.isDestroyed()) {
+		mainWindow.webContents.send("panel-window:refresh-request", panel);
+	}
 });
 
 if (process.env.NODE_ENV === "production") {

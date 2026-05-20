@@ -268,6 +268,37 @@ const LayoutModern: FunctionComponent = () => {
 		};
 	}, []);
 
+	// Sprint 14: respond to panel pop-out refresh requests.
+	// The pop-out sends panel-window:request-payload → main forwards here →
+	// we build a snapshot and send it back via panel-window:send-payload IPC.
+	useEffect(() => {
+		const unsub = window.electron?.panelWindow?.onRefreshRequest(
+			(panel: "activity" | "moderation") => {
+				const slug = getActiveChannelSlug();
+				const now = Date.now();
+				if (panel === "activity") {
+					window.electron.panelWindow.sendPayload({
+						panel: "activity",
+						channelSlug: slug || undefined,
+						activityList: messages.activityList,
+						snapshotAt: now,
+					});
+				} else if (panel === "moderation") {
+					window.electron.panelWindow.sendPayload({
+						panel: "moderation",
+						channelSlug: slug || undefined,
+						modAction: messages.modAction,
+						messageList: messages.messageList,
+						roleInfo,
+						snapshotAt: now,
+					});
+				}
+			}
+		);
+		return () => unsub?.();
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [messages.activityList, messages.modAction, messages.messageList, roleInfo]);
+
 	// Fix 8: Escape closes settings modal
 	useEffect(() => {
 		if (!settingsOpen) return;
