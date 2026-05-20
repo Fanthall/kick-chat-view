@@ -2993,6 +2993,57 @@ body:has([data-app-shell="modern"]) {
 [data-app-shell="modern"] .mod-section-body[hidden] {
 	display: none;
 }
+
+/* Sprint 11: chat user right-click context menu */
+[data-app-shell="modern"] .chat-user-menu {
+	min-width: 200px;
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-3, 8px);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+	padding: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+[data-app-shell="modern"] .chat-user-menu-title {
+	padding: 6px 10px 4px;
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	border-bottom: 1px solid var(--ms-bd-1, #22262e);
+	margin-bottom: 3px;
+}
+[data-app-shell="modern"] .chat-user-menu button {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: none;
+	border: none;
+	padding: 6px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	color: var(--ms-fg-1, #ebecef);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+	transition: background 0.12s, color 0.12s;
+}
+[data-app-shell="modern"] .chat-user-menu button:hover {
+	background: var(--ms-bg-hover, #22252c);
+}
+[data-app-shell="modern"] .chat-user-menu button.danger {
+	color: var(--live, #ef4f5f);
+}
+[data-app-shell="modern"] .chat-user-menu button.danger:hover {
+	background: color-mix(in oklch, var(--live, #ef4f5f) 18%, transparent);
+}
+[data-app-shell="modern"] .chat-user-menu-divider {
+	height: 1px;
+	background: var(--ms-bd-1, #22262e);
+	margin: 4px 0;
+}
 [data-app-shell="modern"] .mod-target {
 	display: flex;
 	align-items: center;

@@ -39,7 +39,7 @@ import {
 	useFanthalDispatch,
 	useFanthalSelector,
 } from "../../store/hooks/hooks";
-import { UserMessage } from "../../util/chatInterface";
+import { User, UserMessage } from "../../util/chatInterface";
 import { getActiveChannelSlug } from "../../util/channelSettings";
 import { refreshChannelEmoteBundle } from "../../util/chatConnection";
 import { buildBadgesHtml, renderMessageHtml } from "../../util/chatHtml";
@@ -135,6 +135,7 @@ interface ChatRowProps {
 	onTimeout: (msg: UserMessage) => void;
 	onRemove: (msg: UserMessage) => void;
 	onUsernameClick: (msg: UserMessage) => void;
+	onContextMenu: (msg: UserMessage, x: number, y: number) => void;
 	canModerate: boolean;
 }
 
@@ -149,6 +150,7 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 	onTimeout,
 	onRemove,
 	onUsernameClick,
+	onContextMenu,
 	canModerate,
 }) => {
 	const sender = message.sender;
@@ -188,7 +190,14 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 	).format("HH:mm");
 
 	return (
-		<div className={cls} data-message-id={message.id}>
+		<div
+			className={cls}
+			data-message-id={message.id}
+			onContextMenu={(e) => {
+				e.preventDefault();
+				onContextMenu(message, e.clientX, e.clientY);
+			}}
+		>
 			<div className="chat-time mono num">{timestamp}</div>
 			<div className="chat-body">
 				{isReply && (
@@ -270,9 +279,15 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 
 // ────────── ChatModern (main component) ──────────
 
-interface ChatModernProps {}
+interface ChatModernProps {
+	/**
+	 * Sprint 11: Notify parent (LayoutModern) when user explicitly picks a
+	 * moderation target via username click or right-click "Set as mod target".
+	 */
+	onSelectModUser?: (user: User) => void;
+}
 
-const ChatModern: FunctionComponent<ChatModernProps> = () => {
+const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => {
 	const messages = useFanthalSelector((state) => state.messages);
 	const dispatch = useFanthalDispatch();
 
@@ -288,6 +303,34 @@ const ChatModern: FunctionComponent<ChatModernProps> = () => {
 	const [broadcasterUserId, setBroadcasterUserId] = useState<number | undefined>(undefined);
 	const [canModerateChannel, setCanModerateChannel] = useState<boolean>(false);
 	const [pickerOpen, setPickerOpen] = useState<boolean>(false);
+
+	// Sprint 11: inline user context menu (right-click on chat row)
+	const [userMenu, setUserMenu] = useState<
+		{ message: UserMessage; x: number; y: number } | undefined
+	>(undefined);
+	const userMenuRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!userMenu) return;
+		const onDocClick = (e: MouseEvent) => {
+			if (
+				userMenuRef.current &&
+				!userMenuRef.current.contains(e.target as Node)
+			) {
+				setUserMenu(undefined);
+			}
+		};
+		const onEsc = (e: Event) => {
+			if ((e as unknown as { key: string }).key === "Escape") {
+				setUserMenu(undefined);
+			}
+		};
+		document.addEventListener("mousedown", onDocClick);
+		document.addEventListener("keydown", onEsc);
+		return () => {
+			document.removeEventListener("mousedown", onDocClick);
+			document.removeEventListener("keydown", onEsc);
+		};
+	}, [userMenu]);
 
 	const composerRef = useRef<HTMLTextAreaElement>(null);
 	const smileButtonRef = useRef<HTMLButtonElement>(null);
@@ -766,12 +809,118 @@ const ChatModern: FunctionComponent<ChatModernProps> = () => {
 							}}
 							onTimeout={(m) => runModerationAction("timeout", m)}
 							onRemove={(m) => runModerationAction("delete", m)}
-							onUsernameClick={openUserWindow}
+							onUsernameClick={(m) => {
+								// Sprint 11: clicking a username sets the mod target
+								// AND (if mod) opens the classic user window.
+								if (m.sender) {
+									onSelectModUser?.(m.sender);
+								}
+								openUserWindow(m);
+							}}
+							onContextMenu={(m, x, y) => setUserMenu({ message: m, x, y })}
 							canModerate={canModerateChannel}
 						/>
 					);
 				})}
 			</div>
+
+			{/* Sprint 11: user context menu (right-click) */}
+			{userMenu && (
+				<div
+					ref={userMenuRef}
+					className="chat-user-menu"
+					style={{
+						position: "fixed",
+						left: Math.min(userMenu.x, window.innerWidth - 220),
+						top: Math.min(userMenu.y, window.innerHeight - 220),
+						zIndex: 200,
+					}}
+					role="menu"
+					aria-label={`Actions for ${userMenu.message.sender?.username}`}
+				>
+					<div className="chat-user-menu-title">
+						{userMenu.message.sender?.username}
+					</div>
+					<button
+						type="button"
+						role="menuitem"
+						onClick={() => {
+							if (userMenu.message.sender) {
+								onSelectModUser?.(userMenu.message.sender);
+							}
+							setUserMenu(undefined);
+						}}
+					>
+						Set as mod target
+					</button>
+					<button
+						type="button"
+						role="menuitem"
+						onClick={() => {
+							openUserWindow(userMenu.message);
+							setUserMenu(undefined);
+						}}
+					>
+						Open user detail
+					</button>
+					<button
+						type="button"
+						role="menuitem"
+						onClick={() => {
+							const name = userMenu.message.sender?.username || "";
+							const next = messageText.endsWith(" ") || messageText.length === 0
+								? `${messageText}@${name} `
+								: `${messageText} @${name} `;
+							setMessageText(next);
+							if (composerRef.current) {
+								composerRef.current.value = next;
+								composerRef.current.focus();
+							}
+							setUserMenu(undefined);
+						}}
+					>
+						Mention @{userMenu.message.sender?.username}
+					</button>
+					<button
+						type="button"
+						role="menuitem"
+						onClick={() => {
+							navigator.clipboard?.writeText(
+								userMenu.message.sender?.username || ""
+							);
+							setUserMenu(undefined);
+						}}
+					>
+						Copy username
+					</button>
+					{canModerateChannel && (
+						<>
+							<div className="chat-user-menu-divider" />
+							<button
+								type="button"
+								role="menuitem"
+								onClick={() => {
+									runModerationAction("timeout", userMenu.message);
+									setUserMenu(undefined);
+								}}
+							>
+								Timeout (default)
+							</button>
+							<button
+								type="button"
+								role="menuitem"
+								className="danger"
+								onClick={() => {
+									runModerationAction("delete", userMenu.message);
+									setUserMenu(undefined);
+								}}
+							>
+								Delete message
+							</button>
+						</>
+					)}
+				</div>
+			)}
 
 			{/* Auto-scroll paused pill */}
 			{paused && (

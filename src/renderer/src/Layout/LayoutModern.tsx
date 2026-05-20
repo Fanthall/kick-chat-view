@@ -115,6 +115,13 @@ const LayoutModern: FunctionComponent = () => {
 	const [addPopoverOpen, setAddPopoverOpen] = useState(false);
 	const addBtnRef = useRef<HTMLButtonElement>(null);
 
+	// Sprint 11: explicit moderation target — set via ChatModern username
+	// click/right-click. Replaces stale modAction[last] derivation that
+	// auto-selected users after any mod event.
+	const [selectedModUser, setSelectedModUser] = useState<
+		import("../../util/chatInterface").User | undefined
+	>(undefined);
+
 	// Fix 1: uptime — recompute every 60s
 	const [uptimeTick, setUptimeTick] = useState(0);
 	useEffect(() => {
@@ -483,7 +490,7 @@ const LayoutModern: FunctionComponent = () => {
 					style={{ minWidth: 0 }}
 					aria-label="Chat"
 				>
-					<ChatModern />
+					<ChatModern onSelectModUser={setSelectedModUser} />
 				</section>
 
 				{/* Activity panel */}
@@ -499,6 +506,8 @@ const LayoutModern: FunctionComponent = () => {
 						<ModActionsModern
 							isOwner={roleInfo.isOwner}
 							isMod={roleInfo.isMod}
+							selectedUser={selectedModUser}
+							onClearSelected={() => setSelectedModUser(undefined)}
 						/>
 					</aside>
 				)}

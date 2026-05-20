@@ -141,7 +141,7 @@ describe("ModActionsModern — selected user card", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern isMod={true} />
+				<ModActionsModern isMod={true} selectedUser={baseUser} />
 			</Provider>
 		);
 		expect(screen.getByTestId("mod-target-card")).toBeInTheDocument();
@@ -178,7 +178,7 @@ describe("ModActionsModern — timeout action", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern isMod={true} />
+				<ModActionsModern isMod={true} selectedUser={baseUser} />
 			</Provider>
 		);
 
@@ -203,7 +203,7 @@ describe("ModActionsModern — ban action", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern isMod={true} />
+				<ModActionsModern isMod={true} selectedUser={baseUser} />
 			</Provider>
 		);
 
@@ -228,7 +228,7 @@ describe("ModActionsModern — keyboard shortcuts", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern isMod={true} />
+				<ModActionsModern isMod={true} selectedUser={baseUser} />
 			</Provider>
 		);
 
@@ -249,7 +249,7 @@ describe("ModActionsModern — keyboard shortcuts", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern isMod={true} />
+				<ModActionsModern isMod={true} selectedUser={baseUser} />
 			</Provider>
 		);
 

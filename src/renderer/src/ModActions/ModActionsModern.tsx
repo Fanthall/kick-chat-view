@@ -153,12 +153,22 @@ interface ModActionsModernProps {
 	/** Sprint 10: gate write-actions when user isn't owner/mod. */
 	isOwner?: boolean;
 	isMod?: boolean;
+	/**
+	 * Sprint 11: EXPLICIT selected user (set via ChatModern right-click).
+	 * When undefined -> empty state; previously fell back to modAction[last]
+	 * which caused stale auto-select.
+	 */
+	selectedUser?: User;
+	/** Optional clear handler so the X / clear button can reset state. */
+	onClearSelected?: () => void;
 }
 
 const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	onClose,
 	isOwner = false,
 	isMod = false,
+	selectedUser: explicitSelectedUser,
+	onClearSelected,
 }) => {
 	const canModerate = isOwner || isMod;
 	const [collapsed, setCollapsed] = useState<Record<SectionId, boolean>>(loadCollapsed);
@@ -173,20 +183,9 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	const channelBadges = useFanthalSelector((state) => state.messages.channelBadges);
 	const activeChannelSlug = getActiveChannelSlug();
 
-	// Derive selected user from the latest mod action for the active channel
-	// (same approach as classic ModActions which reads from messages.modAction)
-	const selectedUser: User | undefined = (() => {
-		const filtered = messages.modAction.filter(
-			(item) => !activeChannelSlug || item.channelSlug === activeChannelSlug
-		);
-		if (!filtered.length) return undefined;
-		const latest = filtered[filtered.length - 1];
-		return (
-			latest.user ||
-			latest.message?.messageList?.[0]?.sender ||
-			undefined
-		);
-	})();
+	// Sprint 11: prefer EXPLICIT prop. modAction[last] fallback removed —
+	// it was auto-selecting any user after a mod event, regardless of intent.
+	const selectedUser: User | undefined = explicitSelectedUser;
 
 	// Suspended users
 	const [suspendedList, setSuspendedList] = useState<SuspendedEntry[]>(() =>
