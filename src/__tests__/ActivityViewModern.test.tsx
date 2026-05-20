@@ -375,66 +375,19 @@ describe("ActivityViewModern — bulk gift recipients", () => {
 });
 
 // ─── Test 8: KICKs leaderboard sub-tab ───────────────────────────────────────
-describe("ActivityViewModern — KICKs leaderboard", () => {
-	it("switches to leaderboard tab and shows week entries", async () => {
+// Sprint 38b: "KICKs Sıralama" alt tab kaldırıldı — Kick UI'da
+// karşılığı olmadığı için Sprint 4'te eklenen leaderboard subtab
+// silindi. Önceki 3 leaderboard testi geçersiz.
+describe("ActivityViewModern — leaderboard removed (Sprint 38b)", () => {
+	it("does not render KICKs Leaderboard sub-tab anymore", () => {
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
 				<ActivityViewModern />
 			</Provider>
 		);
-
-		// Sprint 7: sub-tab buttons now have role="tab" (a11y improvement)
-		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
-
-		await waitFor(() => {
-			expect(screen.getByText("alpha")).toBeInTheDocument();
-			expect(screen.getByText("beta")).toBeInTheDocument();
-		});
-	});
-
-	it("switches period tab to Month and shows month entries", async () => {
-		const store = buildStore([]);
-		render(
-			<Provider store={store}>
-				<ActivityViewModern />
-			</Provider>
-		);
-
-		// Sprint 7: sub-tab buttons now have role="tab"
-		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
-
-		await waitFor(() => {
-			expect(screen.getByText("alpha")).toBeInTheDocument();
-		});
-
-		// Period tabs also have role="tab"
-		fireEvent.click(screen.getByRole("tab", { name: "Month" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("gamma")).toBeInTheDocument();
-		});
-		expect(screen.queryByText("alpha")).not.toBeInTheDocument();
-	});
-
-	it("shows scope missing empty state when kicks:read absent", () => {
-		(window.electron.kick.getAuthStatus as jest.Mock).mockResolvedValue({
-			grantedScopes: [],
-			tokenScope: "",
-		});
-		const store = buildStore([]);
-		render(
-			<Provider store={store}>
-				<ActivityViewModern />
-			</Provider>
-		);
-
-		// Sprint 7: sub-tab buttons now have role="tab"
-		fireEvent.click(screen.getByRole("tab", { name: /KICKs Leaderboard/i }));
-
-		// Scope missing state should eventually appear
 		expect(
-			screen.getByText(/kicks:read/i)
-		).toBeInTheDocument();
+			screen.queryByRole("tab", { name: /KICKs Leaderboard/i })
+		).not.toBeInTheDocument();
 	});
 });
