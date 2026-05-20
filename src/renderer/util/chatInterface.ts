@@ -117,6 +117,17 @@ export interface ActivityItem {
 	status?: ActivityStatus;
 	createdAt: number;
 	raw?: unknown;
+	// Webhook eventType (e.g. "channel.subscription.new", "kicks.gifted") — REQ-3/5
+	eventType?: string;
+	// Subscription expiry timestamp (epoch ms) — REQ-3
+	expiresAt?: number;
+	// Anonymous gifter marker — REQ-4
+	anonymous?: boolean;
+	// KICKs gift metadata — REQ-5
+	giftName?: string;
+	giftType?: string;
+	giftTier?: number | string;
+	pinnedTimeSeconds?: number;
 	// Legacy subscription fields kept for old Pusher payload compatibility.
 	username?: string;
 	giftedList?: string[];
