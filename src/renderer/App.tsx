@@ -9,6 +9,7 @@ import { getFfzGlobalSets } from "./services/ffz";
 import { getEmote, getSevenTvGlobalSet } from "./services/sevenTv";
 import KickConnection from "./src/KickConnection/KickConnection";
 import Layout from "./src/Layout/Layout";
+import LayoutModern from "./src/Layout/LayoutModern";
 import UserWindow from "./src/UserWindow/UserWindow";
 import MessageActionsFunc from "./store/actions/chatMessage";
 import { useFanthalDispatch } from "./store/hooks/hooks";
@@ -16,17 +17,36 @@ import {
 	getChannelList,
 	getActiveChannelSlug,
 	setActiveChannelSlug,
+	addChannel,
 } from "./util/channelSettings";
+import { bootstrapDefaultOwnChannel } from "./util/defaultChannelBootstrap";
 import { chatListener } from "./util/chatConnection";
 import {
 	normalizeBttvGlobal,
 	normalizeFfzSet,
 	normalizeSevenTvSet,
 } from "./util/emoteIndex";
+// Sprint 2 — Modern shell developer preview flag (Karar 1: runtime user-toggle YOK).
+// Opt-in: URL hash `?shell=modern` veya localStorage `chatViewShellPreview=modern`.
+// Default: classic Layout.
+const isModernShellOptIn = (): boolean => {
+	try {
+		const hash = window.location.hash || "";
+		const q = hash.includes("?") ? hash.split("?")[1] : "";
+		const params = new URLSearchParams(q);
+		if (params.get("shell") === "modern") return true;
+		if (localStorage.getItem("chatViewShellPreview") === "modern") return true;
+	} catch {
+		// noop — guvenli fallback
+	}
+	return false;
+};
+
 export default function App() {
 	const dispatch = useFanthalDispatch();
 	const isUserWindow = window.location.hash.startsWith("#/user-window");
 	const isKickConnection = window.location.hash.startsWith("#/kick-connection");
+	const useModernShell = isModernShellOptIn();
 	useEffect(() => {
 		if (isUserWindow || isKickConnection) return;
 		// TODO: sağ üstte ayarlardan eklenecek
@@ -77,14 +97,27 @@ export default function App() {
 			dispatch(MessageActionsFunc.setGlobalEmoteSets(sets));
 		});
 
-		const channels = getChannelList();
-		const activeChannel = getActiveChannelSlug();
-		if (!activeChannel && channels[0]) {
-			setActiveChannelSlug(channels[0].slug);
-		}
-		channels
-			.filter((channel) => channel.autoConnect)
-			.forEach((channel) => dispatch(chatListener(channel.slug)));
+		// REQ-2: OAuth-connected ve manuel active channel yoksa own channel'i default sec.
+		// Manuel secim (chatViewActiveChannel) varsa dokunulmaz.
+		bootstrapDefaultOwnChannel({
+			getAuthStatus: () => window.electron.kick.getAuthStatus(),
+			getOwnChannels: () => window.electron.kick.getOwnChannels(),
+			getActiveChannelSlug,
+			getChannelList,
+			setActiveChannelSlug,
+			addChannel,
+		})
+			.catch(() => undefined)
+			.finally(() => {
+				const channels = getChannelList();
+				const activeChannel = getActiveChannelSlug();
+				if (!activeChannel && channels[0]) {
+					setActiveChannelSlug(channels[0].slug);
+				}
+				channels
+					.filter((channel) => channel.autoConnect)
+					.forEach((channel) => dispatch(chatListener(channel.slug)));
+			});
 	}, [isUserWindow, isKickConnection]);
 
 	return (
@@ -110,6 +143,8 @@ export default function App() {
 							<UserWindow />
 						) : isKickConnection ? (
 							<KickConnection />
+						) : useModernShell ? (
+							<LayoutModern />
 						) : (
 							<Layout />
 						)}
