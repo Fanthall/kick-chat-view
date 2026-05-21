@@ -66,6 +66,15 @@ beforeEach(() => {
 			kickConnectionWindow: {
 				open: jest.fn(),
 			},
+			// Sprint 53: update bridge mock (UpdateBlock mount'ta check çağırıyor)
+			update: {
+				check: jest.fn().mockResolvedValue({
+					ok: false,
+					reason: "token-or-network",
+					current: "4.6.3",
+				}),
+			},
+			openExternal: jest.fn().mockResolvedValue(true),
 			userWindow: {
 				open: jest.fn(),
 				update: jest.fn(),
@@ -229,11 +238,13 @@ describe("SettingsModern — moderation section", () => {
 		renderSettings();
 		fireEvent.click(screen.getByRole("button", { name: /^Moderation/i }));
 
+		// Sprint 54: Long timeout stepper kaldırıldı; sadece 1 stepper var.
 		await waitFor(() => {
-			expect(screen.getAllByRole("button", { name: /Increase seconds/i })).toHaveLength(2);
+			expect(
+				screen.getAllByRole("button", { name: /Increase seconds/i })
+			).toHaveLength(1);
 		});
 
-		// Click the first "Increase seconds" button (default timeout stepper)
 		const increaseBtns = screen.getAllByRole("button", { name: /Increase seconds/i });
 		fireEvent.click(increaseBtns[0]);
 
@@ -241,66 +252,27 @@ describe("SettingsModern — moderation section", () => {
 	});
 });
 
-// ─── Test 7: Emotes — animate GIF toggle persists to localStorage ─────────────
-
-describe("SettingsModern — emotes section", () => {
-	it("animate GIF toggle persists chatViewAnimateGif to localStorage", async () => {
-		localStorage.removeItem("chatViewAnimateGif");
-
+// Sprint 54: Animate GIF toggle kaldırıldı (dead). Negative test.
+describe("SettingsModern — emotes section (Sprint 54)", () => {
+	it("does not render Animate GIF toggle anymore", async () => {
 		renderSettings();
 		fireEvent.click(screen.getByRole("button", { name: /^Emotes/i }));
-
-		await waitFor(() => {
-			expect(screen.getByText(/animate gif emotes/i)).toBeInTheDocument();
-		});
-
-		// Initial state: on (default true). Find the toggle by finding the row
-		const rows = document.querySelectorAll(".set-block-row");
-		let animRow: Element | null = null;
-		rows.forEach((row) => {
-			if (row.textContent?.match(/animate gif emotes/i)) animRow = row;
-		});
-		expect(animRow).not.toBeNull();
-
-		const toggle = animRow!.querySelector(".set-toggle");
-		expect(toggle).not.toBeNull();
-
-		// Click to turn off (was true → false)
-		fireEvent.click(toggle!);
-		expect(localStorage.getItem("chatViewAnimateGif")).toBe("false");
-
-		// Click again to turn on
-		fireEvent.click(toggle!);
-		expect(localStorage.getItem("chatViewAnimateGif")).toBe("true");
+		expect(
+			screen.queryByText(/animate gif emotes/i)
+		).not.toBeInTheDocument();
 	});
 });
 
-// ─── Test 8: Advanced — UI mode toggle persists chatViewShellPreference ───────
+// Sprint 51: Classic shell tamamen iptal — "Modern UI (beta)" toggle
+// kaldırıldı. Önceki Test 8'in yerine negative test: toggle artık DOM'da yok.
 
-describe("SettingsModern — advanced section", () => {
-	it("Modern UI toggle writes chatViewShellPreference to localStorage", async () => {
-		localStorage.removeItem("chatViewShellPreference");
-
+describe("SettingsModern — advanced section (Sprint 51)", () => {
+	it("does not render Modern UI shell toggle anymore", async () => {
 		renderSettings();
 		fireEvent.click(screen.getByRole("button", { name: /^Advanced/i }));
-
-		await waitFor(() => {
-			expect(screen.getByText(/modern ui.*beta/i)).toBeInTheDocument();
-		});
-
-		const rows = document.querySelectorAll(".set-block-row");
-		let modernRow: Element | null = null;
-		rows.forEach((row) => {
-			if (row.textContent?.match(/modern ui.*beta/i)) modernRow = row;
-		});
-		expect(modernRow).not.toBeNull();
-
-		const toggle = modernRow!.querySelector(".set-toggle");
-		expect(toggle).not.toBeNull();
-
-		fireEvent.click(toggle!);
-		const stored = localStorage.getItem("chatViewShellPreference");
-		expect(stored === "modern" || stored === "classic").toBe(true);
+		expect(
+			screen.queryByText(/modern ui.*beta/i)
+		).not.toBeInTheDocument();
 	});
 });
 

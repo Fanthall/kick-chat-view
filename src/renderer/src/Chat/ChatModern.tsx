@@ -49,8 +49,9 @@ import { getActiveChannelSlug } from "../../util/channelSettings";
 import { refreshChannelEmoteBundle } from "../../util/chatConnection";
 import { buildBadgesHtml, renderMessageHtml } from "../../util/chatHtml";
 import {
-	createEmoteImg,
 	extractComposerText,
+	handleEmoteBackspaceDelete,
+	insertEmoteAtCaret,
 	putCaretAtEnd,
 	replaceKickBracketsInDom,
 } from "../../util/composerDom";
@@ -71,6 +72,9 @@ import { buildUserWindowPayload } from "../../util/userWindowPayload";
 import EmoteAutocompleteModern from "./EmoteAutocompleteModern";
 import EmotePickerModern from "./EmotePickerModern";
 import { useTranslation } from "../../util/i18n";
+
+// Sprint 59: lazy emoji picker (paket ~700KB; ilk açılışta yüklenir)
+const EmojiPicker = React.lazy(() => import("emoji-picker-react"));
 
 // ────────── Types ──────────
 
@@ -328,6 +332,9 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	const [tokenScopes, setTokenScopes] = useState<string[]>([]);
 	const pendingModCheckChannelsRef = useRef<Set<string>>(new Set());
 	const [pickerOpen, setPickerOpen] = useState<boolean>(false);
+	// Sprint 59: OS-style emoji picker (Unicode 😀🎉) — Kick emote'larıyla
+	// karışmasın diye ayrı buton + ayrı popover.
+	const [emojiPickerOpen, setEmojiPickerOpen] = useState<boolean>(false);
 
 	// Sprint 11: inline user context menu (right-click on chat row)
 	const [userMenu, setUserMenu] = useState<
@@ -357,8 +364,12 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		};
 	}, [userMenu]);
 
-	const composerRef = useRef<HTMLTextAreaElement>(null);
+	// Sprint 56: textarea → contentEditable div. [emote:id:name] tokenları
+	// composerDom.replaceKickBracketsInDom ile inline <img> olarak gösterilir.
+	const composerRef = useRef<HTMLDivElement>(null);
 	const smileButtonRef = useRef<HTMLButtonElement>(null);
+	const emojiButtonRef = useRef<HTMLButtonElement>(null);
+	const emojiPopoverRef = useRef<HTMLDivElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
 
 	const channelName = getActiveChannelSlug();
@@ -636,16 +647,58 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	useEffect(() => {
 		setMentionIndex(0);
 	}, [mentionSearch]);
+	// Sprint 56: composer contenteditable — text yerine textContent + emote IMG'leri yeniden çevir.
+	const setComposerContent = (raw: string) => {
+		const node = composerRef.current;
+		if (!node) return;
+		node.textContent = raw;
+		replaceKickBracketsInDom(node, emoteIndex);
+		putCaretAtEnd(node);
+		node.focus();
+	};
+
+	// Sprint 59: Unicode emoji ekle — composer text'in sonuna ekler,
+	// emote IMG'leri korunur (setComposerContent zaten parse eder).
+	const insertEmojiAtCaret = (emoji: string) => {
+		const next = `${messageText}${emoji}`;
+		setMessageText(next);
+		setComposerContent(next);
+	};
+
+	// Sprint 59: emoji popover outside-click + Esc kapatma
+	useEffect(() => {
+		if (!emojiPickerOpen) return;
+		const onDown = (e: MouseEvent) => {
+			const target = e.target as Node | null;
+			if (!target) return;
+			if (
+				emojiPopoverRef.current?.contains(target) ||
+				emojiButtonRef.current?.contains(target)
+			) {
+				return;
+			}
+			setEmojiPickerOpen(false);
+		};
+		const onEsc = (e: KeyboardEvent) => {
+			if ((e as unknown as { key: string }).key === "Escape") {
+				setEmojiPickerOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", onDown);
+		document.addEventListener("keydown", onEsc as any);
+		return () => {
+			document.removeEventListener("mousedown", onDown);
+			document.removeEventListener("keydown", onEsc as any);
+		};
+	}, [emojiPickerOpen]);
+
 	const applyMention = (selectedUsername: string) => {
 		const nextText = messageText.replace(
 			/(^|\s)@([a-zA-Z0-9_]*)$/,
 			`$1@${selectedUsername} `
 		);
 		setMessageText(nextText);
-		if (composerRef.current) {
-			composerRef.current.value = nextText;
-			composerRef.current.focus();
-		}
+		setComposerContent(nextText);
 		setMentionIndex(0);
 	};
 
@@ -673,11 +726,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	const applySlashSuggestion = (def: typeof chatCommandDefinitions[number]) => {
 		const next = def.template;
 		setMessageText(next);
-		if (composerRef.current) {
-			composerRef.current.value = next;
-			composerRef.current.focus();
-			composerRef.current.setSelectionRange(next.length, next.length);
-		}
+		setComposerContent(next);
 	};
 
 	useEffect(() => {
@@ -696,10 +745,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		const nextText = `${before}${insert}${needsSpace ? " " : ""}${after}`;
 		setMessageText(nextText);
 		setEmoteSuggestionIndex(0);
-		if (composerRef.current) {
-			composerRef.current.value = nextText;
-			composerRef.current.focus();
-		}
+		setComposerContent(nextText);
 	};
 
 	// ── Moderation ──
@@ -996,7 +1042,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		setMessageText("");
 		setReplyTarget(undefined);
 		if (composerRef.current) {
-			composerRef.current.value = "";
+			composerRef.current.textContent = "";
 			composerRef.current.focus();
 		}
 		setSendingMessage(true);
@@ -1031,7 +1077,23 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	};
 
 	// ── Keyboard handler ──
-	const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+	const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+		// Sprint 58e: Backspace/Delete ile emote IMG sil
+		// (autocomplete/mention nav'ından önce — onlar Backspace değil ok tuşları kullanır)
+		if (
+			(event.key === "Backspace" || event.key === "Delete") &&
+			!mentionOpen &&
+			!slashOpen &&
+			handleEmoteBackspaceDelete(event.nativeEvent)
+		) {
+			// IMG kaldırıldı — composer text state'ini sync et
+			const node = composerRef.current;
+			if (node) {
+				const text = extractComposerText(node).replace(/\n/g, "");
+				setMessageText(text);
+			}
+			return;
+		}
 		// Sprint 33b: @ mention autocomplete keyboard nav
 		if (mentionOpen) {
 			if (event.key === "ArrowDown") {
@@ -1147,24 +1209,15 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		return () => window.removeEventListener("keydown", handleGlobalKey);
 	}, []);
 
-	// ── Insert emote from picker at cursor or end ──
-	const handlePickerInsert = (entry: { insertText: string }) => {
-		const insert = entry.insertText;
-		const ta = composerRef.current;
-		if (ta) {
-			const start = ta.selectionStart ?? ta.value.length;
-			const end = ta.selectionEnd ?? ta.value.length;
-			const before = ta.value.slice(0, start);
-			const after = ta.value.slice(end);
-			const needsSpace = before.length > 0 && !/\s$/.test(before);
-			const nextText = `${before}${needsSpace ? " " : ""}${insert} ${after}`;
-			setMessageText(nextText);
-			ta.value = nextText;
-			ta.focus();
-		} else {
-			const needsSpace = messageText.length > 0 && !/\s$/.test(messageText);
-			setMessageText((prev) => `${prev}${needsSpace ? " " : ""}${insert} `);
-		}
+	// ── Insert emote from picker — Sprint 58f: DOM-first insert (7TV emote'ları için) ──
+	// Önceki versiyon: text-replace + replaceKickBracketsInDom — 7TV emote isimleri
+	// bracket'siz geldiği için IMG'e dönüşmüyordu. Şimdi doğrudan IMG node insert.
+	const handlePickerInsert = (entry: import("../../constants/emote").EmoteEntry) => {
+		const node = composerRef.current;
+		if (!node) return;
+		insertEmoteAtCaret(node, entry);
+		const text = extractComposerText(node).replace(/\n/g, "");
+		setMessageText(text);
 	};
 
 	return (
@@ -1372,10 +1425,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 								? `${messageText}@${name} `
 								: `${messageText} @${name} `;
 							setMessageText(next);
-							if (composerRef.current) {
-								composerRef.current.value = next;
-								composerRef.current.focus();
-							}
+							setComposerContent(next);
 							setUserMenu(undefined);
 						}}
 					>
@@ -1548,23 +1598,46 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						</div>
 					)}
 
-					<textarea
+					<div
 						ref={composerRef}
 						className="composer-input"
-						placeholder={
+						contentEditable={!sendingMessage}
+						role="textbox"
+						suppressContentEditableWarning
+						data-placeholder={
 							replyTarget
 								? `${t("chat.reply-to")} @${replyTarget.sender.username}…`
 								: t("chat.placeholder")
 						}
-						value={messageText}
-						rows={1}
-						disabled={sendingMessage}
-						onChange={(e) => setMessageText(e.target.value)}
-						onKeyDown={handleKeyDown}
+						onInput={(e) => {
+							const node = e.currentTarget;
+							const replaced = replaceKickBracketsInDom(node, emoteIndex);
+							if (replaced) {
+								putCaretAtEnd(node);
+							}
+							const text = extractComposerText(node).replace(/\n/g, "");
+							setMessageText(text);
+						}}
+						onKeyDown={handleKeyDown as any}
 						aria-label="Chat message input"
 					/>
 
-					<div className="composer-tools">
+					<div className="composer-tools" style={{ position: "relative" }}>
+						<button
+							ref={emojiButtonRef}
+							className="icon-btn"
+							title="Emoji (😀)"
+							aria-label="Open emoji picker"
+							type="button"
+							style={{ width: 28, height: 28, fontSize: 15 }}
+							onClick={() => {
+								setEmojiPickerOpen((v) => !v);
+								setPickerOpen(false);
+							}}
+							data-testid="emoji-btn"
+						>
+							<span aria-hidden style={{ lineHeight: 1 }}>😀</span>
+						</button>
 						<button
 							ref={smileButtonRef}
 							className="icon-btn"
@@ -1572,7 +1645,10 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							aria-label="Open emote picker"
 							type="button"
 							style={{ width: 28, height: 28 }}
-							onClick={() => setPickerOpen((v) => !v)}
+							onClick={() => {
+								setPickerOpen((v) => !v);
+								setEmojiPickerOpen(false);
+							}}
 							data-testid="smile-btn"
 						>
 							<LuSmile size={15} aria-hidden />
@@ -1586,6 +1662,42 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						>
 							Send <LuSend size={11} aria-hidden />
 						</button>
+
+						{/* Sprint 59: Unicode emoji popover */}
+						{emojiPickerOpen && (
+							<div
+								ref={emojiPopoverRef}
+								className="emoji-popover"
+								role="dialog"
+								aria-label="Emoji picker"
+								data-testid="emoji-popover"
+							>
+								<React.Suspense
+									fallback={
+										<div className="emoji-popover-loading">Yükleniyor…</div>
+									}
+								>
+									<EmojiPicker
+										onEmojiClick={(data: any) => {
+											insertEmojiAtCaret(data.emoji);
+										}}
+										width={320}
+										height={380}
+										autoFocusSearch={false}
+										previewConfig={{ showPreview: false }}
+										skinTonesDisabled
+										searchPlaceholder="Ara..."
+										theme={
+											(document.documentElement.getAttribute(
+												"data-theme"
+											) === "light"
+												? "light"
+												: "dark") as any
+										}
+									/>
+								</React.Suspense>
+							</div>
+						)}
 					</div>
 				</div>
 
@@ -1602,7 +1714,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						)}
 					</span>
 					<span className="mono num" style={{ color: "var(--ms-fg-3)", fontSize: 11 }}>
-						⏎ send · ⇧⏎ newline · : emote · Ctrl+E picker
+						⏎ send · ⇧⏎ newline · : emote · Ctrl+E picker · 😀 emoji
 					</span>
 				</div>
 			</div>

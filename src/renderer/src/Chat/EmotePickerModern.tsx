@@ -136,8 +136,8 @@ interface EmoteCellProps {
 	entry: EmoteEntry;
 	isFav: boolean;
 	isHovered: boolean;
-	onMouseEnter: () => void;
-	onClick: () => void;
+	onSelect: () => void; // tek tık — preview seç
+	onPick: () => void; // çift tık — inputa ekle
 	onContextMenu: (e: React.MouseEvent) => void;
 }
 
@@ -145,8 +145,8 @@ const EmoteCell: FunctionComponent<EmoteCellProps> = ({
 	entry,
 	isFav,
 	isHovered,
-	onMouseEnter,
-	onClick,
+	onSelect,
+	onPick,
 	onContextMenu,
 }) => {
 	const cls = [
@@ -161,9 +161,9 @@ const EmoteCell: FunctionComponent<EmoteCellProps> = ({
 		<button
 			type="button"
 			className={cls}
-			title={entry.name}
-			onMouseEnter={onMouseEnter}
-			onClick={onClick}
+			title={`${entry.name} — çift tık: ekle`}
+			onClick={onSelect}
+			onDoubleClick={onPick}
 			onContextMenu={onContextMenu}
 			aria-label={entry.name}
 		>
@@ -468,8 +468,8 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 												? `${hovered.provider}:${hovered.id}:${hovered.name}` === key
 												: false
 										}
-										onMouseEnter={() => setHovered(entry)}
-										onClick={() => handlePick(entry)}
+										onSelect={() => setHovered(entry)}
+										onPick={() => handlePick(entry)}
 										onContextMenu={(e) => {
 											e.preventDefault();
 											handleToggleFavorite(entry);

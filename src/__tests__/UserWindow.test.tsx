@@ -173,13 +173,15 @@ describe("UserWindow (Sprint 12)", () => {
 		await waitFor(() => {
 			expect(mock.kick.getChannelBySlug).toHaveBeenCalled();
 		});
+		// Sprint 52: Hem Ban hem Unban her zaman görünür (eski ban'ı manuel
+		// kaldırma için). Önceki "ya Ban ya Unban" XOR davranışı kaldırıldı.
 		await waitFor(() => {
 			expect(screen.getByText("Ban permanently")).toBeInTheDocument();
 		});
-		expect(screen.queryByText("Unban")).not.toBeInTheDocument();
+		expect(screen.getByText("Unban")).toBeInTheDocument();
 	});
 
-	it("shows Unban button when last relevant mod action is ban", async () => {
+	it("shows both Ban + Unban buttons when last mod action is ban", async () => {
 		const { mock } = renderWithPayload(
 			makePayload({
 				modActions: [makeModAction("ban")],
@@ -193,7 +195,7 @@ describe("UserWindow (Sprint 12)", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Unban")).toBeInTheDocument();
 		});
-		expect(screen.queryByText("Ban permanently")).not.toBeInTheDocument();
+		expect(screen.getByText("Ban permanently")).toBeInTheDocument();
 	});
 
 	it("custom seconds input clears preset and updates duration display", async () => {

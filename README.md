@@ -1,159 +1,168 @@
-<img src=".erb/img/erb-banner.svg" width="100%" />
+# Kick Chat Viewer
 
-<br>
+Kick.com kanal chat'ini ve moderasyon olaylarını masaüstünde tek pencerede izlemek için yazılmış **Electron + React + TypeScript** uygulaması. Aynı anda birden fazla kanala bağlanabilir, chat / aktivite / moderasyon panellerini yan yana gösterir, Kick'in resmi OAuth API'si üzerinden timeout / ban / unban / mesaj silme aksiyonları yapar. Otomasyon rutinleri ile chat olaylarına ve zamanlı tetikleyicilere otomatik yanıt verebilir.
 
-<p>
-  Electron React Boilerplate uses <a href="https://electron.atom.io/">Electron</a>, <a href="https://facebook.github.io/react/">React</a>, <a href="https://github.com/reactjs/react-router">React Router</a>, <a href="https://webpack.js.org/">Webpack</a> and <a href="https://www.npmjs.com/package/react-refresh">React Fast Refresh</a>.
-</p>
+![Kick Chat Viewer — Ana ekran](docs/screenshots/main-window.png)
 
-<br>
+## Özellikler
 
-<div align="center">
+- **Multi-channel chat** — Tek pencerede birden çok Kick kanalına bağlanma, Pusher websocket üzerinden gerçek zamanlı mesaj akışı.
+- **Aktivite paneli** — Abonelikler, gifted sub, KICKs, bağış, host/raid, follow ve channel point reward eventlerini ayrı sekmelerde gösterir.
+- **Moderasyon paneli** — Seçili kullanıcı için timeout (preset / özel saniye), kalıcı ban, unban, mesaj silme. Son aksiyonlar log'u + kısıtlı kullanıcı listesi.
+- **Kullanıcı detay penceresi (UserWindow)** — Profil, oturum mesajları (boşsa Kick API'den son mesajlar fetch edilir), oturum mod geçmişi, kişisel notlar.
+- **Emote desteği** — Kick global + kanal emote'ları, kullanıcının abone olduğu kanalların emote union'u, 7TV global emote'lar; composer'da inline `<img>` olarak render (DOM-first insert, Backspace/Delete ile silinebilir).
+- **Emote picker + autocomplete** — Modal Kick emote picker (klavye nav + focus trap), `:emote` inline autocomplete, `@user` mention autocomplete, composer'da **Unicode emoji picker** (😀🎉 — `emoji-picker-react`).
+- **Otomasyon Rutinleri** — Chat olaylarına otomatik yanıt: chat keyword, mention, sub/gift sub, follow, KICKs, host, reward redeem, **zamanlı (interval)** tetikleyiciler. Placeholder destekli mesajlar (`{username}`, `{amount}` vb.), cooldown, per-channel scope, hediye-sub-alıcı filtresi, live-only mod.
+- **Modern UI shell** — OKLCH tabanlı design token sistemi, light/dark tema, i18n (TR/EN), tam responsive (panel pop-out + drawer modu).
+- **Otomatik güncelleme kontrolü** — Açılışta GitHub Releases API üzerinden son sürüm kontrolü; yeni release çıktığında Settings → Güncelleme bölümünde "Güncelleme var" rozeti.
+- **Sub/gift/host/follow/KICKs/reward banner'ları** — Sentetik chat satırları olarak chat'in içinde de görünür, sadece Aktivite panelinde değil.
 
-[![Build Status][github-actions-status]][github-actions-url]
-[![Github Tag][github-tag-image]][github-tag-url]
-[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/Fjy3vfgy5q)
+## Otomasyon Rutinleri (Sprint 58 / 60)
 
-[![OpenCollective](https://opencollective.com/electron-react-boilerplate-594/backers/badge.svg)](#backers)
-[![OpenCollective](https://opencollective.com/electron-react-boilerplate-594/sponsors/badge.svg)](#sponsors)
-[![StackOverflow][stackoverflow-img]][stackoverflow-url]
+Settings → **Rutinler** sekmesinden yönetilir. 4 hazır şablon (Sub'a teşekkür, Yeni takipçi karşılama, Mention yanıtı, 30dk'da bir hatırlatma) ile hızlı başlatma yapılabilir.
 
-</div>
+**Tetikleyiciler:**
 
-## Install
+| Tip | Açıklama |
+|---|---|
+| `chat_match` | Chat'te belirli kelime/regex (case opsiyonu, emote desteği) |
+| `mention` | Belirli kullanıcı(lar) etiketlendiğinde |
+| `sub_event` | Yeni abonelik (default: hediye-sub alıcıları filtrelenir) |
+| `gift_sub_event` | Hediye sub geldiğinde (gifter için) |
+| `follow_event` | Yeni takipçi delta'sı |
+| `kicks_event` | KICKs bağışı (opsiyonel min tutar) |
+| `host_event` | Host / raid |
+| `reward_redeemed` | Channel point reward (opsiyonel title filtresi) |
+| `interval` | **Zamanlı** — 15dk/30dk/1saat preset veya custom, live-only opsiyon |
 
-Clone the repo and install dependencies:
+**Aksiyonlar:** `send_message` (chat'e gönder) / `send_toast` (bana bildirim göster).
+
+**Placeholder syntax:** `{username}` `{amount}` `{months}` `{tier}` `{message}` `{channel}` `{reward}`
+
+**Diğer:**
+- **Cooldown** — Rutin çalıştıktan sonra X saniye boyunca yeniden tetiklenmez (spam koruması).
+- **Per-channel scope** — Boş = tüm kanallar; veya çoklu kanal seçimi (chip selector).
+- **Hediye-sub filtresi** — `GiftedSubscriptionsEvent` alıcıları 5dk cache'lenir, hemen ardından gelen `SubscriptionEvent` `sub_event` rule'larında otomatik atlanır (opt-in `includeGifted` flag'i ile aç).
+- **Live-only mod (interval)** — Kanal yayında değilse scheduler tick'i atlar; yayın açılınca devam eder.
+- **Emote insert** — Hem trigger pattern hem mesaj içeriği `EmoteEditable` (contentEditable + DOM-first IMG insert) — Kick channel, Kick global, 7TV emote'ları görsel olarak görünür ve Backspace/Delete ile silinebilir.
+
+## Teknik Stack
+
+- **Runtime:** Electron 26, electron-builder, electron-updater
+- **UI:** React 18, NextUI (legacy bileşenler), Tailwind, react-icons, react-toastify, emoji-picker-react
+- **State:** Redux Toolkit
+- **Realtime:** Kick Pusher websocket (`chatrooms.<chatroom_id>.v2`, `channel_<channel_id>`, `chatroom_<chatroom_id>`)
+- **Auth:** Kick OAuth 2.1 PKCE flow (main process), `http://localhost:18291/kick/oauth/callback`
+- **Build:** webpack tabanlı `.erb` konfigleri
+- **Test:** Jest + Testing Library + jsdom
+- **Language:** TypeScript strict
+
+## Kurulum
 
 ```bash
-git clone --depth 1 --branch main https://github.com/electron-react-boilerplate/electron-react-boilerplate.git your-project-name
-cd your-project-name
+git clone https://github.com/Fanthall/kick-chat-view.git
+cd kick-chat-view
 npm install
 ```
 
-**Having issues installing? See our [debugging guide](https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues/400)**
+> **Gereksinim:** Node `>=24.11.1`, npm `>=10`. Eski Node ile postinstall / native rebuild kırılabilir.
 
-## Starting Development
-
-Start the app in the `dev` environment:
+## Geliştirme
 
 ```bash
-npm start
+npm start            # renderer dev server + Electron main
+npm run start:main   # sadece main process (dev mode)
 ```
 
-## Packaging for Production
-
-To package apps for the local platform:
+## Build & Paketleme
 
 ```bash
-npm run package
+npm run build         # main + renderer production build
+npm run package       # dist temizle, build al, electron-builder ile paketle (NSIS installer)
 ```
 
-## Docs
+Paketlenmiş çıktı: `release/build/Kick Chat Viewer Setup <version>.exe`
 
-See our [docs and guides here](https://electron-react-boilerplate.js.org/docs/installation)
+## Test
 
-## Community
+```bash
+npm test       # Jest test suite (164+ test)
+npm run lint   # ESLint kontrolü
+```
 
-Join our Discord: https://discord.gg/Fjy3vfgy5q
+## Kick OAuth & Scope
 
-## Sponsors
+İlk kullanımda uygulama Kick OAuth login'ini açar. Varsayılan scope seti (`src/shared/kickScopes.ts`):
 
-<a href="https://palette.dev">
-  <img src=".erb/img/palette-sponsor-banner.svg" width="100%" />
-</a>
+`user:read`, `channel:read`, `channel:write`, `channel:rewards:read`, `channel:rewards:write`, `chat:write`, `streamkey:read`, `events:subscribe`, `moderation:ban`, `moderation:chat_message:manage`, `kicks:read`
 
-## Donations
+Token + Kick app config `app.getPath("userData")/kick-oauth.json` altında tutulur. Renderer doğrudan token'la iş yapmaz — main process `kickService.ts` üzerinden tüm API çağrıları proxylenir.
 
-**Donations will ensure the following:**
+> Kick Developer App tarafında redirect URI uygulamadaki callback URL ile birebir aynı olmalı: `http://localhost:18291/kick/oauth/callback`.
 
-- 🔨 Long term maintenance of the project
-- 🛣 Progress on the [roadmap](https://electron-react-boilerplate.js.org/docs/roadmap)
-- 🐛 Quick responses to bug reports and help requests
+## Mimari Harita
 
-## Backers
+| Dosya | Görev |
+|---|---|
+| `src/main/main.ts` | Electron main process, BrowserWindow, auto-updater |
+| `src/main/preload.ts` | Typed IPC bridge (`window.electron.*`) |
+| `src/main/kickOAuth.ts` | OAuth 2.1 PKCE flow |
+| `src/main/kickService.ts` | Resmi Kick API wrapper (channel / livestream / chat / moderation / events) |
+| `src/main/githubUpdate.ts` | GitHub Releases update check (unauth, public repo) |
+| `src/renderer/App.tsx` | Bootstrap (7TV emote yükle, chatListener dispatch) |
+| `src/renderer/src/Layout/LayoutModern.tsx` | 3-kolonlu modern shell (Chat / Activity / Moderation) |
+| `src/renderer/src/Chat/ChatModern.tsx` | Ana chat render'ı, contentEditable composer, mention/emote autocomplete, inline emoji picker |
+| `src/renderer/src/Chat/EmotePickerModern.tsx` | Modal Kick emote picker (focus trap) |
+| `src/renderer/src/ActivityView/ActivityViewModern.tsx` | Activity panel (sub / gift / KICKs / host / follow / reward) |
+| `src/renderer/src/ModActions/ModActionsModern.tsx` | Moderation panel: user card, timeout / ban / unban |
+| `src/renderer/src/UserWindow/UserWindow.tsx` | Kullanıcı detay pop-up'ı (Overview / Messages / Activity / Mod history / Notes) |
+| `src/renderer/src/Settings/SettingsModern.tsx` | Ayarlar (kanal, OAuth, tema, dil, güncelleme, bloklu emote, suspended user) |
+| `src/renderer/src/Settings/AutomationSection.tsx` | Otomasyon rutinleri editörü |
+| `src/renderer/src/Settings/EmoteEditable.tsx` | contentEditable input + emote IMG render (trigger pattern / message content) |
+| `src/renderer/util/automationRules.ts` | Tip tanımları, placeholder replacer, pattern matcher |
+| `src/renderer/util/automationRulesStorage.ts` | localStorage I/O |
+| `src/renderer/util/automationRulesEngine.ts` | Engine: rule cache, cooldown, scheduler (interval), gift recipient filter, live status cache |
+| `src/renderer/util/composerDom.ts` | contentEditable helpers: extract / replace / insert / backspace-delete |
+| `src/renderer/util/chatConnection.ts` | Pusher abonelik + event parse/dispatch merkezi (automation hook'ları dahil) |
+| `src/renderer/store/reducer/chatMessage.ts` | Chat, mod aksiyonları, subscription, host/raid state |
 
-Support us with a monthly donation and help us continue our activities. [[Become a backer](https://opencollective.com/electron-react-boilerplate-594#backer)]
+## Kanal & Kullanıcı Ayarları
 
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/0/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/0/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/1/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/1/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/2/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/2/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/3/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/3/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/4/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/4/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/5/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/5/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/6/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/6/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/7/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/7/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/8/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/8/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/9/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/9/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/10/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/10/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/11/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/11/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/12/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/12/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/13/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/13/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/14/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/14/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/15/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/15/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/16/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/16/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/17/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/17/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/18/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/18/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/19/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/19/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/20/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/20/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/21/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/21/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/22/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/22/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/23/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/23/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/24/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/24/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/25/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/25/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/26/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/26/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/27/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/27/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/28/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/28/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/backer/29/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/backer/29/avatar.svg"></a>
+LocalStorage anahtarları proje sözleşmesi gibi kullanılır:
 
-## Sponsors
+- `channelName` — Aktif kanal (legacy, tek-kanal modu)
+- `channelTabs` — Modern shell çoklu kanal tab'ları
+- `username` — Mention highlight için kullanıcı adı
+- `susUsers` — Suspended (şüpheli) kullanıcı listesi
+- `blockEmotes` — Bloklanan emote listesi
+- `chatViewLocale` — `tr` | `en`
+- `chatViewTheme` — `dark` | `light`
+- `chatViewAutomationRules` — Otomasyon rutinleri JSON array
 
-Become a sponsor and get your logo on our README on Github with a link to your site. [[Become a sponsor](https://opencollective.com/electron-react-boilerplate-594-594#sponsor)]
+## Güncelleme Akışı
 
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/0/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/0/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/1/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/1/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/2/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/2/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/3/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/3/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/4/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/4/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/5/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/5/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/6/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/6/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/7/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/7/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/8/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/8/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/9/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/9/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/10/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/10/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/11/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/11/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/12/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/12/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/13/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/13/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/14/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/14/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/15/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/15/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/16/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/16/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/17/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/17/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/18/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/18/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/19/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/19/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/20/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/20/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/21/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/21/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/22/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/22/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/23/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/23/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/24/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/24/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/25/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/25/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/26/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/26/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/27/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/27/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/28/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/28/avatar.svg"></a>
-<a href="https://opencollective.com/electron-react-boilerplate-594/sponsor/29/website" target="_blank"><img src="https://opencollective.com/electron-react-boilerplate-594/sponsor/29/avatar.svg"></a>
+- Açılışta `Settings → Güncelleme` bölümü `https://api.github.com/repos/Fanthall/kick-chat-view/releases/latest` çağrısı yapar.
+- Versiyon karşılaştırması `compareVersions` (semver-ish) ile.
+- Yeni release varsa `İndir` butonu doğrudan tarayıcıda Release sayfasını açar.
+- electron-builder + electron-updater configure: `Fanthall/kick-chat-view` (public repo, PAT gereksiz).
 
-## Maintainers
+## Geliştirme Notları
 
-- [Amila Welihinda](https://github.com/amilajack)
-- [John Tran](https://github.com/jooohhn)
-- [C. T. Lin](https://github.com/chentsulin)
-- [Jhen-Jie Hong](https://github.com/jhen0409)
+- Chat HTML'i `renderMessageHtml` / `buildBadgesHtml` üzerinden sanitize edilir; raw `dangerouslySetInnerHTML` bu helperlerin dışında kullanılmaz.
+- Tüm Modern UI CSS değişkenleri `[data-app-shell="modern"]` altında scope'lanmıştır; NextUI veya legacy stillere bulaşmaz.
+- Reducer listeleri 500 elemanda truncate edilir.
+- Raid/host için resmi Kick API endpoint'i olmadığından `StreamHostEvent` Pusher üzerinden izlenir.
+- Composer + EmoteEditable'da emote'lar `<img data-emote-text="[emote:id:name]" class="composer-emote">` olarak DOM'da tutulur; `extractComposerText` bunları kanonik metne çevirir.
+- Otomasyon engine'i `chatConnection.ts` event dispatch'lerine hook'lanır; storage event ile cross-tab senkronizasyon yapar; `interval` rule'lar için `setInterval` scheduler + 60sn live-status cache kurar.
 
-## License
+## Sürüm
 
-MIT © [Electron React Boilerplate](https://github.com/electron-react-boilerplate)
+Mevcut sürüm: **v4.6.4** (release/app/package.json)
 
-[github-actions-status]: https://github.com/electron-react-boilerplate/electron-react-boilerplate/workflows/Test/badge.svg
-[github-actions-url]: https://github.com/electron-react-boilerplate/electron-react-boilerplate/actions
-[github-tag-image]: https://img.shields.io/github/tag/electron-react-boilerplate/electron-react-boilerplate.svg?label=version
-[github-tag-url]: https://github.com/electron-react-boilerplate/electron-react-boilerplate/releases/latest
-[stackoverflow-img]: https://img.shields.io/badge/stackoverflow-electron_react_boilerplate-blue.svg
-[stackoverflow-url]: https://stackoverflow.com/questions/tagged/electron-react-boilerplate
+Release Notes: [GitHub Releases](https://github.com/Fanthall/kick-chat-view/releases)
+
+## Lisans
+
+MIT © Fanthal (Sezer Demir DEDEK)
+
+Bu proje [electron-react-boilerplate](https://github.com/electron-react-boilerplate/electron-react-boilerplate) üzerine kurulmuştur.

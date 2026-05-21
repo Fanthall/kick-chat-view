@@ -103,6 +103,7 @@
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-updater": "^6.1.4",
+    "emoji-picker-react": "^4.19.1",
     "formik": "^2.4.5",
     "framer-motion": "^11.0.24",
     "googleapis": "^137.1.0",

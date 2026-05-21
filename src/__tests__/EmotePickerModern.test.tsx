@@ -235,7 +235,7 @@ describe("EmotePickerModern", () => {
 		});
 
 		const grid = screen.getByTestId("ep-grid");
-		const cell = grid.querySelector("[title=\"PauseChamp\"]") as HTMLElement;
+		const cell = grid.querySelector("[title^=\"PauseChamp\"]") as HTMLElement;
 		expect(cell).toBeTruthy();
 
 		await act(async () => {
@@ -250,20 +250,28 @@ describe("EmotePickerModern", () => {
 		expect(previewMeta.textContent).toContain("7TV");
 	});
 
-	// Case 4: Click emote calls onPick with correct entry + closes picker
-	it("clicking an emote cell calls onPick with correct entry and closes picker", async () => {
+	// Case 4: Sprint 54 — tek tık SADECE select (preview), çift tık inputa ekler.
+	it("double-clicking an emote cell calls onPick + closes picker", async () => {
 		const onPick = jest.fn();
 		const onClose = jest.fn();
 		renderPicker({ onPick, onClose });
 
 		const grid = screen.getByTestId("ep-grid");
-		const cell = grid.querySelector("[title=\"KEKW\"]") as HTMLElement;
+		const cell = grid.querySelector(
+			"[title^=\"KEKW\"]"
+		) as HTMLElement;
 		expect(cell).toBeTruthy();
 
+		// Tek tık: onPick çağrılmamalı, sadece preview seçilir
 		await act(async () => {
 			fireEvent.click(cell);
 		});
+		expect(onPick).not.toHaveBeenCalled();
 
+		// Çift tık: onPick + onClose
+		await act(async () => {
+			fireEvent.doubleClick(cell);
+		});
 		expect(onPick).toHaveBeenCalledTimes(1);
 		expect(onPick).toHaveBeenCalledWith(
 			expect.objectContaining({ name: "KEKW", insertText: "[emote:100:KEKW]" }),
@@ -280,7 +288,7 @@ describe("EmotePickerModern", () => {
 		window.addEventListener(FAVORITES_CHANGED_EVENT, favEventSpy);
 
 		const grid = screen.getByTestId("ep-grid");
-		const cell = grid.querySelector("[title=\"KEKW\"]") as HTMLElement;
+		const cell = grid.querySelector("[title^=\"KEKW\"]") as HTMLElement;
 		expect(cell).toBeTruthy();
 
 		await act(async () => {

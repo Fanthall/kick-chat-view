@@ -220,6 +220,30 @@ const electronHandler = {
 		},
 	},
 	// Sprint 47: webhook bridge kaldırıldı (Pusher tüm event'leri sağlıyor).
+	// Sprint 52: varsayılan tarayıcıda harici URL açan helper (UserWindow
+	// rol butonları Kick kanal sayfasını açmak için kullanıyor).
+	openExternal(url: string): Promise<boolean> {
+		return ipcRenderer.invoke("open-external", url);
+	},
+	// Sprint 53: GitHub Releases update check (private repo + PAT).
+	update: {
+		check(tokenOverride?: string): Promise<{
+			ok: boolean;
+			reason?: string;
+			current: string;
+			latest?: {
+				tag: string;
+				version: string;
+				name: string;
+				htmlUrl: string;
+				publishedAt: string;
+				body?: string;
+			};
+			updateAvailable?: boolean;
+		}> {
+			return ipcRenderer.invoke("update:check", tokenOverride);
+		},
+	},
 };
 
 contextBridge.exposeInMainWorld("electron", electronHandler);

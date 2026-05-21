@@ -79,7 +79,7 @@ const deriveIsBanned = (modActions: ModMessage[]): boolean => {
 	return last.type === "ban";
 };
 
-type Tab = "overview" | "messages" | "activity" | "modhistory" | "notes" | "mychannel";
+type Tab = "overview" | "messages" | "activity" | "modhistory" | "notes";
 
 const TIMEOUT_PRESETS = [
 	{ label: "1m", seconds: 60 },
@@ -123,15 +123,10 @@ const UserWindow: FunctionComponent = () => {
 	const [broadcasterUserId, setBroadcasterUserId] = useState<
 		number | undefined
 	>();
-	const [oauthUserId, setOauthUserId] = useState<number | undefined>();
-	const [myChannelSlug, setMyChannelSlug] = useState<string | undefined>();
-	const [myChannelBroadcasterId, setMyChannelBroadcasterId] = useState<
-		number | undefined
-	>();
+	// Sprint 57: oauthUserId + myChannel + role-mgmt state'leri kaldırıldı
+	// (rol yönetimi yok, derived value'lar artık kullanılmıyordu).
 	const [grantedScopes, setGrantedScopes] = useState<string[]>([]);
 	const [moderationLoading, setModerationLoading] = useState<string>("");
-	const [roleLoading, setRoleLoading] = useState<string>("");
-	const [myChannelRoleLoading, setMyChannelRoleLoading] = useState<string>("");
 	const [activeTab, setActiveTab] = useState<Tab>("overview");
 
 	// Timeout state
@@ -169,21 +164,11 @@ const UserWindow: FunctionComponent = () => {
 		Promise.all([
 			window.electron.kick.getChannelBySlug(payload.channelName),
 			window.electron.kick.getAuthStatus().catch(() => undefined),
-			window.electron.kick.getUsers().catch(() => undefined),
 		])
-			.then(([channelResponse, authStatus, userResponse]: any[]) => {
+			.then(([channelResponse, authStatus]: any[]) => {
 				setBroadcasterUserId(
 					channelResponse?.data?.[0]?.broadcaster_user_id
 				);
-				const myUser = userResponse?.data?.[0];
-				setOauthUserId(myUser?.user_id);
-				const myName: string | undefined =
-					myUser?.name ||
-					myUser?.username ||
-					myUser?.slug ||
-					localStorage.getItem("username") ||
-					undefined;
-				setMyChannelSlug(myName);
 				setGrantedScopes(
 					parseKickScopes(
 						authStatus?.grantedScopes,
@@ -192,24 +177,11 @@ const UserWindow: FunctionComponent = () => {
 						authStatus?.introspection?.data?.scopes
 					)
 				);
-				// Sprint 33: kullanıcının kendi kanal broadcaster id'si — chat
-				// slash command'lar bu id ile gönderilebilsin diye fetch et.
-				if (myName) {
-					window.electron.kick
-						.getChannelBySlug(myName)
-						.then((res: any) => {
-							setMyChannelBroadcasterId(
-								res?.data?.[0]?.broadcaster_user_id
-							);
-						})
-						.catch(() => setMyChannelBroadcasterId(undefined));
-				}
+				// Sprint 57: getUsers + myChannel fetch'i kaldırıldı —
+				// rol yönetimi yok.
 			})
 			.catch(() => {
 				setBroadcasterUserId(undefined);
-				setOauthUserId(undefined);
-				setMyChannelSlug(undefined);
-				setMyChannelBroadcasterId(undefined);
 				setGrantedScopes([]);
 			});
 	}, [payload?.channelName]);
@@ -288,33 +260,9 @@ const UserWindow: FunctionComponent = () => {
 	const canModerateUser =
 		canUseModerationUi && !!broadcasterUserId && hasBanScope;
 
-	// Sprint 32: owner-only — kanal sahibi rol yönetimi yapabilir
-	// (mod / VIP / OG ekle/çıkar). Moderator yapamaz. Kick'in resmi public
-	// API'sinde dedicated endpoint yok; chat slash command (`/mod`, `/unmod`,
-	// `/vip`, `/unvip`, `/og`, `/unog`) ile yönetiliyor — sendChatMessage
-	// üstünden gönderiyoruz.
-	const isOwner =
-		!!broadcasterUserId &&
-		!!oauthUserId &&
-		broadcasterUserId === oauthUserId;
-	const targetUserBadges = payload?.user.identity?.badges || [];
-	const targetIsMod = targetUserBadges.some(
-		(b) => (b.type || "").toLowerCase() === "moderator"
-	);
-	const targetIsVip = targetUserBadges.some(
-		(b) => (b.type || "").toLowerCase() === "vip"
-	);
-	const targetIsOg = targetUserBadges.some(
-		(b) => (b.type || "").toLowerCase() === "og"
-	);
-	const targetIsSelf =
-		!!payload && !!oauthUserId && payload.user.id === oauthUserId;
-	const targetIsOwner =
-		!!payload &&
-		!!broadcasterUserId &&
-		payload.user.id === broadcasterUserId;
-	// Sahip kendine veya başka sahibe rol atayamaz.
-	const canManageRoles = isOwner && !targetIsSelf && !targetIsOwner;
+	// Sprint 57: Owner / target-role / canManageRoles derived values
+	// kaldırıldı — Kick public API'sinde rol yönetimi yok (Mod/VIP/OG
+	// UI bütünüyle kaldırıldı).
 	const canDeleteMessages =
 		canUseModerationUi && !!broadcasterUserId && hasMessageManageScope;
 
@@ -497,93 +445,9 @@ const UserWindow: FunctionComponent = () => {
 			.finally(() => setModerationLoading(""));
 	};
 
-	// Sprint 32: rol yönetimi (Kick chat slash command — Kick API'sinde
-	// dedicated endpoint yok).
-	// Sprint 33: target broadcaster parametrize edildi — aktif kanal (owner-only)
-	// veya kullanıcının kendi kanalı (her zaman geçerli) için kullanılabilir.
-	const runRoleCommandFor = (
-		role: "mod" | "vip" | "og",
-		direction: "grant" | "revoke",
-		opts: {
-			targetBroadcasterId: number | undefined;
-			setLoading: (v: string) => void;
-			contextLabel: string;
-		}
-	) => {
-		if (!payload) return;
-		if (!opts.targetBroadcasterId) {
-			toast(`Broadcaster ID yüklenmedi (${opts.contextLabel}).`, {
-				type: "warning",
-			});
-			return;
-		}
-		if (!hasChatWriteScope) {
-			toast("Kick chat:write scope yok — chat command gönderilemiyor.", {
-				type: "warning",
-			});
-			return;
-		}
-		const verb =
-			direction === "grant"
-				? role === "mod"
-					? "/mod"
-					: role === "vip"
-					? "/vip"
-					: "/og"
-				: role === "mod"
-				? "/unmod"
-				: role === "vip"
-				? "/unvip"
-				: "/unog";
-		const slug = payload.user.slug || payload.user.username;
-		const content = `${verb} ${slug}`;
-		const loadingKey = `${role}-${direction}`;
-		opts.setLoading(loadingKey);
-		window.electron.kick
-			.sendChatMessage({
-				broadcaster_user_id: opts.targetBroadcasterId,
-				content,
-				type: "user",
-			})
-			.then(() => {
-				toast(`${content} → ${opts.contextLabel}`, { type: "success" });
-			})
-			.catch((err: any) => {
-				toast(err?.message || `${content} gönderilemedi.`, { type: "error" });
-			})
-			.finally(() => opts.setLoading(""));
-	};
-
-	const runRoleCommand = (
-		role: "mod" | "vip" | "og",
-		direction: "grant" | "revoke"
-	) => {
-		if (!canManageRoles) {
-			toast("Yalnızca kanal sahibi rol atayabilir.", { type: "warning" });
-			return;
-		}
-		runRoleCommandFor(role, direction, {
-			targetBroadcasterId: broadcasterUserId,
-			setLoading: setRoleLoading,
-			contextLabel: payload?.channelName || "kanal",
-		});
-	};
-
-	// Sprint 33: kendi kanalında rol yönetimi (UserWindow "My Channel" tab).
-	const runMyChannelRoleCommand = (
-		role: "mod" | "vip" | "og",
-		direction: "grant" | "revoke"
-	) => {
-		if (targetIsSelf) {
-			toast("Kendi kanalında kendine rol atayamazsın.", { type: "warning" });
-			return;
-		}
-		runRoleCommandFor(role, direction, {
-			targetBroadcasterId: myChannelBroadcasterId,
-			setLoading: setMyChannelRoleLoading,
-			contextLabel: myChannelSlug || "kendi kanalın",
-		});
-	};
+	// Sprint 57: runRoleCommandFor / runRoleCommand / runMyChannelRoleCommand
+	// kaldırıldı — Kick public API'sinde rol yönetimi için endpoint yok ve
+	// sendChatMessage slash command'ı parse etmiyor.
 
 	const runDeleteMessage = (message: UserMessage) => {
 		if (!hasMessageManageScope) {
@@ -673,7 +537,6 @@ const UserWindow: FunctionComponent = () => {
 		activity: 0,
 		modhistory: modActions.length,
 		notes: notes.length,
-		mychannel: null,
 	};
 
 	const TABS: { id: Tab; labelKey: string }[] = [
@@ -683,16 +546,8 @@ const UserWindow: FunctionComponent = () => {
 		{ id: "modhistory", labelKey: "userwindow.tab.modhistory" },
 		{ id: "notes", labelKey: "userwindow.tab.notes" },
 	];
-	// Sprint 33: "My Channel" tab — OAuth user'in kendi kanali varsa ve hedef
-	// kullanici kendisi degilse goster. Burada kullanici kendi kanalinda
-	// hedefin rolunu yonetebilir (Mod / VIP / OG slash commandlari).
-	const showMyChannelTab =
-		!!myChannelBroadcasterId &&
-		!!myChannelSlug &&
-		!targetIsSelf;
-	if (showMyChannelTab) {
-		TABS.push({ id: "mychannel", labelKey: "userwindow.tab.mychannel" });
-	}
+	// Sprint 57: "My Channel" tab kaldırıldı — Kick public API'sinde
+	// rol yönetimi yok.
 
 	// ── Save note ─────────────────────────────────────────────────────────────
 
@@ -872,115 +727,38 @@ const UserWindow: FunctionComponent = () => {
 							{/* Sprint 27: Clear msgs butonu kaldirildi. Kick API'sinde
 							    toplu silme yok; tek-mesaj silme zaten Messages tab'inda
 							    her satirda mevcut. */}
-							<div className="uw-strip-group">
-								{isBanned ? (
-									<button
-										type="button"
-										className="uw-btn-primary uw-strip-unban"
-										disabled={!canModerateUser || moderationLoading === "unban"}
-										onClick={() => runUserModeration("unban")}
-									>
-										{moderationLoading === "unban" ? "..." : t("userwindow.mod.unban")}
-									</button>
-								) : (
-									<button
-										type="button"
-										className="uw-btn-danger uw-strip-ban"
-										disabled={!canModerateUser || moderationLoading === "ban"}
-										onClick={() => runUserModeration("ban")}
-									>
-										{moderationLoading === "ban" ? "..." : t("userwindow.mod.ban")}
-									</button>
-								)}
+							{/* Sprint 52: Hem Ban hem Unban her zaman görünür —
+							    önceden banlanmış bir kullanıcı için manuel
+							    unban yapılabilsin (deriveIsBanned modAction
+							    history'sini görmüyorsa). */}
+							<div className="uw-strip-group" style={{ display: "flex", gap: 6 }}>
+								<button
+									type="button"
+									className="uw-btn-danger uw-strip-ban"
+									disabled={!canModerateUser || moderationLoading === "ban"}
+									onClick={() => runUserModeration("ban")}
+									title={isBanned ? "Kullanıcı zaten banlı görünüyor" : "Permanently ban"}
+								>
+									{moderationLoading === "ban" ? "..." : t("userwindow.mod.ban")}
+								</button>
+								<button
+									type="button"
+									className="uw-btn-primary uw-strip-unban"
+									disabled={!canModerateUser || moderationLoading === "unban"}
+									onClick={() => runUserModeration("unban")}
+									title="Önceki ban'ı kaldır (varsa)"
+								>
+									{moderationLoading === "unban" ? "..." : t("userwindow.mod.unban")}
+								</button>
 							</div>
 
 							{/* Sprint 26: Account section removed — joined dates not
 							    available from current IPC, so placeholder "—" was
 							    just noise. */}
 
-							{/* Sprint 32: owner-only rol yönetimi (mod / VIP / OG).
-							    Kanal sahibi kendisi değilse görünmez. Kendine veya
-							    diğer kanal sahibine atama engelli. */}
-							{canManageRoles && hasChatWriteScope && (
-								<>
-									<span className="uw-strip-divider" aria-hidden />
-									<div className="uw-strip-group uw-strip-roles">
-										<span className="uw-strip-heading">ROL</span>
-										<button
-											type="button"
-											className={`uw-btn-ghost uw-strip-role${
-												targetIsMod ? " is-on" : ""
-											}`}
-											disabled={!!roleLoading}
-											title={
-												targetIsMod
-													? "Moderatör yetkisini kaldır (/unmod)"
-													: "Moderatör yap (/mod)"
-											}
-											onClick={() =>
-												runRoleCommand(
-													"mod",
-													targetIsMod ? "revoke" : "grant"
-												)
-											}
-										>
-											{roleLoading.startsWith("mod-")
-												? "..."
-												: targetIsMod
-												? "Unmod"
-												: "Mod"}
-										</button>
-										<button
-											type="button"
-											className={`uw-btn-ghost uw-strip-role${
-												targetIsVip ? " is-on" : ""
-											}`}
-											disabled={!!roleLoading}
-											title={
-												targetIsVip
-													? "VIP'i kaldır (/unvip)"
-													: "VIP yap (/vip)"
-											}
-											onClick={() =>
-												runRoleCommand(
-													"vip",
-													targetIsVip ? "revoke" : "grant"
-												)
-											}
-										>
-											{roleLoading.startsWith("vip-")
-												? "..."
-												: targetIsVip
-												? "Unvip"
-												: "VIP"}
-										</button>
-										<button
-											type="button"
-											className={`uw-btn-ghost uw-strip-role${
-												targetIsOg ? " is-on" : ""
-											}`}
-											disabled={!!roleLoading}
-											title={
-												targetIsOg
-													? "OG'i kaldır (/unog)"
-													: "OG yap (/og)"
-											}
-											onClick={() =>
-												runRoleCommand(
-													"og",
-													targetIsOg ? "revoke" : "grant"
-												)
-											}
-										>
-											{roleLoading.startsWith("og-")
-												? "..."
-												: targetIsOg
-												? "Unog"
-												: "OG"}
-										</button>
-									</div>
-								</>
-							)}
+							{/* Sprint 57: Mod / VIP / OG butonları kaldırıldı —
+							    Kick public API'sinde dedicated endpoint yok,
+							    slash command'lar parse edilmiyordu. */}
 						</>
 					) : (
 						<div className="uw-strip-empty">
@@ -1202,118 +980,8 @@ const UserWindow: FunctionComponent = () => {
 						</div>
 					)}
 
-					{/* Sprint 33: My Channel tab — kendi kanalında rol yönetimi */}
-					{activeTab === "mychannel" && showMyChannelTab && (
-						<div className="uw-tab-content uw-mychannel-tab">
-							<div className="uw-card">
-								<div className="uw-card-title">
-									Kendi Kanalın:{" "}
-									<span style={{ color: "var(--ms-ac-mint, #2fd3a0)" }}>
-										{myChannelSlug}
-									</span>
-								</div>
-								<p className="uw-card-hint">
-									{user.username} kullanıcısına <b>kendi kanalında</b> rol
-									ver veya kaldır. Aksiyonlar chat slash command olarak
-									kendi kanalına gönderilir.
-								</p>
-								{!hasChatWriteScope ? (
-									<p
-										className="uw-empty-state"
-										style={{ color: "var(--ms-ac-warn, #e89a3c)" }}
-									>
-										chat:write scope yok — yeniden bağlanıp izin verin.
-									</p>
-								) : (
-									<div
-										className="uw-strip-roles"
-										style={{ marginTop: 10, justifyContent: "flex-start" }}
-									>
-										<button
-											type="button"
-											className={`uw-btn-ghost uw-strip-role${
-												targetIsMod ? " is-on" : ""
-											}`}
-											disabled={!!myChannelRoleLoading}
-											title={
-												targetIsMod
-													? "Kendi kanalından moderatör yetkisini kaldır (/unmod)"
-													: "Kendi kanalında moderatör yap (/mod)"
-											}
-											onClick={() =>
-												runMyChannelRoleCommand(
-													"mod",
-													targetIsMod ? "revoke" : "grant"
-												)
-											}
-										>
-											{myChannelRoleLoading.startsWith("mod-")
-												? "..."
-												: targetIsMod
-												? "Unmod"
-												: "Mod"}
-										</button>
-										<button
-											type="button"
-											className={`uw-btn-ghost uw-strip-role${
-												targetIsVip ? " is-on" : ""
-											}`}
-											disabled={!!myChannelRoleLoading}
-											title={
-												targetIsVip
-													? "Kendi kanalından VIP'i kaldır (/unvip)"
-													: "Kendi kanalında VIP yap (/vip)"
-											}
-											onClick={() =>
-												runMyChannelRoleCommand(
-													"vip",
-													targetIsVip ? "revoke" : "grant"
-												)
-											}
-										>
-											{myChannelRoleLoading.startsWith("vip-")
-												? "..."
-												: targetIsVip
-												? "Unvip"
-												: "VIP"}
-										</button>
-										<button
-											type="button"
-											className={`uw-btn-ghost uw-strip-role${
-												targetIsOg ? " is-on" : ""
-											}`}
-											disabled={!!myChannelRoleLoading}
-											title={
-												targetIsOg
-													? "Kendi kanalından OG'i kaldır (/unog)"
-													: "Kendi kanalında OG yap (/og)"
-											}
-											onClick={() =>
-												runMyChannelRoleCommand(
-													"og",
-													targetIsOg ? "revoke" : "grant"
-												)
-											}
-										>
-											{myChannelRoleLoading.startsWith("og-")
-												? "..."
-												: targetIsOg
-												? "Unog"
-												: "OG"}
-										</button>
-									</div>
-								)}
-								<p
-									className="uw-card-hint"
-									style={{ marginTop: 8, fontSize: 11 }}
-								>
-									Not: Hedef kullanıcı rozetleri aktif kanaldan okunuyor;
-									kendi kanalındaki gerçek rol durumu chat slash command
-									gönderildikten sonra güncellenir.
-								</p>
-							</div>
-						</div>
-					)}
+					{/* Sprint 57: My Channel tab tamamen kaldırıldı (rol verme
+					    işlevi Kick API tarafından desteklenmiyordu). */}
 				</div>
 			</div>
 
