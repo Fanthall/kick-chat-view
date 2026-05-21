@@ -30,3 +30,12 @@ npm-debug.log.*
 
 # Geçici preview dosyaları (regen edilebilir)
 docs/README-preview.html
+
+# Environment / secrets — KESİNLİKLE commit etme
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+kick-oauth.json
