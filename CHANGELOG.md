@@ -1,3 +1,7 @@
+# 4.6.9 — 2026-05-22
+
+Emote Rendering Unification — bkz aşağıdaki bölüm.
+
 ## [Emote Rendering Unification] — 2026-05-22
 
 - **Fix:** `[emote:ID:NAME]` tokens now render correctly in all message surfaces. Previously broken in: UserWindow Messages tab, UserWindow Overview/Mod history excerpts, PopupHistory (user message history popup), reply preview area (Chat + ChatModern), composer reply target.
