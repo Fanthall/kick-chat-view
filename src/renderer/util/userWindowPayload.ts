@@ -1,3 +1,4 @@
+import { EmoteSet } from "../constants/emote";
 import { UserWindowPayload } from "../../shared/userWindow";
 import { ModMessage, User, UserMessage } from "./chatInterface";
 
@@ -53,6 +54,9 @@ export const buildUserWindowPayload = (input: {
 	openedFrom: "chat" | "moderation";
 	channelName?: string;
 	canModerateChannel?: boolean;
+	channelEmoteSets?: EmoteSet[];
+	globalEmoteSets?: EmoteSet[];
+	blockedEmotes?: string[];
 }): UserWindowPayload => {
 	const username = input.user.username;
 	const usernameKey = normalizeKey(username);
@@ -81,5 +85,8 @@ export const buildUserWindowPayload = (input: {
 		messages: userMessages,
 		modActions: userModActions,
 		updatedAt: Date.now(),
+		channelEmoteSets: input.channelEmoteSets ?? [],
+		globalEmoteSets: input.globalEmoteSets ?? [],
+		blockedEmotes: input.blockedEmotes ?? [],
 	};
 };

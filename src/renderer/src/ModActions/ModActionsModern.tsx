@@ -29,6 +29,7 @@ import { getActiveChannelSlug } from "../../util/channelSettings";
 import { getDefaultTimeoutSeconds } from "../../util/chatCommands";
 import { buildBadgesHtml } from "../../util/chatHtml";
 import {
+	getBlockedEmotes,
 	getSuspendedUsers,
 	LOCAL_MODERATION_SETTINGS_CHANGED,
 	removeSuspendedUser,
@@ -315,6 +316,16 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 	const channelBadges = useFanthalSelector((state) => state.messages.channelBadges);
 	const activeChannelSlug = getActiveChannelSlug();
 
+	// UserWindow ayri renderer; Redux'a erisemez. Payload icinde emote rendering
+	// kaynak verilerini gondeririz (UserWindow buildEmoteIndex ile lokal kurar).
+	const buildEmoteContextForPayload = () => ({
+		channelEmoteSets: activeChannelSlug
+			? messages.emoteSetsByChannel[activeChannelSlug] || []
+			: [],
+		globalEmoteSets: messages.globalEmoteSets,
+		blockedEmotes: getBlockedEmotes(),
+	});
+
 	// Sprint 11: prefer EXPLICIT prop. modAction[last] fallback removed —
 	// it was auto-selecting any user after a mod event, regardless of intent.
 	const selectedUser: User | undefined = explicitSelectedUser;
@@ -552,6 +563,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 				openedFrom: "moderation",
 				channelName: activeChannelSlug || undefined,
 				canModerateChannel: canModerate,
+				...buildEmoteContextForPayload(),
 			});
 			window.electron.userWindow.open(payload);
 		} catch (err: any) {
@@ -648,6 +660,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 				openedFrom: "moderation",
 				channelName: activeChannelSlug || undefined,
 				canModerateChannel: canModerate,
+				...buildEmoteContextForPayload(),
 			});
 			window.electron.userWindow.open(payload);
 		} catch (err: any) {
@@ -812,6 +825,7 @@ const ModActionsModern: FunctionComponent<ModActionsModernProps> = ({
 													openedFrom: "moderation",
 													channelName: activeChannelSlug || undefined,
 													canModerateChannel: canModerate,
+													...buildEmoteContextForPayload(),
 												});
 												window.electron.userWindow.open(payload);
 											} catch (err: any) {

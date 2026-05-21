@@ -27,7 +27,11 @@ import {
 } from "../../util/chatCommands";
 import { getActiveChannelSlug } from "../../util/channelSettings";
 import { refreshChannelEmoteBundle } from "../../util/chatConnection";
-import { buildBadgesHtml, renderMessageHtml } from "../../util/chatHtml";
+import {
+	buildBadgesHtml,
+	renderMessageHtml,
+	renderMessageHtmlSnippet,
+} from "../../util/chatHtml";
 import {
 	createEmoteImg,
 	extractComposerText,
@@ -255,9 +259,12 @@ const Chat: FunctionComponent<ChatProps> = () => {
 				openedFrom: "chat",
 				channelName,
 				canModerateChannel,
+				channelEmoteSets,
+				globalEmoteSets: messages.globalEmoteSets,
+				blockedEmotes: blockEmotes,
 			})
 		);
-	}, [messages.messageList, messages.modAction, channelName, canModerateChannel]);
+	}, [messages.messageList, messages.modAction, channelName, canModerateChannel, channelEmoteSets, messages.globalEmoteSets, blockEmotes]);
 
 	useEffect(() => {
 		const loadBroadcasterUserId = () => {
@@ -562,6 +569,9 @@ const Chat: FunctionComponent<ChatProps> = () => {
 				openedFrom: "chat",
 				channelName,
 				canModerateChannel,
+				channelEmoteSets,
+				globalEmoteSets: messages.globalEmoteSets,
+				blockedEmotes: blockEmotes,
 			})
 		);
 	};
@@ -1083,10 +1093,19 @@ const Chat: FunctionComponent<ChatProps> = () => {
 								{isReply && (
 									<div className="chat-message-reply-preview flex flex-row justify-start items-center ml-2 text-small">
 										<GoReply style={{ marginRight: 5 }} />
-										{`${originalSenderUsername} : ${originalMessageContent.substring(
-											0,
-											Math.min(50, originalMessageContent.length)
-										)}`}
+										<span
+											dangerouslySetInnerHTML={{
+												__html:
+													escapeHtml(originalSenderUsername) +
+													" : " +
+													renderMessageHtmlSnippet(
+														originalMessageContent,
+														emoteIndex,
+														blockedEmotesSet,
+														50
+													),
+											}}
+										/>
 									</div>
 								)}
 								{item.type === "celebration" && (
