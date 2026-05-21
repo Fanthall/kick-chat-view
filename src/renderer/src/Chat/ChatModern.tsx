@@ -47,7 +47,11 @@ import {
 import { User, UserMessage } from "../../util/chatInterface";
 import { getActiveChannelSlug } from "../../util/channelSettings";
 import { refreshChannelEmoteBundle } from "../../util/chatConnection";
-import { buildBadgesHtml, renderMessageHtml } from "../../util/chatHtml";
+import {
+	buildBadgesHtml,
+	renderMessageHtml,
+	renderMessageHtmlSnippet,
+} from "../../util/chatHtml";
 import {
 	extractComposerText,
 	handleEmoteBackspaceDelete,
@@ -146,6 +150,13 @@ interface ChatRowProps {
 	susUsers: string[];
 	badgesHtml: string;
 	contentHtml: string;
+	/**
+	 * Pre-rendered HTML for the reply preview (emote-aware snippet).
+	 * Empty string when the message is not a reply.
+	 * Computed in parent via renderMessageHtmlSnippet so it shares the
+	 * same emoteIndex and blocked set as the main message body.
+	 */
+	replyPreviewHtml: string;
 	onReply: (msg: UserMessage) => void;
 	onPin: (msg: UserMessage) => void;
 	onTimeout: (msg: UserMessage) => void;
@@ -164,6 +175,7 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 	susUsers,
 	badgesHtml,
 	contentHtml,
+	replyPreviewHtml,
 	onReply,
 	onPin,
 	onTimeout,
@@ -233,10 +245,8 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 								maxWidth: 380,
 								display: "inline-block",
 							}}
-						>
-							{originalMessageContent.substring(0, 60)}
-							{originalMessageContent.length > 60 ? "…" : ""}
-						</span>
+							dangerouslySetInnerHTML={{ __html: replyPreviewHtml }}
+						/>
 					</div>
 				)}
 				{badgesHtml && (
@@ -826,6 +836,9 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				openedFrom: "chat",
 				channelName,
 				canModerateChannel,
+				channelEmoteSets,
+				globalEmoteSets: messages.globalEmoteSets,
+				blockedEmotes: blockEmotes,
 			})
 		);
 	};
@@ -1343,6 +1356,17 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						channelBadges
 					);
 					const contentHtml = renderMessageContent(msg.id, msg.content);
+					const originalReplyContent =
+						msg.metadata?.original_message?.content || "";
+					const replyPreviewHtml =
+						msg.type === "reply" && originalReplyContent
+							? renderMessageHtmlSnippet(
+									originalReplyContent,
+									emoteIndex,
+									blockedEmotesSet,
+									60
+								)
+							: "";
 					return (
 						<ChatRow
 							key={`chat-row-${msg.id}`}
@@ -1351,6 +1375,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							susUsers={susUsers}
 							badgesHtml={badgesHtml}
 							contentHtml={contentHtml}
+							replyPreviewHtml={replyPreviewHtml}
 							onReply={(m) => {
 								setReplyTarget(m);
 								composerRef.current?.focus();
@@ -1499,8 +1524,16 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 								@{replyTarget.sender.username}
 							</b>
 							<span style={{ margin: "0 6px", color: "var(--ms-fg-3)" }}>·</span>
-							{replyTarget.content.substring(0, 50)}
-							{replyTarget.content.length > 50 ? "…" : ""}
+							<span
+								dangerouslySetInnerHTML={{
+									__html: renderMessageHtmlSnippet(
+										replyTarget.content,
+										emoteIndex,
+										blockedEmotesSet,
+										50
+									),
+								}}
+							/>
 						</span>
 						<button
 							aria-label="Cancel reply"

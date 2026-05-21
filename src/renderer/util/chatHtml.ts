@@ -95,18 +95,13 @@ const emoteImgHtml = (entry: EmoteEntry, options: { blocked: boolean }) => {
 };
 
 /**
- * Yeni token-tabanli mesaj HTML uretici.
- * Zero-width emote'lar bir onceki emote'un uzerine overlay edilir.
+ * Token akisini HTML string'e cevirir (renderMessageHtml ve snippet variant
+ * arasinda paylasilan ic helper).
  */
-export const renderMessageHtml = (
-	content: string,
-	index: EmoteIndex,
-	blockedSet: Set<string> = new Set()
+const renderTokensToHtml = (
+	tokens: import("./messageTokens").MessageToken[],
+	blockedLower: Set<string>
 ): string => {
-	const tokens = tokenizeMessage(content || "", index);
-	const blockedLower = new Set(
-		Array.from(blockedSet, (value) => value.toLowerCase())
-	);
 	const parts: string[] = [];
 	let lastEmoteIdx = -1;
 	for (const token of tokens) {
@@ -134,8 +129,69 @@ export const renderMessageHtml = (
 };
 
 /**
- * Eski API - sadece sevenTvEmoteList[] alir, geri uyumluluk icin korunur.
- * Yeni cagrilar `renderMessageHtml(content, index, blocked)` kullansin.
+ * Yeni token-tabanli mesaj HTML uretici.
+ * Zero-width emote'lar bir onceki emote'un uzerine overlay edilir.
+ */
+export const renderMessageHtml = (
+	content: string,
+	index: EmoteIndex,
+	blockedSet: Set<string> = new Set()
+): string => {
+	const tokens = tokenizeMessage(content || "", index);
+	const blockedLower = new Set(
+		Array.from(blockedSet, (value) => value.toLowerCase())
+	);
+	return renderTokensToHtml(tokens, blockedLower);
+};
+
+/**
+ * Snippet variant: icerik tokenize edilir, sonra **token boundary**'sinde
+ * `maxChars` karaktere kadar kesilir. Half-emote olusturmaz.
+ *
+ * Char count'unda emote token'lari kendi `raw` uzunluklarini ekler
+ * (orn. `[emote:1:KEKW]` = 14 char), boylece text ve emote agirligi tutarli.
+ * Truncate olursa sonuna `…` (Unicode horizontal ellipsis) ekler.
+ *
+ * Kullanim: reply preview, user history excerpt, vb. kucuk snippet'lar.
+ */
+export const renderMessageHtmlSnippet = (
+	content: string,
+	index: EmoteIndex,
+	blockedSet: Set<string> = new Set(),
+	maxChars: number = 60
+): string => {
+	if (!content) return "";
+	const tokens = tokenizeMessage(content, index);
+	const blockedLower = new Set(
+		Array.from(blockedSet, (value) => value.toLowerCase())
+	);
+	const accepted: import("./messageTokens").MessageToken[] = [];
+	let chars = 0;
+	let truncated = false;
+	for (const t of tokens) {
+		const tokenLen =
+			t.kind === "emote" ? t.raw.length : t.value.length;
+		if (chars + tokenLen > maxChars) {
+			truncated = true;
+			break;
+		}
+		accepted.push(t);
+		chars += tokenLen;
+	}
+	const body = renderTokensToHtml(accepted, blockedLower);
+	return truncated ? body + "…" : body;
+};
+
+/**
+ * @deprecated Sadece geriye uyumluluk icin korunuyor. Bu API yalnizca
+ * 7TV global emote listesini index'e ekler — channel-specific 7TV, BTTV,
+ * FFZ ve Kick sub/channel emote'lari **render edilmez**. (Kick `[emote:ID:NAME]`
+ * token'lari `messageTokens` icindeki Kick fallback sayesinde calisir.)
+ *
+ * Yeni cagrilar `renderMessageHtml(content, emoteIndex, blockedSet)` veya
+ * snippet ihtiyaci icin `renderMessageHtmlSnippet(...)` kullansin.
+ * EmoteIndex'i Redux'tan veya `buildEmoteIndex(channelSets, globalSets, channelSlug)`
+ * ile uretin.
  */
 export const buildEmoteMessageHtml = (
 	content: string,

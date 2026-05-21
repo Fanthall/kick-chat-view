@@ -21,6 +21,7 @@ import { useFanthalSelector } from "../../store/hooks/hooks";
 import { ModMessage } from "../../util/chatInterface";
 import { getActiveChannelSlug } from "../../util/channelSettings";
 import { buildUserWindowPayload } from "../../util/userWindowPayload";
+import { getBlockedEmotes } from "../../util/localModerationStorage";
 import ScrollableView from "../Component/ScrollableView/ScrollableView";
 import moderator from "./../../kickBadges/channelMod.png";
 import founder from "./../../kickBadges/founder.png";
@@ -65,14 +66,20 @@ const ModActions: FunctionComponent<ModActionsProps> = () => {
 			latestAction?.user || latestAction?.message?.messageList?.[0]?.sender;
 		if (!user) return;
 
+		const channelName = localStorage.getItem("channelName") || undefined;
 		window.electron.userWindow.update(
 			buildUserWindowPayload({
 				user,
 				messages: messages.messageList,
 				modActions: messages.modAction,
 				openedFrom: "moderation",
-				channelName: localStorage.getItem("channelName") || undefined,
+				channelName,
 				canModerateChannel: false,
+				channelEmoteSets: channelName
+					? messages.emoteSetsByChannel[channelName] || []
+					: [],
+				globalEmoteSets: messages.globalEmoteSets,
+				blockedEmotes: getBlockedEmotes(),
 			})
 		);
 	}, [messages.modAction, messages.messageList]);
@@ -187,16 +194,22 @@ const ModActions: FunctionComponent<ModActionsProps> = () => {
 										props.operation.user ||
 										props.operation.message?.messageList?.[0]?.sender;
 									if (!user) return;
+									const channelName =
+										localStorage.getItem("channelName") || undefined;
 									window.electron.userWindow.open(
 										buildUserWindowPayload({
 											user,
 											messages: messages.messageList,
 											modActions: messages.modAction,
 											openedFrom: "moderation",
-											channelName:
-												localStorage.getItem("channelName") ||
-												undefined,
+											channelName,
 											canModerateChannel: false,
+											channelEmoteSets: channelName
+												? messages.emoteSetsByChannel[channelName] ||
+													[]
+												: [],
+											globalEmoteSets: messages.globalEmoteSets,
+											blockedEmotes: getBlockedEmotes(),
 										})
 									);
 								}}

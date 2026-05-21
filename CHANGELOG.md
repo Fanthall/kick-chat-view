@@ -1,3 +1,12 @@
+## [Emote Rendering Unification] — 2026-05-22
+
+- **Fix:** `[emote:ID:NAME]` tokens now render correctly in all message surfaces. Previously broken in: UserWindow Messages tab, UserWindow Overview/Mod history excerpts, PopupHistory (user message history popup), reply preview area (Chat + ChatModern), composer reply target.
+- **New helper:** `renderMessageHtmlSnippet(content, index, blocked, maxChars)` in `chatHtml.ts` — tokenize-then-truncate so emote tokens are never split mid-way. Appends Unicode `…` when truncated.
+- **Deprecated:** `buildEmoteMessageHtml(content, sevenTvList)` — only renders global 7TV emotes; missed Kick channel/sub, BTTV, FFZ, and channel-specific 7TV. Kept for backward compat; flagged with `@deprecated` JSDoc. No production callers remain.
+- **`UserWindowPayload` extended:** added optional `channelEmoteSets`, `globalEmoteSets`, `blockedEmotes` fields. UserWindow (separate Electron renderer with no Redux access) builds its own `EmoteIndex` locally via `buildEmoteIndex`. Backward compatible: existing payloads without these fields fall back to empty index.
+- **CONSTRAINT-4 enforced everywhere:** all message HTML now goes through `renderMessageHtml` / `renderMessageHtmlSnippet` (sanitized via `escapeHtml` + `safeUrl`). UserWindow file comment updated accordingly.
+- **Tests:** 13 new unit tests in `chatHtml.test.ts` covering rendering, escaping, snippet truncation at token boundary, Unicode ellipsis, blocked emote handling, and deprecated API behavior.
+
 ## [Modern UI (beta)] — 2026-05-20
 
 - **LayoutModern shell:** 3-column layout (Chat / Activity / Moderation) + topbar with channel tabs, live pill, viewer count, uptime, category. Modern shell is now the default; classic accessible via Settings → Advanced → Modern UI toggle.

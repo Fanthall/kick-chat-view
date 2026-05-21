@@ -1,12 +1,16 @@
 import moment from "moment";
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, useMemo } from "react";
 import { GoReply } from "react-icons/go";
 import { useFanthalSelector } from "../../../store/hooks/hooks";
 import { ModUserHistory } from "../../../util/chatInterface";
 import {
 	buildBadgesHtml,
-	buildEmoteMessageHtml,
+	renderMessageHtml,
+	renderMessageHtmlSnippet,
 } from "../../../util/chatHtml";
+import { buildEmoteIndex } from "../../../util/emoteIndex";
+import { getActiveChannelSlug } from "../../../util/channelSettings";
+import { getBlockedEmotes } from "../../../util/localModerationStorage";
 import { escapeHtml, safeColor } from "../../../util/htmlSafe";
 import DraggableView from "../DraggableView/DraggableView";
 interface PopupHistoryProps {
@@ -16,6 +20,23 @@ interface PopupHistoryProps {
 }
 const PopupHistory: FunctionComponent<PopupHistoryProps> = (props) => {
 	const messages = useFanthalSelector((state) => state.messages);
+	const channelName = getActiveChannelSlug();
+	const channelEmoteSets = useMemo(
+		() =>
+			(channelName ? messages.emoteSetsByChannel[channelName] : []) || [],
+		[channelName, messages.emoteSetsByChannel]
+	);
+	const emoteIndex = useMemo(
+		() =>
+			buildEmoteIndex(channelEmoteSets, messages.globalEmoteSets, channelName),
+		[channelEmoteSets, messages.globalEmoteSets, channelName]
+	);
+	const blockedEmotesSet = useMemo(
+		() => new Set(getBlockedEmotes()),
+		// PopupHistory acildiginda blocked list'i bir kez okuyoruz — popup kisa
+		// omurlu oldugu icin runtime degisikligi takip etmiyoruz (Chat aksine).
+		[]
+	);
 	return (
 		<DraggableView
 			title={"User History"}
@@ -54,10 +75,19 @@ const PopupHistory: FunctionComponent<PopupHistoryProps> = (props) => {
 								item.sender.identity?.badges,
 								messages.channelBadges
 							);
-							const contentHtml = buildEmoteMessageHtml(
+							const contentHtml = renderMessageHtml(
 								item.content,
-								messages.sevenTvEmoteList
+								emoteIndex,
+								blockedEmotesSet
 							);
+							const replyPreviewHtml = isReply
+								? renderMessageHtmlSnippet(
+										originalMessageContent,
+										emoteIndex,
+										blockedEmotesSet,
+										50
+									)
+								: "";
 							return (
 								<div
 									key={"message-list-" + item.id}
@@ -74,13 +104,16 @@ const PopupHistory: FunctionComponent<PopupHistoryProps> = (props) => {
 														marginRight: 5,
 													}}
 												/>
-												{`${originalSenderUsername} : ${originalMessageContent.substring(
-													0,
-													Math.min(
-														50,
-														originalMessageContent.length
-													)
-												)}`}
+												<span
+													dangerouslySetInnerHTML={{
+														__html:
+															escapeHtml(
+																originalSenderUsername
+															) +
+															" : " +
+															replyPreviewHtml,
+													}}
+												/>
 											</div>
 										)}
 

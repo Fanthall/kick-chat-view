@@ -5,9 +5,12 @@
  * user-detail popup. All IPC handlers and optimistic-update patterns
  * (addLocalModAction / createLocalAction) are preserved verbatim.
  *
- * CONSTRAINT-4: message HTML uses `message.content` as plain text —
- * no dangerouslySetInnerHTML in this file (UserWindow has no emote
- * rendering path; raw content is safe).
+ * CONSTRAINT-4 (Emote unification 2026-05-22): message HTML uses
+ * `renderMessageHtml` / `renderMessageHtmlSnippet` from chatHtml.ts
+ * (sanitized via escapeHtml + safeUrl). EmoteIndex received via
+ * UserWindowPayload.channelEmoteSets + globalEmoteSets and built
+ * locally with buildEmoteIndex (UserWindow is a separate Electron
+ * renderer; no Redux access).
  */
 
 import moment from "moment";
@@ -22,6 +25,11 @@ import { FiCopy, FiX, FiMessageSquare } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { UserWindowPayload } from "../../../shared/userWindow";
 import { ModMessage, UserMessage } from "../../util/chatInterface";
+import {
+	renderMessageHtml,
+	renderMessageHtmlSnippet,
+} from "../../util/chatHtml";
+import { buildEmoteIndex } from "../../util/emoteIndex";
 import { hasKickScope, parseKickScopes } from "../../util/kickScopes";
 import { useProfilePic } from "../../util/useProfilePic";
 import {
@@ -501,6 +509,23 @@ const UserWindow: FunctionComponent = () => {
 			.finally(() => setModerationLoading(""));
 	};
 
+	// ─── Emote rendering (Sprint XX, emote unification) ────────────────────
+	// Payload yoksa bos index ile fallback (hook order korunmak zorunda —
+	// rules of hooks: erken return'den ONCE useMemo cagrilmali).
+	const emoteIndex = useMemo(
+		() =>
+			buildEmoteIndex(
+				payload?.channelEmoteSets ?? [],
+				payload?.globalEmoteSets ?? [],
+				payload?.channelName
+			),
+		[payload?.channelEmoteSets, payload?.globalEmoteSets, payload?.channelName]
+	);
+	const blockedEmotesSet = useMemo(
+		() => new Set(payload?.blockedEmotes ?? []),
+		[payload?.blockedEmotes]
+	);
+
 	// ── Empty state ───────────────────────────────────────────────────────────
 
 	if (!payload) {
@@ -813,7 +838,16 @@ const UserWindow: FunctionComponent = () => {
 												>
 													{msg.sender.username}
 												</span>
-												<span className="uw-msg-content">{msg.content}</span>
+												<span
+												className="uw-msg-content"
+												dangerouslySetInnerHTML={{
+													__html: renderMessageHtml(
+														msg.content,
+														emoteIndex,
+														blockedEmotesSet
+													),
+												}}
+											/>
 											</li>
 										))}
 									</ul>
@@ -873,7 +907,16 @@ const UserWindow: FunctionComponent = () => {
 											>
 												{msg.sender.username}
 											</span>
-											<span className="uw-msg-content">{msg.content}</span>
+											<span
+												className="uw-msg-content"
+												dangerouslySetInnerHTML={{
+													__html: renderMessageHtml(
+														msg.content,
+														emoteIndex,
+														blockedEmotesSet
+													),
+												}}
+											/>
 											{canUseModerationUi && (
 												<button
 													type="button"
@@ -922,9 +965,20 @@ const UserWindow: FunctionComponent = () => {
 													"system"}
 											</span>
 											{a.message?.messageList?.[0] && (
-												<span className="uw-muted uw-msg-excerpt">
-													"{a.message.messageList[0].content}"
-												</span>
+												<span
+													className="uw-muted uw-msg-excerpt"
+													dangerouslySetInnerHTML={{
+														__html:
+															'"' +
+															renderMessageHtmlSnippet(
+																a.message.messageList[0].content,
+																emoteIndex,
+																blockedEmotesSet,
+																60
+															) +
+															'"',
+													}}
+												/>
 											)}
 											<span
 												className={`uw-status-pill uw-status-${a.status || "success"}`}
