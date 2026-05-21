@@ -497,6 +497,12 @@ ipcMain.handle("update:auto-check", async () => {
 ipcMain.handle("update:download", async () => {
 	wireAutoUpdater();
 	try {
+		// Sprint 61 fix: electron-updater downloadUpdate() öncesi
+		// checkForUpdates() cache'inin hazır olmasını gerektirir
+		// (yoksa "Please check update first" hatası). App açılışındaki
+		// background check henüz tamamlanmamış olabilir → burada
+		// garantili tekrar çağır.
+		await autoUpdater.checkForUpdates();
 		await autoUpdater.downloadUpdate();
 		return { ok: true };
 	} catch (err: any) {
