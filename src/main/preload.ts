@@ -243,6 +243,21 @@ const electronHandler = {
 		}> {
 			return ipcRenderer.invoke("update:check", tokenOverride);
 		},
+		// Sprint 61: electron-updater auto download/install + event subscribe
+		download(): Promise<{ ok: boolean; message?: string }> {
+			return ipcRenderer.invoke("update:download");
+		},
+		install(): Promise<{ ok: boolean; message?: string }> {
+			return ipcRenderer.invoke("update:install");
+		},
+		autoCheck(): Promise<{ ok: boolean; version?: string; message?: string }> {
+			return ipcRenderer.invoke("update:auto-check");
+		},
+		onEvent(callback: (event: any) => void): () => void {
+			const handler = (_e: any, payload: any) => callback(payload);
+			ipcRenderer.on("update:event", handler);
+			return () => ipcRenderer.removeListener("update:event", handler);
+		},
 	},
 };
 
