@@ -157,7 +157,7 @@ LocalStorage anahtarları proje sözleşmesi gibi kullanılır:
 
 ## Sürüm
 
-Mevcut sürüm: **v4.6.4** (release/app/package.json)
+Mevcut sürüm: **v4.6.5** (release/app/package.json)
 
 Release Notes: [GitHub Releases](https://github.com/Fanthall/kick-chat-view/releases)
 
