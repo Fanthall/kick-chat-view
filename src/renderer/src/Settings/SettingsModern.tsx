@@ -751,11 +751,17 @@ const UpdateBlock: FunctionComponent = () => {
 	>("idle");
 	const [current, setCurrent] = useState<string>("");
 	const [latest, setLatest] = useState<any>(null);
+	// Sprint 61: download/install state
+	const [downloadState, setDownloadState] = useState<
+		"idle" | "downloading" | "downloaded" | "error"
+	>("idle");
+	const [downloadProgress, setDownloadProgress] = useState<number>(0);
+	const [downloadSpeed, setDownloadSpeed] = useState<number>(0);
+	const [downloadError, setDownloadError] = useState<string>("");
 
 	const runCheck = async () => {
 		setStatus("checking");
 		try {
-			// Sprint 55: repo public — token gerekli değil, çağrı unauth.
 			const res = await (window.electron as any).update.check();
 			setCurrent(res?.current || "");
 			if (!res?.ok) {
@@ -769,11 +775,51 @@ const UpdateBlock: FunctionComponent = () => {
 		}
 	};
 
-	// Sprint 55: Açılışta otomatik kontrol et — repo public, token yok.
 	useEffect(() => {
 		runCheck();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// Sprint 61: electron-updater event subscription
+	useEffect(() => {
+		const off = (window.electron as any).update.onEvent?.((e: any) => {
+			if (!e) return;
+			switch (e.kind) {
+				case "progress":
+					setDownloadState("downloading");
+					setDownloadProgress(Math.round(e.percent || 0));
+					setDownloadSpeed(e.bytesPerSecond || 0);
+					break;
+				case "downloaded":
+					setDownloadState("downloaded");
+					setDownloadProgress(100);
+					break;
+				case "error":
+					setDownloadState("error");
+					setDownloadError(e.message || "Bilinmeyen hata");
+					break;
+			}
+		});
+		return () => {
+			if (typeof off === "function") off();
+		};
+	}, []);
+
+	const startDownload = async () => {
+		setDownloadState("downloading");
+		setDownloadProgress(0);
+		setDownloadError("");
+		const res = await (window.electron as any).update.download?.();
+		if (!res?.ok) {
+			setDownloadState("error");
+			setDownloadError(res?.message || "İndirme başlatılamadı.");
+		}
+	};
+
+	const installNow = async () => {
+		// quitAndInstall app'i kapatır, geri dönüş yok
+		await (window.electron as any).update.install?.();
+	};
 
 	const openReleasePage = () => {
 		const url =
@@ -790,8 +836,15 @@ const UpdateBlock: FunctionComponent = () => {
 			: status === "checking"
 			? { text: "KONTROL...", color: "var(--ms-fg-3)" }
 			: status === "error"
-			? { text: "TOKEN/AĞ HATASI", color: "var(--ms-ac-live, #ef4f5f)" }
+			? { text: "AĞ HATASI", color: "var(--ms-ac-live, #ef4f5f)" }
 			: { text: "—", color: "var(--ms-fg-3)" };
+
+	const speedLabel = (bps: number): string => {
+		if (!bps) return "";
+		if (bps < 1024) return `${Math.round(bps)} B/s`;
+		if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`;
+		return `${(bps / 1024 / 1024).toFixed(1)} MB/s`;
+	};
 
 	return (
 		<div className="set-block">
@@ -820,23 +873,99 @@ const UpdateBlock: FunctionComponent = () => {
 					<button
 						type="button"
 						className="set-btn"
-						disabled={status === "checking"}
+						disabled={status === "checking" || downloadState === "downloading"}
 						onClick={runCheck}
 					>
 						Kontrol et
 					</button>
-					{status === "available" && (
+					{status === "available" && downloadState === "idle" && (
+						<>
+							<button
+								type="button"
+								className="set-btn primary"
+								onClick={startDownload}
+							>
+								İndir ve Kur
+							</button>
+							<button
+								type="button"
+								className="set-btn"
+								onClick={openReleasePage}
+								title="Tarayıcıda release sayfasını aç"
+							>
+								Tarayıcıda aç
+							</button>
+						</>
+					)}
+					{downloadState === "downloaded" && (
 						<button
 							type="button"
 							className="set-btn primary"
-							onClick={openReleasePage}
+							onClick={installNow}
 						>
-							İndir
+							Şimdi yeniden başlat ve kur
 						</button>
 					)}
 				</div>
 			</div>
-			{/* Sprint 55: PAT input kaldırıldı — repo public, token gereksiz. */}
+
+			{/* Sprint 61: Download progress + status feedback */}
+			{downloadState === "downloading" && (
+				<div style={{ marginTop: 10 }}>
+					<div
+						style={{
+							height: 6,
+							background: "var(--ms-bg-2, rgba(11,19,26,0.6))",
+							borderRadius: 4,
+							overflow: "hidden",
+							border: "1px solid var(--ms-bd-2, rgba(128,159,177,0.24))",
+						}}
+					>
+						<div
+							style={{
+								height: "100%",
+								width: `${downloadProgress}%`,
+								background: "var(--ac-mint, #2fd3a0)",
+								transition: "width 0.2s",
+							}}
+						/>
+					</div>
+					<div
+						style={{
+							marginTop: 4,
+							fontSize: 11,
+							color: "var(--ms-fg-3)",
+							display: "flex",
+							justifyContent: "space-between",
+						}}
+					>
+						<span>İndiriliyor… %{downloadProgress}</span>
+						{downloadSpeed > 0 && <span>{speedLabel(downloadSpeed)}</span>}
+					</div>
+				</div>
+			)}
+			{downloadState === "downloaded" && (
+				<div
+					style={{
+						marginTop: 8,
+						fontSize: 12,
+						color: "var(--ms-ac-mint, #2fd3a0)",
+					}}
+				>
+					✓ Yeni sürüm hazır. Uygulamayı yeniden başlatınca kurulacak.
+				</div>
+			)}
+			{downloadState === "error" && downloadError && (
+				<div
+					style={{
+						marginTop: 8,
+						fontSize: 12,
+						color: "var(--ms-ac-live, #ef4f5f)",
+					}}
+				>
+					⚠ İndirme hatası: {downloadError}
+				</div>
+			)}
 		</div>
 	);
 };

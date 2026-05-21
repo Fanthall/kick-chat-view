@@ -48,7 +48,12 @@ class AppUpdater {
 	constructor() {
 		log.transports.file.level = "info";
 		autoUpdater.logger = log;
-		autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+		// Sprint 61: Manuel akış — kullanıcı butona basana kadar indirme yok.
+		// Background'da sadece versiyon kontrolü yapılır, event'ler renderer'a
+		// forward edilir (wireAutoUpdater main process IPC handler'larında).
+		autoUpdater.autoDownload = false;
+		autoUpdater.autoInstallOnAppQuit = true;
+		autoUpdater.checkForUpdates().catch((err) => {
 			log.warn("auto-update check skipped:", err?.message ?? err);
 		});
 	}
@@ -414,7 +419,7 @@ ipcMain.handle("open-external", async (_e, url: string) => {
 	}
 });
 
-// Sprint 53: GitHub Releases check (private repo + PAT).
+// Sprint 53: GitHub Releases check (public repo).
 import { fetchLatestRelease, compareVersions } from "./githubUpdate";
 
 ipcMain.handle(
@@ -434,6 +439,81 @@ ipcMain.handle(
 		};
 	}
 );
+
+// Sprint 61: electron-updater event forwarder + manual download/install IPC.
+// app.whenReady() içinde call edilir, çünkü main window'a event forward etmek gerek.
+let autoUpdaterWired = false;
+const wireAutoUpdater = () => {
+	if (autoUpdaterWired) return;
+	autoUpdaterWired = true;
+	// Manuel kontrol modu — checkForUpdatesAndNotify yerine sadece check
+	autoUpdater.autoDownload = false;
+	autoUpdater.autoInstallOnAppQuit = true;
+	const forward = (channel: string, payload: any) => {
+		BrowserWindow.getAllWindows().forEach((w) => {
+			if (!w.isDestroyed()) {
+				w.webContents.send(channel, payload);
+			}
+		});
+	};
+	autoUpdater.on("checking-for-update", () => forward("update:event", { kind: "checking" }));
+	autoUpdater.on("update-available", (info) =>
+		forward("update:event", { kind: "available", version: info.version, releaseDate: info.releaseDate, releaseNotes: info.releaseNotes })
+	);
+	autoUpdater.on("update-not-available", (info) =>
+		forward("update:event", { kind: "not-available", version: info?.version })
+	);
+	autoUpdater.on("error", (err) =>
+		forward("update:event", { kind: "error", message: err?.message ?? String(err) })
+	);
+	autoUpdater.on("download-progress", (p) =>
+		forward("update:event", {
+			kind: "progress",
+			percent: p.percent,
+			transferred: p.transferred,
+			total: p.total,
+			bytesPerSecond: p.bytesPerSecond,
+		})
+	);
+	autoUpdater.on("update-downloaded", (info) =>
+		forward("update:event", { kind: "downloaded", version: info.version })
+	);
+};
+
+ipcMain.handle("update:auto-check", async () => {
+	wireAutoUpdater();
+	try {
+		const res = await autoUpdater.checkForUpdates();
+		return {
+			ok: true,
+			version: res?.updateInfo?.version,
+			downloadPromise: !!res?.downloadPromise,
+		};
+	} catch (err: any) {
+		return { ok: false, message: err?.message ?? String(err) };
+	}
+});
+
+ipcMain.handle("update:download", async () => {
+	wireAutoUpdater();
+	try {
+		await autoUpdater.downloadUpdate();
+		return { ok: true };
+	} catch (err: any) {
+		return { ok: false, message: err?.message ?? String(err) };
+	}
+});
+
+ipcMain.handle("update:install", async () => {
+	wireAutoUpdater();
+	try {
+		// isSilent=false: NSIS UI gösterir; isForceRunAfter=true: kurulduktan sonra app açar
+		autoUpdater.quitAndInstall(false, true);
+		return { ok: true };
+	} catch (err: any) {
+		return { ok: false, message: err?.message ?? String(err) };
+	}
+});
 
 if (process.env.NODE_ENV === "production") {
 	const sourceMapSupport = require("source-map-support");
