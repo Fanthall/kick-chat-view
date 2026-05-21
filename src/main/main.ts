@@ -401,6 +401,40 @@ ipcMain.on("panel-window:clear-mod-target", () => {
    tüm event'leri sağlıyor). webhookServer.ts dosyası silindi; IPC
    handler / auto-start / quit hook'lar artık gereksiz. */
 
+// Sprint 52: open-external — UserWindow rol butonları Kick kanal sayfasını
+// varsayılan tarayıcıda açabilsin diye (mod/VIP/OG komutu için).
+ipcMain.handle("open-external", async (_e, url: string) => {
+	if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return false;
+	try {
+		await shell.openExternal(url);
+		return true;
+	} catch (err) {
+		console.log("open-external failed", err);
+		return false;
+	}
+});
+
+// Sprint 53: GitHub Releases check (private repo + PAT).
+import { fetchLatestRelease, compareVersions } from "./githubUpdate";
+
+ipcMain.handle(
+	"update:check",
+	async (_e, tokenOverride?: string) => {
+		const current = app.getVersion();
+		const latest = await fetchLatestRelease(tokenOverride);
+		if (!latest) {
+			return { ok: false, reason: "token-or-network", current };
+		}
+		const cmp = compareVersions(latest.version, current);
+		return {
+			ok: true,
+			current,
+			latest,
+			updateAvailable: cmp > 0,
+		};
+	}
+);
+
 if (process.env.NODE_ENV === "production") {
 	const sourceMapSupport = require("source-map-support");
 	sourceMapSupport.install();

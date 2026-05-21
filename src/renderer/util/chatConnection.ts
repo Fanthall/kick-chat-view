@@ -22,6 +22,16 @@ import {
 	LegacyGiftedSubscriptionsPayload,
 	LegacySubscriptionPayload,
 } from "./legacyPusherBridge";
+// Sprint 58: otomasyon rutini engine — event noktalarında çağırılır.
+import {
+	evaluateChatMessage,
+	evaluateFollowEvent,
+	evaluateGiftSubEvent,
+	evaluateHostEvent,
+	evaluateKicksEvent,
+	evaluateRewardEvent,
+	evaluateSubEvent,
+} from "./automationRulesEngine";
 interface EventType {
 	channel: string;
 	data: string;
@@ -358,6 +368,16 @@ export const chatListener = (slug?: string) => {
 								channelSlug: channelName,
 							})
 						);
+						// Sprint 58: chat_match + mention triggers
+						try {
+							evaluateChatMessage(
+								channelName,
+								parsedMessage?.sender?.username || "",
+								parsedMessage?.content || ""
+							);
+						} catch (autoErr) {
+							console.log("automation chat eval failed", autoErr);
+						}
 						break;
 				case "App\\Events\\SubscriptionEvent":
 					const parsedSubMessage: LegacySubscriptionPayload = JSON.parse(
@@ -372,6 +392,16 @@ export const chatListener = (slug?: string) => {
 								})
 							)
 					);
+					// Sprint 58: sub_event trigger
+					try {
+						evaluateSubEvent(
+							channelName,
+							(parsedSubMessage as any)?.username,
+							(parsedSubMessage as any)?.months
+						);
+					} catch (autoErr) {
+						console.log("automation sub eval failed", autoErr);
+					}
 					break;
 				case "App\\Events\\GiftedSubscriptionsEvent":
 					const parsedGiftSubMessage: LegacyGiftedSubscriptionsPayload = JSON.parse(
@@ -386,6 +416,23 @@ export const chatListener = (slug?: string) => {
 								})
 							)
 					);
+					// Sprint 58 + 58b: gift_sub_event trigger + recipient cache
+					try {
+						const gifter =
+							(parsedGiftSubMessage as any)?.gifter_username ||
+							(parsedGiftSubMessage as any)?.gifter?.username;
+						const recipientsRaw: any =
+							(parsedGiftSubMessage as any)?.gifted_usernames;
+						const recipients: string[] = Array.isArray(recipientsRaw)
+							? recipientsRaw.filter((r: any) => typeof r === "string")
+							: [];
+						const giftCount =
+							recipients.length ||
+							(parsedGiftSubMessage as any)?.amount;
+						evaluateGiftSubEvent(channelName, gifter, giftCount, recipients);
+					} catch (autoErr) {
+						console.log("automation gift sub eval failed", autoErr);
+					}
 					break;
 				case "App\\Events\\MessageDeletedEvent":
 					const parsedDeleteMessage: DeleteMessage = JSON.parse(
@@ -456,6 +503,12 @@ export const chatListener = (slug?: string) => {
 								localStorage.getItem("chatViewShowFollowers") !==
 								"false";
 							if (showFollowers && delta > 0) {
+								// Sprint 58: follow_event trigger
+								try {
+									evaluateFollowEvent(channelName, delta);
+								} catch (autoErr) {
+									console.log("automation follow eval failed", autoErr);
+								}
 								const now = Date.now();
 								const id = `follow-count-${channelName}-${now}`;
 								const text =
@@ -522,6 +575,16 @@ export const chatListener = (slug?: string) => {
 							optional_message: parsedHostInfo.optional_message,
 						})
 					);
+					// Sprint 58: host_event trigger
+					try {
+						evaluateHostEvent(
+							channelName,
+							parsedHostInfo.host_username,
+							parsedHostInfo.number_viewers
+						);
+					} catch (autoErr) {
+						console.log("automation host eval failed", autoErr);
+					}
 					break;
 				case "RewardRedeemedEvent": {
 					// Sprint 49: chatroom_<id> kanalında reward redemption.
@@ -532,6 +595,12 @@ export const chatListener = (slug?: string) => {
 							typeof p?.user_id === "number" ? p.user_id : undefined;
 						const createdMs = Date.now();
 						const id = `reward-${channelName}-${userId || username}-${createdMs}`;
+						// Sprint 58: reward_redeemed trigger
+						try {
+							evaluateRewardEvent(channelName, username, p?.reward_title);
+						} catch (autoErr) {
+							console.log("automation reward eval failed", autoErr);
+						}
 						dispatch(
 							MessageActionsFunc.addActivity({
 								id,
@@ -579,6 +648,12 @@ export const chatListener = (slug?: string) => {
 						const amount: number =
 							typeof gift.amount === "number" ? gift.amount : 0;
 						const message: string | undefined = p?.message;
+						// Sprint 58: kicks_event trigger
+						try {
+							evaluateKicksEvent(channelName, username, amount);
+						} catch (autoErr) {
+							console.log("automation kicks eval failed", autoErr);
+						}
 						dispatch(
 							MessageActionsFunc.addActivity({
 								id,

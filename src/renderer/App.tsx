@@ -8,7 +8,6 @@ import { getBttvGlobalEmotes } from "./services/bttv";
 import { getFfzGlobalSets } from "./services/ffz";
 import { getEmote, getSevenTvGlobalSet } from "./services/sevenTv";
 import KickConnection from "./src/KickConnection/KickConnection";
-import Layout from "./src/Layout/Layout";
 import LayoutModern from "./src/Layout/LayoutModern";
 import UserWindow from "./src/UserWindow/UserWindow";
 import ActivityWindowShell from "./src/ActivityView/ActivityWindowShell";
@@ -29,31 +28,8 @@ import {
 	normalizeSevenTvSet,
 } from "./util/emoteIndex";
 
-// Sprint 7 — Shell preference resolution.
-// Priority: URL param > localStorage explicit > default (modern).
-// Legacy key migration: chatViewShellPreview → chatViewShellPreference.
-function getShellPreference(): "classic" | "modern" {
-	try {
-		// URL override (highest priority) — works for both search params and hash routing
-		if (typeof window !== "undefined") {
-			const url = new URL(window.location.href);
-			const param = url.searchParams.get("shell");
-			if (param === "classic" || param === "modern") return param;
-			// Hash routing param (Electron file:// often uses hash)
-			const hash = window.location.hash || "";
-			if (hash.includes("shell=classic")) return "classic";
-			if (hash.includes("shell=modern")) return "modern";
-		}
-		// localStorage explicit override
-		const stored = localStorage.getItem("chatViewShellPreference");
-		if (stored === "classic") return "classic";
-		if (stored === "modern") return "modern";
-	} catch {
-		// noop — safe fallback
-	}
-	// Default: modern (flipped in Sprint 7; was classic)
-	return "modern";
-}
+// Sprint 51: Classic shell artık tamamen iptal — her zaman Modern.
+// Eski toggle / localStorage preference / URL override kaldırıldı.
 
 export default function App() {
 	const dispatch = useFanthalDispatch();
@@ -62,31 +38,17 @@ export default function App() {
 	// Sprint 14: panel pop-out windows reuse the same index.html entry.
 	const isActivityWindow = window.location.hash.startsWith("#/activity-window");
 	const isModerationWindow = window.location.hash.startsWith("#/moderation-window");
-	const [shellPreference, setShellPreference] = useState<"classic" | "modern">(
-		getShellPreference
-	);
-	const useModernShell = shellPreference === "modern";
+	// Sprint 51: Modern shell artık tek shell. classic Layout tamamen kaldırıldı.
+	const useModernShell = true;
 	useEffect(() => {
-		// Sprint 7 — Migrate legacy key chatViewShellPreview → chatViewShellPreference
+		// Eski toggle ile classic seçmiş kullanıcıların preference'ını temizle —
+		// bir sonraki kontrol classic'i hiç görmesin.
 		try {
-			const legacy = localStorage.getItem("chatViewShellPreview");
-			if (legacy && !localStorage.getItem("chatViewShellPreference")) {
-				localStorage.setItem("chatViewShellPreference", legacy);
-				localStorage.removeItem("chatViewShellPreview");
-			}
+			localStorage.removeItem("chatViewShellPreference");
+			localStorage.removeItem("chatViewShellPreview");
 		} catch {
-			// noop
+			/* noop */
 		}
-	}, []);
-	// Listen for shell preference changes dispatched by SettingsModern Advanced toggle
-	useEffect(() => {
-		const handleShellChange = () => {
-			setShellPreference(getShellPreference());
-		};
-		window.addEventListener("chat-view-shell-preference-changed", handleShellChange);
-		return () => {
-			window.removeEventListener("chat-view-shell-preference-changed", handleShellChange);
-		};
 	}, []);
 	// Sprint 16: when modern shell is active, mark <html>+<body> with a class
 	// so CSS can drop the classic body padding/gradient frame reliably (the
@@ -237,10 +199,8 @@ export default function App() {
 		<UserWindow />
 	) : isKickConnection ? (
 		<KickConnection />
-	) : useModernShell ? (
-		<LayoutModern />
 	) : (
-		<Layout />
+		<LayoutModern />
 	);
 
 	return (

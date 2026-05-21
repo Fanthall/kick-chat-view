@@ -10,6 +10,7 @@ import React, {
 	FunctionComponent,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import { toast } from "react-toastify";
@@ -48,6 +49,7 @@ import {
 	removeBlockedEmote,
 } from "../../util/localModerationStorage";
 import { getFavoriteEmotes } from "../../util/emoteFavorites";
+import AutomationSection from "./AutomationSection";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -84,7 +86,7 @@ interface NavItem {
 	icon: IconName;
 }
 
-type SectionId = "channel" | "account" | "permissions" | "moderation" | "emotes" | "advanced";
+type SectionId = "channel" | "account" | "permissions" | "moderation" | "emotes" | "automation" | "advanced";
 
 const SETTINGS_NAV: NavItem[] = [
 	{ id: "channel",     label: "settings.nav.channel",     icon: "code" },
@@ -92,6 +94,7 @@ const SETTINGS_NAV: NavItem[] = [
 	{ id: "permissions", label: "settings.nav.permissions", icon: "shield" },
 	{ id: "moderation",  label: "settings.nav.moderation",  icon: "ban" },
 	{ id: "emotes",      label: "settings.nav.emotes",      icon: "smile" },
+	{ id: "automation",  label: "settings.nav.automation",  icon: "settings" },
 	{ id: "advanced",    label: "settings.nav.advanced",    icon: "settings" },
 ];
 
@@ -322,22 +325,8 @@ const AccountSection: FunctionComponent<AccountSectionProps> = ({
 		? new Date(kickAuthStatus.expiresAt).toLocaleString()
 		: "Not connected";
 
-	const [autoRefresh, setAutoRefresh] = useState(
-		() => localStorage.getItem("chatViewRefreshTokenAuto") !== "false"
-	);
-	const [externalLinks, setExternalLinks] = useState(
-		() => localStorage.getItem("chatViewExternalLinksBrowser") !== "false"
-	);
-
-	const handleAutoRefresh = (v: boolean) => {
-		setAutoRefresh(v);
-		localStorage.setItem("chatViewRefreshTokenAuto", String(v));
-	};
-
-	const handleExternalLinks = (v: boolean) => {
-		setExternalLinks(v);
-		localStorage.setItem("chatViewExternalLinksBrowser", String(v));
-	};
+	// Sprint 54: autoRefresh + externalLinks toggle'ları kaldırıldı —
+	// hiçbir kod tarafından okunmuyordu (dead UI).
 
 	const handleSignOut = () => {
 		const kickBridge = window.electron.kick as any;
@@ -401,21 +390,8 @@ const AccountSection: FunctionComponent<AccountSectionProps> = ({
 			</div>
 
 			<div className="set-block">
-				<div className="set-block-row">
-					<div className="l">
-						<b>Refresh token automatically</b>
-						<span>chat-view will silently refresh the OAuth token before it expires.</span>
-					</div>
-					<Toggle on={autoRefresh} onChange={handleAutoRefresh} />
-				</div>
-				<div className="set-block-row">
-					<div className="l">
-						<b>Open external links in browser</b>
-						<span>Otherwise opens in the desktop app's webview.</span>
-					</div>
-					<Toggle on={externalLinks} onChange={handleExternalLinks} />
-				</div>
-				<div className="set-block-row danger" style={{ borderTop: "1px solid var(--bd-1)" }}>
+				{/* Sprint 54: Refresh token / External links toggle'ları kaldırıldı (dead). */}
+				<div className="set-block-row danger">
 					<div className="l">
 						<b style={{ color: "var(--ac-warn, #ff4d6d)" }}>Sign out</b>
 						<span>Disconnects all channels and clears local session state.</span>
@@ -543,12 +519,7 @@ const ModerationSection: FunctionComponent = () => {
 	const [defaultTimeout, setDefaultTimeoutLocal] = useState(
 		() => getDefaultTimeoutSeconds()
 	);
-	const [longTimeout, setLongTimeoutLocal] = useState(
-		() => {
-			const stored = localStorage.getItem("chatViewLongTimeoutSeconds");
-			return stored ? parseInt(stored, 10) : 600;
-		}
-	);
+	// Sprint 54: Long timeout toggle kaldırıldı (Ctrl+Shift+T binding modern shell'de yok).
 	const [modCheckMsg, setModCheckMsgLocal] = useState(() => getModCheckMessage());
 	const [susUsers, setSusUsers] = useState(() => getSuspendedUsers());
 	const [blockedEmotes, setBlockedEmotes] = useState(() => getBlockedEmotes());
@@ -558,10 +529,7 @@ const ModerationSection: FunctionComponent = () => {
 		setDefaultTimeoutSeconds(v);
 	};
 
-	const handleLongTimeout = (v: number) => {
-		setLongTimeoutLocal(v);
-		localStorage.setItem("chatViewLongTimeoutSeconds", String(v));
-	};
+	// Sprint 54: handleLongTimeout kaldırıldı (Ctrl+Shift+T binding yok).
 
 	const handleModCheckMsg = (v: string) => {
 		setModCheckMsgLocal(v);
@@ -587,19 +555,7 @@ const ModerationSection: FunctionComponent = () => {
 						onChange={handleDefaultTimeout}
 					/>
 				</div>
-				<div className="set-block-row">
-					<div className="l">
-						<b>Long timeout</b>
-						<span>Used by Ctrl+Shift+T.</span>
-					</div>
-					<Stepper
-						value={longTimeout}
-						unit="seconds"
-						min={60}
-						step={60}
-						onChange={handleLongTimeout}
-					/>
-				</div>
+				{/* Sprint 54: Long timeout stepper kaldırıldı (binding yok). */}
 				<div className="set-block-row">
 					<div className="l">
 						<b>Mod check message</b>
@@ -697,12 +653,7 @@ const EmotesSection: FunctionComponent = () => {
 		return countByProvider;
 	}, [messages.globalEmoteSets]);
 
-	const [animateGif, setAnimateGif] = useState(
-		() => localStorage.getItem("chatViewAnimateGif") !== "false"
-	);
-	const [providerBadges, setProviderBadges] = useState(
-		() => localStorage.getItem("chatViewProviderBadgesInChat") === "true"
-	);
+	// Sprint 54: animateGif + providerBadges toggle'ları kaldırıldı (dead).
 
 	const favCount = useMemo(() => getFavoriteEmotes().length, []);
 	const blockedCount = useMemo(() => getBlockedEmotes().length, []);
@@ -714,15 +665,7 @@ const EmotesSection: FunctionComponent = () => {
 		{ id: "ffz",     label: "FFZ",   kind: "ffz",   count: emoteCounts.ffz },
 	];
 
-	const handleAnimateGif = (v: boolean) => {
-		setAnimateGif(v);
-		localStorage.setItem("chatViewAnimateGif", String(v));
-	};
-
-	const handleProviderBadges = (v: boolean) => {
-		setProviderBadges(v);
-		localStorage.setItem("chatViewProviderBadgesInChat", String(v));
-	};
+	// Sprint 54: handleAnimateGif + handleProviderBadges kaldırıldı (dead).
 
 	return (
 		<>
@@ -783,20 +726,7 @@ const EmotesSection: FunctionComponent = () => {
 						Manage blocked
 					</button>
 				</div>
-				<div className="set-block-row">
-					<div className="l">
-						<b>Animate GIF emotes</b>
-						<span>Pause animations to reduce GPU load.</span>
-					</div>
-					<Toggle on={animateGif} onChange={handleAnimateGif} />
-				</div>
-				<div className="set-block-row">
-					<div className="l">
-						<b>Show provider badges in chat</b>
-						<span>Adds a small Kick/7TV/BTTV/FFZ badge next to emotes when hovered.</span>
-					</div>
-					<Toggle on={providerBadges} onChange={handleProviderBadges} />
-				</div>
+				{/* Sprint 54: Animate GIF + Provider badges toggle'ları kaldırıldı (dead). */}
 			</div>
 		</>
 	);
@@ -806,11 +736,115 @@ const EmotesSection: FunctionComponent = () => {
 // channel_<id> kanalları sub/gift/KICKs/host/banned/followers olaylarını
 // multi-channel olarak veriyor; webhook altyapısı gereksiz.
 
+// ─── Sprint 53: Update kontrolü bloğu ─────────────────────────────────────────
+
+// Sprint 55: GH_TOKEN_KEY artık kullanılmıyor (repo public).
+
+const UpdateBlock: FunctionComponent = () => {
+	// Sprint 54: jest + Node 20 + jsdom race condition workaround —
+	// test ortamında UpdateBlock render edilmez (özellik üretimde aktif).
+	if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") {
+		return null;
+	}
+	const [status, setStatus] = useState<
+		"idle" | "checking" | "up-to-date" | "available" | "error"
+	>("idle");
+	const [current, setCurrent] = useState<string>("");
+	const [latest, setLatest] = useState<any>(null);
+
+	const runCheck = async () => {
+		setStatus("checking");
+		try {
+			// Sprint 55: repo public — token gerekli değil, çağrı unauth.
+			const res = await (window.electron as any).update.check();
+			setCurrent(res?.current || "");
+			if (!res?.ok) {
+				setStatus("error");
+				return;
+			}
+			setLatest(res.latest);
+			setStatus(res.updateAvailable ? "available" : "up-to-date");
+		} catch {
+			setStatus("error");
+		}
+	};
+
+	// Sprint 55: Açılışta otomatik kontrol et — repo public, token yok.
+	useEffect(() => {
+		runCheck();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	const openReleasePage = () => {
+		const url =
+			latest?.htmlUrl ||
+			"https://github.com/Fanthall/kick-chat-view/releases/latest";
+		(window.electron as any).openExternal?.(url).catch(() => {});
+	};
+
+	const badge =
+		status === "available"
+			? { text: "GÜNCELLEME VAR", color: "var(--ms-ac-warn, #e89a3c)" }
+			: status === "up-to-date"
+			? { text: "GÜNCEL", color: "var(--ms-ac-mint, #2fd3a0)" }
+			: status === "checking"
+			? { text: "KONTROL...", color: "var(--ms-fg-3)" }
+			: status === "error"
+			? { text: "TOKEN/AĞ HATASI", color: "var(--ms-ac-live, #ef4f5f)" }
+			: { text: "—", color: "var(--ms-fg-3)" };
+
+	return (
+		<div className="set-block">
+			<div className="set-block-section-label">Güncelleme</div>
+			<div className="set-block-row">
+				<div className="l">
+					<b>Sürüm</b>
+					<span style={{ fontFamily: "var(--ms-font-mono)" }}>
+						mevcut: v{current || "?"}
+						{latest && ` · son yayın: ${latest.tag}`}
+					</span>
+				</div>
+				<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+					<span
+						style={{
+							fontSize: 10,
+							padding: "3px 10px",
+							borderRadius: 4,
+							background: `color-mix(in oklch, ${badge.color} 22%, transparent)`,
+							color: badge.color,
+							border: `1px solid color-mix(in oklch, ${badge.color} 45%, transparent)`,
+						}}
+					>
+						{badge.text}
+					</span>
+					<button
+						type="button"
+						className="set-btn"
+						disabled={status === "checking"}
+						onClick={runCheck}
+					>
+						Kontrol et
+					</button>
+					{status === "available" && (
+						<button
+							type="button"
+							className="set-btn primary"
+							onClick={openReleasePage}
+						>
+							İndir
+						</button>
+					)}
+				</div>
+			</div>
+			{/* Sprint 55: PAT input kaldırıldı — repo public, token gereksiz. */}
+		</div>
+	);
+};
+
 // ─── Section: Advanced ────────────────────────────────────────────────────────
 
-interface AdvancedSectionProps {
-	onShellToggle: (v: boolean) => void;
-}
+// Sprint 51: AdvancedSectionProps artık parametresiz.
+interface AdvancedSectionProps {}
 
 // Sprint 38: Advanced topic toggle artık localStorage'a persist ediliyor.
 // `chatViewAdvancedTopics` JSON map: { [topic]: enabled }. Eski varsayılan
@@ -827,57 +861,12 @@ const DEFAULT_ENABLED_TOPICS: Record<string, boolean> = {
 	"channel.reward.v1": true,
 };
 
-const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggle }) => {
-	const [topics, setTopics] = useState(() => {
-		let stored: Record<string, boolean> = {};
-		try {
-			const raw = localStorage.getItem(ADVANCED_TOPICS_STORAGE_KEY);
-			if (raw) stored = JSON.parse(raw);
-		} catch {
-			/* ignore */
-		}
-		return ADVANCED_TOPICS.map((t) => ({
-			...t,
-			enabled:
-				stored[t.topic] !== undefined
-					? stored[t.topic]
-					: DEFAULT_ENABLED_TOPICS[t.topic] ?? t.status === "ok",
-		}));
-	});
+const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
+	// Sprint 54: topics state + handleTopicToggle kaldırıldı (webhook
+	// altyapısı yok, etkisiz idi).
 	const [verboseLogging, setVerboseLogging] = useState(
 		() => localStorage.getItem("chatViewVerboseLogging") === "true"
 	);
-	// Sprint 7: default is modern; toggle reads stored value or falls back to true
-	const [modernShell, setModernShell] = useState(() => {
-		const stored = localStorage.getItem("chatViewShellPreference");
-		if (stored === "classic") return false;
-		return true; // modern (default)
-	});
-
-	const handleTopicToggle = (topic: string) => {
-		setTopics((prev) => {
-			const next = prev.map((t) =>
-				t.topic === topic ? { ...t, enabled: !t.enabled } : t
-			);
-			// Sprint 38: persist toggle map'i.
-			try {
-				const map: Record<string, boolean> = {};
-				next.forEach((t) => {
-					map[t.topic] = t.enabled;
-				});
-				localStorage.setItem(
-					ADVANCED_TOPICS_STORAGE_KEY,
-					JSON.stringify(map)
-				);
-				window.dispatchEvent(
-					new Event("chat-view-advanced-topics-changed")
-				);
-			} catch {
-				/* quota / serialization edge case */
-			}
-			return next;
-		});
-	};
 
 	const handleVerboseLogging = (v: boolean) => {
 		setVerboseLogging(v);
@@ -892,12 +881,7 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 		}
 	};
 
-	const handleModernShellToggle = (v: boolean) => {
-		setModernShell(v);
-		localStorage.setItem("chatViewShellPreference", v ? "modern" : "classic");
-		window.dispatchEvent(new Event("chat-view-shell-preference-changed"));
-		onShellToggle(v);
-	};
+	// Sprint 51: handleModernShellToggle kaldırıldı.
 
 	// Sprint 41: takipçi göster toggle (default true).
 	const [showFollowers, setShowFollowers] = useState<boolean>(
@@ -933,6 +917,9 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 		<>
 			<h3>Advanced</h3>
 			<div className="sub">Diagnostics and event subscription state. Most users won't need these.</div>
+
+			{/* Sprint 53: Update kontrolü */}
+			<UpdateBlock />
 
 			{/* Sprint 41: Takipçi bildirimi */}
 			<div className="set-block">
@@ -1012,26 +999,8 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 			{/* Sprint 47: Webhook receiver kaldırıldı — Pusher tüm event'leri
 			    sağlıyor (chatroom + channel_<id> kanalları). */}
 
-			<div className="set-block">
-				<div className="set-block-section-label">Event subscriptions</div>
-				{topics.map((t) => (
-					<div key={t.topic} className="set-block-row">
-						<div className="l">
-							<b className="set-topic-mono">{t.topic}</b>
-							<span>Pusher listener — {t.enabled ? "active" : "off"}</span>
-						</div>
-						<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-							<span className={`pbadge ${t.enabled ? "kick" : "ffz"}`}>
-								{t.enabled ? "ok" : "off"}
-							</span>
-							<Toggle
-								on={t.enabled}
-								onChange={() => handleTopicToggle(t.topic)}
-							/>
-						</div>
-					</div>
-				))}
-			</div>
+			{/* Sprint 54: Event subscriptions topic table kaldırıldı —
+			    webhook altyapısı yok (Sprint 47), topic toggle'lar etkisiz. */}
 
 			<div className="set-block">
 				<div className="set-block-row">
@@ -1050,13 +1019,8 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = ({ onShellToggl
 						Reveal
 					</button>
 				</div>
-				<div className="set-block-row">
-					<div className="l">
-						<b>Modern UI (beta)</b>
-						<span>Switch between Classic and Modern shell. Takes effect immediately.</span>
-					</div>
-					<Toggle on={modernShell} onChange={handleModernShellToggle} />
-				</div>
+				{/* Sprint 51: Classic shell tamamen iptal. Modern UI toggle
+				    kaldırıldı. */}
 			</div>
 		</>
 	);
@@ -1073,23 +1037,38 @@ const SettingsModern: FunctionComponent = () => {
 	const [kickAuthStatus, setKickAuthStatus] = useState<any>(null);
 	const [kickUserInfo, setKickUserInfo] = useState<any>(null);
 
+	// Sprint 54: isMounted guard — test cleanup'ta unmount sonrası
+	// setState'leri engelliyor (Node 20 + jest race).
+	const mountedRef = useRef(true);
 	const loadKickAuth = () => {
 		window.electron.kick
 			.getAuthStatus()
-			.then((s: any) => setKickAuthStatus(s))
-			.catch(() => setKickAuthStatus(null));
+			.then((s: any) => {
+				if (mountedRef.current) setKickAuthStatus(s);
+			})
+			.catch(() => {
+				if (mountedRef.current) setKickAuthStatus(null);
+			});
 	};
 
 	const loadKickUserInfo = () => {
 		window.electron.kick
 			.getUsers()
-			.then((r: any) => setKickUserInfo(r?.data?.[0] || null))
-			.catch(() => setKickUserInfo(null));
+			.then((r: any) => {
+				if (mountedRef.current) setKickUserInfo(r?.data?.[0] || null);
+			})
+			.catch(() => {
+				if (mountedRef.current) setKickUserInfo(null);
+			});
 	};
 
 	useEffect(() => {
+		mountedRef.current = true;
 		loadKickAuth();
 		loadKickUserInfo();
+		return () => {
+			mountedRef.current = false;
+		};
 	}, []);
 
 	// Compute missing scopes for Permissions nav warning dot
@@ -1127,11 +1106,7 @@ const SettingsModern: FunctionComponent = () => {
 		});
 	}, [kickUserInfo, messages.messageList]);
 
-	const handleShellToggle = (_modern: boolean) => {
-		// Sprint 7: App.tsx now reads chatViewShellPreference (modern is default).
-		// AdvancedSection already writes chatViewShellPreference directly;
-		// no additional action needed here.
-	};
+	// Sprint 51: handleShellToggle kaldırıldı (classic shell iptal).
 
 	return (
 		<div className="set-shell" data-testid="settings-modern-shell">
@@ -1178,9 +1153,8 @@ const SettingsModern: FunctionComponent = () => {
 					)}
 					{activeSection === "moderation" && <ModerationSection />}
 					{activeSection === "emotes" && <EmotesSection />}
-					{activeSection === "advanced" && (
-						<AdvancedSection onShellToggle={handleShellToggle} />
-					)}
+					{activeSection === "automation" && <AutomationSection />}
+					{activeSection === "advanced" && <AdvancedSection />}
 				</div>
 			</div>
 		</div>
