@@ -21,7 +21,7 @@ import {
 	addChannel,
 } from "./util/channelSettings";
 import { bootstrapDefaultOwnChannel } from "./util/defaultChannelBootstrap";
-import { chatListener } from "./util/chatConnection";
+import { chatListener, installNetworkResilience } from "./util/chatConnection";
 import {
 	normalizeBttvGlobal,
 	normalizeFfzSet,
@@ -110,6 +110,9 @@ export default function App() {
 	}, [useModernShell]);
 	useEffect(() => {
 		if (isUserWindow || isKickConnection || isActivityWindow || isModerationWindow) return;
+		// FIX-4: ag online/offline reconnect emniyet agi — modul seviyesinde bir
+		// kez kurulur (shell-agnostic). Yalnizca chat dinleyen ana pencerede.
+		installNetworkResilience(dispatch);
 		// TODO: sağ üstte ayarlardan eklenecek
 		//localStorage.setItem("userName", "Fanthal");
 		getEmote()

@@ -571,6 +571,12 @@ const createWindow = async () => {
 			preload: app.isPackaged
 				? path.join(__dirname, "preload.js")
 				: path.join(__dirname, "../../.erb/dll/preload.js"),
+			// FIX-3: Pencere arka plandayken (minimize/orulu) Electron varsayilan
+			// olarak timer + arka plan isini kisar (backgroundThrottling: true).
+			// Bu, canli chat dinleyen websocket heartbeat/reconnect mantigini
+			// throttle eder ve "focus degilken dinlemiyor" sikayetine yol acar.
+			// Canli chat icin bilincli trade-off: CPU bir miktar artar.
+			backgroundThrottling: false,
 		},
 	});
 

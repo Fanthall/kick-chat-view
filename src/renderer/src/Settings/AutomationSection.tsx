@@ -352,7 +352,11 @@ const RuleEditor: FunctionComponent<EditorProps> = ({
 				trigger = { type: "reward_redeemed", rewardTitle: "" };
 				break;
 			case "sub_event":
-				trigger = { type: "sub_event", includeGifted: false };
+				trigger = {
+					type: "sub_event",
+					includeGifted: false,
+					subType: "any",
+				};
 				break;
 			case "interval":
 				trigger = {
@@ -571,7 +575,53 @@ const RuleEditor: FunctionComponent<EditorProps> = ({
 			)}
 			{rule.trigger.type === "sub_event" && (
 				<div className="auto-field auto-detail">
-					<div className="auto-field-label">Hediye sub davranışı</div>
+					{/* FIX-3: Yeni / Yenileme / Hepsi alt-seçimi (kullanıcı kararı). */}
+					<div className="auto-field-label">Hangi abonelik tipinde?</div>
+					<div className="auto-chip-row">
+						{(
+							[
+								{ id: "new", label: "Yeni abone" },
+								{ id: "renewal", label: "Yenileme" },
+								{ id: "any", label: "Hepsi" },
+							] as { id: "new" | "renewal" | "any"; label: string }[]
+						).map((opt) => {
+							const current =
+								(rule.trigger.type === "sub_event" &&
+									rule.trigger.subType) ||
+								"any";
+							const on = current === opt.id;
+							return (
+								<button
+									key={opt.id}
+									type="button"
+									className={`auto-chip ${on ? "is-on" : ""}`}
+									onClick={() =>
+										onChange({
+											...rule,
+											trigger: {
+												type: "sub_event",
+												includeGifted:
+													rule.trigger.type === "sub_event"
+														? rule.trigger.includeGifted
+														: false,
+												subType: opt.id,
+											},
+										})
+									}
+								>
+									{opt.label}
+								</button>
+							);
+						})}
+					</div>
+					<div className="auto-cd-hint" style={{ marginTop: 4 }}>
+						<strong>Yeni:</strong> ilk kez abone olanlar.{" "}
+						<strong>Yenileme:</strong> aboneliğini uzatanlar (1 aydan
+						fazla). <strong>Hepsi:</strong> ikisinde de tetiklenir.
+					</div>
+					<div className="auto-field-label" style={{ marginTop: 10 }}>
+						Hediye sub davranışı
+					</div>
 					<label className="auto-check">
 						<input
 							type="checkbox"
@@ -582,6 +632,11 @@ const RuleEditor: FunctionComponent<EditorProps> = ({
 									trigger: {
 										type: "sub_event",
 										includeGifted: e.target.checked,
+										// FIX-3: subType'i koru (üzerine yazma).
+										subType:
+											rule.trigger.type === "sub_event"
+												? rule.trigger.subType ?? "any"
+												: "any",
 									},
 								})
 							}

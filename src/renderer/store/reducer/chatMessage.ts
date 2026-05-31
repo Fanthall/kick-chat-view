@@ -50,6 +50,81 @@ const LOCAL_MESSAGE_ID_PREFIX = "local-";
 const LOCAL_MOD_ID_PREFIX = "local-";
 const LOCAL_ECHO_WINDOW_MS = 20000;
 
+// FIX-2 (dedup): Aynı yenileme hem `SubscriptionEvent` (Path B) hem celebration
+// chat mesajı (Path A) ile gelebiliyor. `${slug}::${username}::${months}` anahtarı
+// için kısa pencere (~30sn) içinde ikinci banner/activity'yi yutuyoruz.
+const SUB_DEDUP_WINDOW_MS = 30 * 1000;
+const recentSubEvents = new Map<string, number>(); // key → epoch ms
+
+const subDedupKey = (slug: string | undefined, username: string, months?: number) =>
+	`${(slug || "").toLowerCase()}::${username.toLowerCase()}::${months ?? "?"}`;
+
+// true dönerse bu (slug,user,months) yakın zamanda zaten işlendi → tekrar basma.
+const isDuplicateSubEvent = (
+	slug: string | undefined,
+	username: string,
+	months?: number
+): boolean => {
+	if (!username) return false;
+	const key = subDedupKey(slug, username, months);
+	const now = Date.now();
+	const last = recentSubEvents.get(key);
+	// Sızıntı guard: pencereyi geçmiş eski kayıtları ara sıra temizle.
+	if (recentSubEvents.size > 200) {
+		for (const [k, ts] of recentSubEvents) {
+			if (now - ts > SUB_DEDUP_WINDOW_MS) recentSubEvents.delete(k);
+		}
+	}
+	if (typeof last === "number" && now - last < SUB_DEDUP_WINDOW_MS) {
+		return true;
+	}
+	recentSubEvents.set(key, now);
+	return false;
+};
+
+// FIX-3 (gift recipient exclude): Gift alıcılarını kısa süre işaretle ki
+// gifter→recipient için ayrıca gelen SubscriptionEvent / celebration renewal
+// banner+activity'sine düşmesin (otomasyon zaten ayrı dışlıyordu — RC-3).
+const GIFT_RECIPIENT_TTL_MS = 5 * 60 * 1000;
+const giftRecipientsReducer = new Map<string, number>(); // "slug::user" → expiresAt
+
+const giftRecipientKey = (slug: string | undefined, username: string) =>
+	`${(slug || "").toLowerCase()}::${username.toLowerCase()}`;
+
+const markGiftRecipientReducer = (slug: string | undefined, username: string) => {
+	if (!username) return;
+	giftRecipientsReducer.set(
+		giftRecipientKey(slug, username),
+		Date.now() + GIFT_RECIPIENT_TTL_MS
+	);
+};
+
+const wasRecentGiftRecipientReducer = (
+	slug: string | undefined,
+	username: string
+): boolean => {
+	if (!username) return false;
+	const k = giftRecipientKey(slug, username);
+	const exp = giftRecipientsReducer.get(k);
+	if (!exp) return false;
+	if (exp < Date.now()) {
+		giftRecipientsReducer.delete(k);
+		return false;
+	}
+	return true;
+};
+
+// FIX-1: months tabanlı renewal tespiti. months>1 → yenileme; streak>1 destekçi
+// sinyal. months yoksa konservatif "yeni" (false).
+const isRenewalFromCounts = (
+	months: number | undefined,
+	streak: number | undefined
+): boolean => {
+	if (typeof months === "number" && months > 1) return true;
+	if (typeof streak === "number" && streak > 1) return true;
+	return false;
+};
+
 const isLocalMessage = (message: UserMessage) =>
 	message.id.startsWith(LOCAL_MESSAGE_ID_PREFIX);
 
@@ -65,31 +140,120 @@ const trimList = <T,>(list: T[]) => {
 	return list;
 };
 
+// FIX-2: Celebration (re-sub) chat mesajından sub aktivitesi üret.
+// - months: önce metadata.celebration.total_months, yoksa subscriber badge count.
+// - alt-tip guard: yalnız gerçek resub/streak celebration'ı renewal say (kullanıcı
+//   her celebration penceresinde konuştuğunda yanlış renewal üretme).
+// - gift recipient exclude + dedup uygulanır.
+// Sonuç hem activity hem banner üretimi için ortak kullanılır → {activity, banner, months, isRenewal}.
+const CELEBRATION_SUB_TYPES = [
+	"subscription_renewed",
+	"subscription_renewal",
+	"resubscription",
+	"resub",
+	"streak",
+	"sub_renewed",
+	"subscription",
+];
+
+interface CelebrationSubResult {
+	activity: ActivityItem;
+	months?: number;
+	isRenewal: boolean;
+	username: string;
+}
+
 const getSubFromCelebrationMessage = (
 	message: UserMessage
-): ActivityItem | undefined => {
+): CelebrationSubResult | undefined => {
 	if (message.type !== "celebration") {
 		return undefined;
 	}
 
-	const subscriberBadge = message.sender.identity?.badges.find(
+	const celebration = message.metadata?.celebration;
+	const celebrationType = (celebration?.type || "").toLowerCase();
+	// Alt-tip biliniyorsa ve bilinen resub/streak tiplerinden biri değilse,
+	// bunu sub renewal olarak SAYMA (ör. başka bir kutlama alt-tipi).
+	if (celebrationType && !CELEBRATION_SUB_TYPES.some((t) => celebrationType.includes(t))) {
+		return undefined;
+	}
+
+	const subscriberBadge = message.sender.identity?.badges?.find(
 		(badge) => badge.type.toLowerCase() === "subscriber"
 	);
+	const months =
+		typeof celebration?.total_months === "number"
+			? celebration.total_months
+			: subscriberBadge?.count;
 
-	return {
+	const username = message.sender.username;
+
+	// FIX-3: Bu kullanıcı yakın zamanda gift aldıysa renewal olarak basma.
+	if (wasRecentGiftRecipientReducer(message.channelSlug, username)) {
+		return undefined;
+	}
+
+	// FIX-1 semantiği: celebration zaten resub anlamına geldiği için renewal=true,
+	// ama months==1 ise (ilk ay) konservatif yeni say.
+	const isRenewal = isRenewalFromCounts(months, undefined) || months === undefined;
+
+	// FIX-2 dedup: SubscriptionEvent ile aynı yenilemeyi çift basma.
+	if (isDuplicateSubEvent(message.channelSlug, username, months)) {
+		return undefined;
+	}
+
+	const createdAt = new Date(message.created_at).getTime();
+	const activity: ActivityItem = {
 		id: message.id,
 		channelSlug: message.channelSlug,
-		kind: "subscription_renewal",
+		kind: isRenewal ? "subscription_renewal" : "subscription_new",
 		actor: {
 			id: message.sender.id,
-			username: message.sender.username,
+			username,
 			slug: message.sender.slug,
 		},
-		username: message.sender.username,
-		months: subscriberBadge?.count,
-		createdAt: new Date(message.created_at).getTime(),
-		create_at: new Date(message.created_at).getTime(),
+		username,
+		months,
+		createdAt,
+		create_at: createdAt,
 		raw: message,
+	};
+
+	return { activity, months, isRenewal, username };
+};
+
+// FIX-2: Celebration renewal için chat'e sub-banner üret (Path B ile aynı görünüm).
+const buildCelebrationSubBanner = (
+	message: UserMessage,
+	result: CelebrationSubResult
+): UserMessage => {
+	const { username, months, isRenewal } = result;
+	const monthsLabel = typeof months === "number" ? `${months} ay` : "";
+	const suffix = monthsLabel ? ` — ${monthsLabel}` : "";
+	return {
+		id: `sub-banner-celebration-${message.id}`,
+		channelSlug: message.channelSlug,
+		chatroom_id: message.chatroom_id,
+		content: isRenewal
+			? `${username} aboneliğini yeniledi${suffix}`
+			: `${username} abone oldu${suffix}`,
+		type: "sub-banner",
+		created_at: message.created_at,
+		sender: {
+			id: 0,
+			username,
+			slug: username.toLowerCase(),
+			identity: {
+				color: "#7c3aed",
+				badges: [
+					{
+						type: "subscriber",
+						text: "Sub",
+						count: months as number,
+					},
+				],
+			},
+		},
 	};
 };
 
@@ -250,13 +414,29 @@ const ChatMessageReducers = (
 			action.message,
 			...state.messageList.slice(insertAt),
 		]);
+		// FIX-2: Celebration (re-sub) ise hem activity ekle hem chat'e sub-banner bas.
 		const celebrationSub = getSubFromCelebrationMessage(action.message);
+		if (celebrationSub) {
+			const subBanner = buildCelebrationSubBanner(
+				action.message,
+				celebrationSub
+			);
+			const bannerExists = newList.some((m) => m.id === subBanner.id);
+			return {
+				...state,
+				messageList: bannerExists
+					? newList
+					: trimList(newList.concat(subBanner)),
+				activityList: appendActivityItem(
+					state.activityList,
+					celebrationSub.activity
+				),
+			};
+		}
 		return {
 			...state,
 			messageList: newList,
-			activityList: celebrationSub
-				? appendActivityItem(state.activityList, celebrationSub)
-				: state.activityList,
+			activityList: state.activityList,
 		};
 	} else if (action.type === ChatMessageTypes.MOD_MESSAGE_ACTION) {
 		const localEchoAction = state.modAction.find((item) =>
@@ -397,18 +577,28 @@ const ChatMessageReducers = (
 			modAction: newList,
 		};
 	} else if (action.type === ChatMessageTypes.SUB_MESSAGE_ACTION) {
+		const subUsername = action.message.username;
+		// FIX-3: Gifter→recipient için ayrıca gelen SubscriptionEvent'i, alıcı
+		// yakın zamanda gift aldıysa sub/renewal olarak basma (çifte patlama).
+		if (wasRecentGiftRecipientReducer(action.message.channelSlug, subUsername)) {
+			return { ...state };
+		}
+		const months = action.message.months;
+		// FIX-1: renewal tespiti months tabanlı (months>1) + streak destekçi sinyal.
+		const isRenewal = isRenewalFromCounts(months, action.message.streak);
+		// FIX-2: celebration ile aynı yenilemeyi çift basma (kısa pencere dedup).
+		if (isDuplicateSubEvent(action.message.channelSlug, subUsername, months)) {
+			return { ...state };
+		}
 		const newList = appendActivityItem(state.activityList, {
 			id: action.message.id,
 			channelSlug: action.message.channelSlug,
-			kind:
-				action.message.streak && action.message.streak > 1
-					? "subscription_renewal"
-					: "subscription_new",
+			kind: isRenewal ? "subscription_renewal" : "subscription_new",
 			actor: {
-				username: action.message.username,
+				username: subUsername,
 			},
-			username: action.message.username,
-			months: action.message.months,
+			username: subUsername,
+			months,
 			streak: action.message.streak,
 			// WI-1.5: legacy Pusher bridge enrichment (CONSTRAINT-3; alanlar optional)
 			eventType: action.message.eventType,
@@ -419,28 +609,30 @@ const ChatMessageReducers = (
 		});
 		// Sprint 35: chat akışına da sub banner satırı bas — kullanıcı sub
 		// event'lerini activity'den ayrıca takip etmek zorunda kalmasın.
-		const subBannerId = `sub-banner-${action.message.id || action.message.username}-${action.message.create_at}`;
-		const isRenewal = !!action.message.streak && action.message.streak > 1;
+		const subBannerId = `sub-banner-${action.message.id || subUsername}-${action.message.create_at}`;
+		// FIX-1: months undefined ise sayı yazma (NaN/"undefined ay" önlemi).
+		const monthsLabel = typeof months === "number" ? `${months} ay` : "";
+		const suffix = monthsLabel ? ` — ${monthsLabel}` : "";
 		const subBanner: UserMessage = {
 			id: subBannerId,
 			channelSlug: action.message.channelSlug,
 			chatroom_id: action.message.chatroom_id,
 			content: isRenewal
-				? `${action.message.username} aboneliğini yeniledi — ${action.message.months} ay`
-				: `${action.message.username} abone oldu — ${action.message.months} ay`,
+				? `${subUsername} aboneliğini yeniledi${suffix}`
+				: `${subUsername} abone oldu${suffix}`,
 			type: "sub-banner",
 			created_at: new Date(action.message.create_at).toISOString(),
 			sender: {
 				id: 0,
-				username: action.message.username,
-				slug: action.message.username.toLowerCase(),
+				username: subUsername,
+				slug: subUsername.toLowerCase(),
 				identity: {
 					color: "#7c3aed",
 					badges: [
 						{
 							type: "subscriber",
 							text: "Sub",
-							count: action.message.months,
+							count: months,
 						},
 					],
 				},
@@ -457,19 +649,30 @@ const ChatMessageReducers = (
 				: trimList(state.messageList.concat(subBanner)),
 		};
 	} else if (action.type === ChatMessageTypes.GIF_SUB_MESSAGE_ACTION) {
+		// FIX-GIFT (defense-in-depth): bridge normalize ediyor olsa da reducer
+		// `gifted_usernames` undefined'a karşı asla `.map/.length` ile THROW
+		// etmemeli (eskiden bu throw'u dıştaki try/catch yutup gift'i tamamen
+		// görünmez yapıyordu). `?? []` ile garanti dizi.
+		const giftedUsernames = action.message.gifted_usernames ?? [];
+		const gifterUsername = action.message.gifter_username || "Anonim";
+		// FIX-3: alıcıları işaretle ki birazdan gelebilecek SubscriptionEvent /
+		// celebration renewal bunları gifter ile çift basmasın.
+		for (const recipient of giftedUsernames) {
+			markGiftRecipientReducer(action.message.channelSlug, recipient);
+		}
 		const newList = appendActivityItem(state.activityList, {
 			id: action.message.id,
 			channelSlug: action.message.channelSlug,
 			kind: "subscription_gift",
 			actor: {
-				username: action.message.gifter_username,
+				username: gifterUsername,
 			},
-			targetUsers: action.message.gifted_usernames.map((username) => ({
+			targetUsers: giftedUsernames.map((username) => ({
 				username,
 			})),
-			amount: action.message.gifted_usernames.length,
-			username: action.message.gifter_username,
-			giftedList: action.message.gifted_usernames,
+			amount: giftedUsernames.length,
+			username: gifterUsername,
+			giftedList: giftedUsernames,
 			// WI-1.5: legacy Pusher bridge enrichment
 			eventType: action.message.eventType,
 			expiresAt: action.message.expiresAt,
@@ -479,24 +682,27 @@ const ChatMessageReducers = (
 			raw: action.message,
 		});
 		// Sprint 35: gift sub için chat banner satırı.
-		const giftCount = action.message.gifted_usernames.length;
-		const giftBannerId = `gift-sub-banner-${action.message.id || action.message.gifter_username}-${action.message.create_at}`;
-		const targetList = action.message.gifted_usernames.slice(0, 3).join(", ");
+		const giftCount = giftedUsernames.length;
+		const giftBannerId = `gift-sub-banner-${action.message.id || gifterUsername}-${action.message.create_at}`;
+		const targetList = giftedUsernames.slice(0, 3).join(", ");
 		const tailNote =
-			action.message.gifted_usernames.length > 3
-				? ` +${action.message.gifted_usernames.length - 3} kişi daha`
+			giftedUsernames.length > 3
+				? ` +${giftedUsernames.length - 3} kişi daha`
 				: "";
 		const giftBanner: UserMessage = {
 			id: giftBannerId,
 			channelSlug: action.message.channelSlug,
 			chatroom_id: action.message.chatroom_id,
-			content: `${action.message.gifter_username}, ${giftCount} kişiye hediye abonelik verdi → ${targetList}${tailNote}`,
+			content:
+				giftCount > 0
+					? `${gifterUsername}, ${giftCount} kişiye hediye abonelik verdi → ${targetList}${tailNote}`
+					: `${gifterUsername} hediye abonelik verdi`,
 			type: "gift-sub-banner",
 			created_at: new Date(action.message.create_at).toISOString(),
 			sender: {
 				id: 0,
-				username: action.message.gifter_username,
-				slug: action.message.gifter_username.toLowerCase(),
+				username: gifterUsername,
+				slug: gifterUsername.toLowerCase(),
 				identity: {
 					color: "#ec4899",
 					badges: [],

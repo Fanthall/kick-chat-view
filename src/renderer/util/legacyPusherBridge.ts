@@ -36,25 +36,83 @@ export interface LegacyGiftedSubscriptionsPayload extends GiftSubMessage {
 	is_anonymous?: boolean;
 }
 
+// FIX-4: Kick `SubscriptionEvent` payload'unda months/streak bazen string
+// ("3") bazen number (3) gelebiliyor. FIX-1 renewal tespiti `months > 1`
+// karşılaştırmasına dayandığı için burada sayıya normalize ediyoruz; geçersiz
+// değer undefined kalır (reducer konservatif "yeni" varsayar).
+const coerceCount = (value: unknown): number | undefined => {
+	if (typeof value === "number" && Number.isFinite(value)) return value;
+	if (typeof value === "string" && value.trim() !== "") {
+		const n = Number(value);
+		return Number.isFinite(n) ? n : undefined;
+	}
+	return undefined;
+};
+
 export const enrichLegacySubscriptionPayload = (
 	payload: LegacySubscriptionPayload
 ): SubMessage => {
 	const expiresAt = parseExpiresAtIso(
 		payload.expiresAt ?? (payload as any)?.expires_at
 	);
+	const months = coerceCount(payload.months);
+	const streak = coerceCount(payload.streak);
 	return {
 		...payload,
+		months: months as number,
+		streak,
 		eventType: "App\\Events\\SubscriptionEvent",
 		expiresAt,
 	};
 };
 
+// FIX-GIFT (H1): Kick `GiftedSubscriptionsEvent` payload shape kanala/sürüme göre
+// değişiyor. Alıcı listesi `gifted_usernames` yerine `usernames`,
+// `gifted_users[].username` veya tekil `gifted_username` ile gelebiliyor.
+// gifter da `gifter_username` yerine `gifter.username` altında olabiliyor.
+// Reducer `gifted_usernames.length/.map` çağırdığı için undefined olursa THROW
+// → dıştaki try/catch yutuyordu → gift HİÇ görünmüyordu. Burada tek bir güvenli
+// `string[]`'e normalize ediyoruz.
+const normalizeGiftedUsernames = (payload: any): string[] => {
+	const candidates: unknown[] = [
+		payload?.gifted_usernames,
+		payload?.usernames,
+		payload?.gifted_users,
+		payload?.recipients,
+	];
+	for (const c of candidates) {
+		if (Array.isArray(c)) {
+			const list = c
+				.map((entry) =>
+					typeof entry === "string"
+						? entry
+						: entry?.username || entry?.slug || entry?.name
+				)
+				.filter((u: unknown): u is string => typeof u === "string" && u.trim() !== "");
+			if (list.length > 0) return list;
+		}
+	}
+	// Tekil alıcı varyantları.
+	const single =
+		payload?.gifted_username ||
+		payload?.username ||
+		payload?.recipient?.username;
+	if (typeof single === "string" && single.trim() !== "") return [single];
+	return [];
+};
+
 export const enrichLegacyGiftedSubscriptionsPayload = (
 	payload: LegacyGiftedSubscriptionsPayload
 ): GiftSubMessage => {
-	const gifter = payload.gifter_username || "";
+	const gifter =
+		payload.gifter_username ||
+		(payload as any)?.gifter?.username ||
+		(payload as any)?.gifter?.slug ||
+		"";
+	const giftedUsernames = normalizeGiftedUsernames(payload);
 	const inferredAnon =
 		payload.is_anonymous === true ||
+		(payload as any)?.anonymous === true ||
 		gifter.trim().length === 0 ||
 		ANON_RE.test(gifter.trim());
 	const expiresAt = parseExpiresAtIso(
@@ -62,6 +120,8 @@ export const enrichLegacyGiftedSubscriptionsPayload = (
 	);
 	return {
 		...payload,
+		gifter_username: gifter || "Anonim",
+		gifted_usernames: giftedUsernames,
 		eventType: "App\\Events\\GiftedSubscriptionsEvent",
 		expiresAt,
 		anonymous: inferredAnon || undefined,

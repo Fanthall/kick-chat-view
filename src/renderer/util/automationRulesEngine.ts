@@ -289,9 +289,18 @@ export const evaluateChatMessage = (
 export const evaluateSubEvent = (
 	channelSlug: string,
 	username: string | undefined,
-	months: number | undefined
+	months: number | undefined,
+	/**
+	 * FIX-3: Bu event yenileme mi? Çağıran (chatConnection) months>1 ile geçer.
+	 * Verilmezse months'tan türetilir (months>1 → renewal).
+	 */
+	isRenewalArg?: boolean
 ) => {
 	ensureInitialized();
+	const isRenewal =
+		typeof isRenewalArg === "boolean"
+			? isRenewalArg
+			: typeof months === "number" && months > 1;
 	// Sprint 58b: Eğer bu kullanıcı son 5dk içinde hediye sub aldıysa,
 	// includeGifted=false (default) olan rule'lar atlanır.
 	const isGiftRecipient =
@@ -299,9 +308,12 @@ export const evaluateSubEvent = (
 	for (const rule of cachedRules) {
 		if (!ruleAppliesToChannel(rule, channelSlug)) continue;
 		if (rule.trigger.type !== "sub_event") continue;
-		const includeGifted =
-			rule.trigger.type === "sub_event" && rule.trigger.includeGifted === true;
+		const includeGifted = rule.trigger.includeGifted === true;
 		if (isGiftRecipient && !includeGifted) continue;
+		// FIX-3: subType filtresi. "any" (veya tanımsız) → her zaman geçer.
+		const subType = rule.trigger.subType ?? "any";
+		if (subType === "new" && isRenewal) continue;
+		if (subType === "renewal" && !isRenewal) continue;
 		fireAction(rule, { channelSlug, username, months });
 	}
 };

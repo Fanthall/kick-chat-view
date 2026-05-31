@@ -1,3 +1,22 @@
+# 4.6.10 — 2026-06-01
+
+Bağlantı dayanıklılığı + abonelik event ayrımı (yeni / yenileme / hediye).
+
+## [Bağlantı Dayanıklılığı] — 2026-06-01
+
+- **Fix (kritik):** Chat websocket'i bir süre sonra (özellikle pencere arka plandayken) sessizce dinlemeyi bırakıyordu. Üç kök neden giderildi:
+  - **Pusher heartbeat:** `pusher:ping` → `pusher:pong` cevabı + istemci-tarafı watchdog (trafik yoksa proaktif ping, `activity_timeout + grace` boyunca aktivite yoksa ölü socket'i kapat). Önceden hiç pong gönderilmiyordu → sunucu ~2 dakikada bağlantıyı kapatıyordu.
+  - **Otomatik reconnect:** `close`/`error` durumunda exponential backoff ile yeniden bağlanma (`sevenTvEvents` deseni). `intentionalClose` ile kanal kapatılınca sonsuz reconnect engellenir.
+  - **Background throttling:** `mainWindow` `webPreferences.backgroundThrottling: false` — pencere arka plandayken timer/socket işleme durmaz.
+  - **online/offline:** Ağ geri gelince otomatik reconnect (modül seviyesi, shell-agnostic) — modern shell geçişinde kaybolan handler geri getirildi.
+
+## [Abonelik Event Ayrımı] — 2026-06-01
+
+- **Fix:** Yenileme (renewal) yeni abone gibi davranıyordu ve hep aynı sabit mesajı gösteriyordu. Renewal tespiti artık `months > 1` (veya streak) bazlı → "aboneliğini yeniledi — X ay" vs "abone oldu — X ay".
+- **Fix:** Re-sub (celebration) yolu artık chat'e banner basıyor + otomasyon `sub_event` rutinini tetikliyor (önceden sadece activity'e düşüyordu). `metadata.celebration.total_months` okunuyor; SubscriptionEvent ile 30sn dedup.
+- **Fix (kritik):** Hediye abonelik (gift) bazen hiç görünmüyordu — payload alan adı farklı olduğunda reducer `gifted_usernames.length` throw ediyor, dıştaki try/catch sessizce yutuyordu. `gifted_usernames | usernames | gifted_users[].username | recipients` varyantları normalize edildi + guard eklendi.
+- **New:** Otomasyon rutinlerinde `sub_event` trigger'ına alt-seçim — **Yeni abone / Yenileme / Hepsi** (`subType`). Gift recipient'lar renewal/sub olarak çift sayılmaz. Geriye uyumlu (eski kurallar `any`).
+
 # 4.6.9 — 2026-05-22
 
 Emote Rendering Unification — bkz aşağıdaki bölüm.

@@ -43,6 +43,14 @@ export type RuleTrigger =
 			 * gifter rule + alıcı rule iki kez patlamasın diye.
 			 */
 			includeGifted?: boolean;
+			/**
+			 * FIX-3 (kullanıcı kararı): Sub event'in hangi tipinde tetiklensin?
+			 *   - "new"     : yalnız yeni abonelik (months <= 1)
+			 *   - "renewal" : yalnız yenileme (months > 1)
+			 *   - "any"     : ikisi de (default — geriye uyumlu)
+			 * Tanımsız = "any" → eski kurallar aynen çalışır.
+			 */
+			subType?: "new" | "renewal" | "any";
 	  }
 	| { type: "gift_sub_event" }
 	| { type: "follow_event" }
