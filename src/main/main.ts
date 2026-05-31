@@ -52,7 +52,11 @@ class AppUpdater {
 		// Background'da sadece versiyon kontrolü yapılır, event'ler renderer'a
 		// forward edilir (wireAutoUpdater main process IPC handler'larında).
 		autoUpdater.autoDownload = false;
-		autoUpdater.autoInstallOnAppQuit = true;
+		// Sprint 62: autoInstallOnAppQuit=true elektron-updater'i isForceRunAfter=false
+		// ile sessiz kuruyordu → app kapaniyor ama YENIDEN ACILMIYORDU (kullanici "crash"
+		// sandi). Kurulum+relaunch'i kendimiz before-quit'te quitAndInstall(true,true) ile
+		// yonetiyoruz; bu yuzden otomatik quit-install kapatildi.
+		autoUpdater.autoInstallOnAppQuit = false;
 		autoUpdater.checkForUpdates().catch((err) => {
 			log.warn("auto-update check skipped:", err?.message ?? err);
 		});
@@ -443,12 +447,18 @@ ipcMain.handle(
 // Sprint 61: electron-updater event forwarder + manual download/install IPC.
 // app.whenReady() içinde call edilir, çünkü main window'a event forward etmek gerek.
 let autoUpdaterWired = false;
+// Sprint 62: guncelleme indirildi mi? before-quit'te kurup relaunch icin kullanilir.
+let updateDownloaded = false;
+// Re-entry guard: quitAndInstall kendi quit'ini tetikledigi icin before-quit ikinci
+// kez calismasin.
+let isQuittingForUpdate = false;
 const wireAutoUpdater = () => {
 	if (autoUpdaterWired) return;
 	autoUpdaterWired = true;
 	// Manuel kontrol modu — checkForUpdatesAndNotify yerine sadece check
 	autoUpdater.autoDownload = false;
-	autoUpdater.autoInstallOnAppQuit = true;
+	// Sprint 62: kurulum+relaunch'i before-quit'te kendimiz yapiyoruz (bkz AppUpdater).
+	autoUpdater.autoInstallOnAppQuit = false;
 	const forward = (channel: string, payload: any) => {
 		BrowserWindow.getAllWindows().forEach((w) => {
 			if (!w.isDestroyed()) {
@@ -475,9 +485,11 @@ const wireAutoUpdater = () => {
 			bytesPerSecond: p.bytesPerSecond,
 		})
 	);
-	autoUpdater.on("update-downloaded", (info) =>
-		forward("update:event", { kind: "downloaded", version: info.version })
-	);
+	autoUpdater.on("update-downloaded", (info) => {
+		// Sprint 62: indirildi → before-quit'te otomatik kur+relaunch icin isaretle.
+		updateDownloaded = true;
+		forward("update:event", { kind: "downloaded", version: info.version });
+	});
 };
 
 ipcMain.handle("update:auto-check", async () => {
@@ -513,10 +525,14 @@ ipcMain.handle("update:download", async () => {
 ipcMain.handle("update:install", async () => {
 	wireAutoUpdater();
 	try {
-		// isSilent=false: NSIS UI gösterir; isForceRunAfter=true: kurulduktan sonra app açar
-		autoUpdater.quitAndInstall(false, true);
+		// Sprint 62: isSilent=true + isForceRunAfter=true → sessiz kur ve app'i
+		// GARANTILI yeniden baslat. (electron-updater: isSilent=false iken
+		// isForceRunAfter YOK SAYILIR → relaunch garanti degildi.)
+		isQuittingForUpdate = true;
+		autoUpdater.quitAndInstall(true, true);
 		return { ok: true };
 	} catch (err: any) {
+		isQuittingForUpdate = false;
 		return { ok: false, message: err?.message ?? String(err) };
 	}
 });
@@ -621,6 +637,29 @@ app.on("window-all-closed", () => {
 	if (process.platform !== "darwin") {
 		app.quit();
 	}
+});
+
+// Sprint 62: Guncelleme indirildiyse, app kapanirken sessizce kur ve OTOMATIK
+// yeniden baslat. Onceden autoInstallOnAppQuit sessizce kuruyor ama relaunch
+// etmiyordu → app kapaniyor, geri gelmiyordu (kullanici "crash" sandi).
+app.on("before-quit", (event) => {
+	if (!updateDownloaded || isQuittingForUpdate) {
+		return;
+	}
+	isQuittingForUpdate = true;
+	event.preventDefault();
+	// quitAndInstall'i event tick'inin disinda cagir (electron-updater onerisi).
+	setImmediate(() => {
+		try {
+			// isSilent=true + isForceRunAfter=true → sessiz kurulum + garantili relaunch.
+			autoUpdater.quitAndInstall(true, true);
+		} catch (err: any) {
+			log.warn("quitAndInstall (before-quit) failed:", err?.message ?? err);
+			// Kurulum tetiklenemezse normal cikisa izin ver.
+			isQuittingForUpdate = false;
+			app.quit();
+		}
+	});
 });
 
 app.whenReady()

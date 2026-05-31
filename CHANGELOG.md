@@ -1,3 +1,12 @@
+# 4.6.11 — 2026-06-01
+
+Güncelleme sonrası otomatik yeniden başlatma (relaunch) düzeltmesi.
+
+## [Auto-update relaunch] — 2026-06-01
+
+- **Fix:** Güncelleme indirildikten sonra app kapanıyor ama **yeniden açılmıyordu** (kullanıcı "crash" sanıyordu). Kök neden: `autoInstallOnAppQuit` electron-updater'ı `isForceRunAfter=false` ile sessizce kuruyor → relaunch yok. Ayrıca `quitAndInstall(false, true)` çağrısında `isSilent=false` olduğu için `isForceRunAfter` **yok sayılıyordu**.
+- **Çözüm:** `autoInstallOnAppQuit` kapatıldı; kurulum+relaunch artık `before-quit`'te `quitAndInstall(true, true)` (silent + force-run-after) ile yönetiliyor → güncelleme sonrası **garantili otomatik restart**. Manuel "install" butonu da `(true, true)` ile güncellendi. Re-entry guard eklendi.
+
 # 4.6.10 — 2026-06-01
 
 Bağlantı dayanıklılığı + abonelik event ayrımı (yeni / yenileme / hediye).
