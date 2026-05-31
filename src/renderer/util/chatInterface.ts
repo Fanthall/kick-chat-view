@@ -17,13 +17,23 @@ export interface UserMessage {
 	created_at: string;
 	sender: User;
 	metadata?: {
-		original_sender: {
+		original_sender?: {
 			id: number;
 			username: string;
 		};
-		original_message: {
+		original_message?: {
 			id: string;
 			content: string;
+		};
+		// FIX-4: Kick "celebration" (re-sub kutlaması) ChatMessageEvent'inin
+		// metadata.celebration bloku. total_months = toplam abone ay sayısı;
+		// type genelde "subscription_renewed" / "streak" gibi alt-tip taşır.
+		// Tüm alanlar optional — kanal/sürüme göre eksik gelebilir.
+		celebration?: {
+			id?: string;
+			type?: string;
+			total_months?: number;
+			created_at?: string;
 		};
 	};
 }

@@ -2,6 +2,8 @@
 
 Kick.com kanal chat'ini ve moderasyon olaylarını masaüstünde tek pencerede izlemek için yazılmış **Electron + React + TypeScript** uygulaması. Aynı anda birden fazla kanala bağlanabilir, chat / aktivite / moderasyon panellerini yan yana gösterir, Kick'in resmi OAuth API'si üzerinden timeout / ban / unban / mesaj silme aksiyonları yapar. Otomasyon rutinleri ile chat olaylarına ve zamanlı tetikleyicilere otomatik yanıt verebilir.
 
+> **English Summary** — Multi-channel desktop client for Kick.com that brings chat, subscription/gift activity, and moderation actions (timeout / ban / unban / delete) into a single window. Built on Electron + React + TypeScript, talks to Kick via the official OAuth 2.1 PKCE API and Pusher websockets. Supports inline emote autocomplete (Kick + 7TV), a modal emote picker, mention autocomplete, OKLCH-based light/dark theming, TR/EN i18n, automatic GitHub Releases update checks, and a powerful **automation rules engine** that reacts to chat keywords, mentions, subs, gifted subs, follows, KICKs, hosts, channel-point redemptions, and time-based intervals.
+
 ![Kick Chat Viewer — Ana ekran](docs/screenshots/main-window.png)
 
 ## Özellikler

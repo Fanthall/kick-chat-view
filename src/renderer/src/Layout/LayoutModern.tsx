@@ -31,7 +31,7 @@ import {
 	removeChannel,
 	setActiveChannelSlug,
 } from "../../util/channelSettings";
-import { chatListener } from "../../util/chatConnection";
+import { chatListener, disconnectChannel } from "../../util/chatConnection";
 import { useProfilePic } from "../../util/useProfilePic";
 import Icon from "../Component/Icon/Icon";
 import ChatModern from "../Chat/ChatModern";
@@ -435,6 +435,10 @@ const LayoutModern: FunctionComponent = () => {
 	const onCloseChannel = useCallback(
 		(slug: string) => {
 			if (!slug) return;
+			// FIX-2: kanal listeden cikariliyor — websocket'i bilincli kapat
+			// (intentionalClose). Yoksa kaldirilan kanala sonsuz reconnect olur
+			// ve socket leak kalir.
+			disconnectChannel(slug);
 			removeChannel(slug);
 			unreadMap.delete(slug);
 			seenIdsByChannel.delete(slug);

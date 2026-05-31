@@ -52,6 +52,88 @@ const CHANNEL_EMOTE_TTL_MS = 10 * 60 * 1000;
 const SEVENTV_REFRESH_DEBOUNCE_MS = 750;
 const STREAM_META_POLL_MS = 60 * 1000;
 
+// ─── FIX-1/FIX-2: Pusher heartbeat (ping/pong) + backoff reconnect ───────────
+// Pusher protokolu: bagli istemci sunucudan `pusher:ping` alir ve
+// `pusher:pong` ile cevap vermek zorundadir; yoksa sunucu `activity_timeout`
+// (genelde 120sn) sonra socket'i kapatir. Ayrica istemci-tarafli watchdog ile
+// trafik durdugunda proaktif ping atip, hic aktivite yoksa olu socket'i kapatip
+// reconnect tetikliyoruz.
+const PUSHER_DEFAULT_ACTIVITY_TIMEOUT_S = 120;
+// Watchdog tick: bu sureden uzun sessizlikte proaktif ping at.
+const WATCHDOG_TICK_MS = 30 * 1000;
+// Pong/aktivite icin verilen ek tolerans; bu sureyi de asarsa socket olu sayilir.
+const WATCHDOG_GRACE_MS = 30 * 1000;
+// FIX-2: sevenTvEvents.ts deseni — exponential backoff gecikmeleri.
+const RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 30000];
+
+// Per-channel watchdog interval id'leri (heartbeat). close/yeni socket'te clear.
+const watchdogTimers = new Map<string, ReturnType<typeof setInterval>>();
+// Per-channel son aktivite (herhangi bir mesaj) zaman damgasi (ms).
+const lastActivityAt = new Map<string, number>();
+// Per-channel sunucudan gelen activity_timeout (ms).
+const channelActivityTimeoutMs = new Map<string, number>();
+// FIX-2: per-channel reconnect denemesi sayaci + bekleyen reconnect timer.
+const reconnectAttempts = new Map<string, number>();
+const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+// FIX-2: kullanici/sistem tarafindan bilincli kapatilan kanallar — reconnect
+// tetiklenmemeli (kanal listeden cikarildi / disconnect dendi).
+const intentionalClose = new Set<string>();
+
+const verboseLog = (...args: unknown[]) => {
+	if (localStorage.getItem("chatViewVerboseLogging") === "true") {
+		console.log(...args);
+	}
+};
+
+const clearWatchdog = (channelName: string) => {
+	const timer = watchdogTimers.get(channelName);
+	if (timer) {
+		clearInterval(timer);
+		watchdogTimers.delete(channelName);
+	}
+};
+
+const clearReconnectTimer = (channelName: string) => {
+	const timer = reconnectTimers.get(channelName);
+	if (timer) {
+		clearTimeout(timer);
+		reconnectTimers.delete(channelName);
+	}
+};
+
+// FIX-2: backoff ile chatListener'i tekrar dispatch et. Kanal bilincli
+// kapatildiysa veya bu socket artik aktif degilse reconnect yapma.
+const scheduleReconnect = (
+	dispatch: FanthalDispatch,
+	channelName: string,
+	listenerFactory: (slug?: string) => (dispatch: FanthalDispatch) => void
+) => {
+	if (intentionalClose.has(channelName)) {
+		return;
+	}
+	// Zaten bekleyen bir reconnect varsa cift planlama yapma.
+	if (reconnectTimers.has(channelName)) {
+		return;
+	}
+	const attempt = reconnectAttempts.get(channelName) ?? 0;
+	const delay = RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)];
+	reconnectAttempts.set(channelName, attempt + 1);
+	verboseLog(
+		"[chat reconnect] schedule",
+		channelName,
+		`attempt=${attempt + 1}`,
+		`delay=${delay}ms`
+	);
+	const timer = setTimeout(() => {
+		reconnectTimers.delete(channelName);
+		if (intentionalClose.has(channelName)) {
+			return;
+		}
+		dispatch(listenerFactory(channelName));
+	}, delay);
+	reconnectTimers.set(channelName, timer);
+};
+
 const loadStreamMeta = (dispatch: FanthalDispatch, channelSlug: string) => {
 	window.electron.kick
 		.getChannelBySlug(channelSlug)
@@ -239,6 +321,13 @@ export const chatListener = (slug?: string) => {
 			return;
 		}
 
+		// FIX-2: yeni baglanti istegi = bilincli kapatma durumunu sifirla.
+		// (Kanal yeniden izlenmeye basladi; reconnect tekrar serbest.)
+		intentionalClose.delete(channelName);
+		// FIX-1/FIX-2: onceki socket'e ait timer'lari temizle (leak guard).
+		clearWatchdog(channelName);
+		clearReconnectTimer(channelName);
+
 		const existingSocket = activeSockets.get(channelName);
 		if (existingSocket) {
 			existingSocket.close();
@@ -251,6 +340,56 @@ export const chatListener = (slug?: string) => {
 			"wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false"
 		);
 		activeSockets.set(channelName, socket);
+		// FIX-1: watchdog baz degerleri.
+		lastActivityAt.set(channelName, Date.now());
+		channelActivityTimeoutMs.set(
+			channelName,
+			PUSHER_DEFAULT_ACTIVITY_TIMEOUT_S * 1000
+		);
+
+		// FIX-1: istemci-tarafli heartbeat watchdog. Trafik durdugunda proaktif
+		// ping atar; hic aktivite yoksa olu socket'i kapatir (close handler
+		// FIX-2 reconnect'i tetikler). Per-channel; close/yeni socket'te temizlenir.
+		const watchdog = setInterval(() => {
+			// Stale guard: bu interval artik aktif olmayan bir socket'e aitse dur.
+			if (activeSockets.get(channelName) !== socket) {
+				clearInterval(watchdog);
+				return;
+			}
+			if (socket.readyState !== WebSocket.OPEN) {
+				return;
+			}
+			const now = Date.now();
+			const last = lastActivityAt.get(channelName) ?? now;
+			const timeout =
+				channelActivityTimeoutMs.get(channelName) ??
+				PUSHER_DEFAULT_ACTIVITY_TIMEOUT_S * 1000;
+			const silence = now - last;
+			// timeout + grace boyunca hic aktivite yoksa socket olu say.
+			if (silence > timeout + WATCHDOG_GRACE_MS) {
+				verboseLog(
+					"[chat watchdog] no activity, closing dead socket",
+					channelName,
+					`silence=${silence}ms`
+				);
+				try {
+					socket.close();
+				} catch {
+					// noop
+				}
+				return;
+			}
+			// Sessizlik WATCHDOG_TICK_MS'i astiysa proaktif ping at.
+			if (silence >= WATCHDOG_TICK_MS) {
+				try {
+					socket.send('{"event":"pusher:ping","data":{}}');
+					verboseLog("[chat watchdog] proactive ping", channelName);
+				} catch {
+					// noop
+				}
+			}
+		}, WATCHDOG_TICK_MS);
+		watchdogTimers.set(channelName, watchdog);
 
 		socket.addEventListener("open", (event) => {
 			if (channelName) {
@@ -324,12 +463,20 @@ export const chatListener = (slug?: string) => {
 		});
 
 		socket.addEventListener("close", () => {
+			// Stale-socket guard: yalnizca hala aktif olan socket'in close'u
+			// state'i degistirir / reconnect tetikler. Eski socket'in gec gelen
+			// close'u yeni baglantiyi bozmamali.
 			if (activeSockets.get(channelName) === socket) {
 				activeSockets.delete(channelName);
 				stopStreamMetaPolling(channelName);
+				// FIX-1: bu socket'e ait watchdog'u temizle (leak guard).
+				clearWatchdog(channelName);
 				dispatch(
 					MessageActionsFunc.setConnectionStatus("disconnected", channelName)
 				);
+				// FIX-2: kanal hala izleniyorsa (bilincli kapatma degilse) backoff
+				// ile yeniden baglan.
+				scheduleReconnect(dispatch, channelName, chatListener);
 			}
 		});
 
@@ -338,6 +485,9 @@ export const chatListener = (slug?: string) => {
 				dispatch(
 					MessageActionsFunc.setConnectionStatus("disconnected", channelName)
 				);
+				// Not: reconnect'i burada planlamiyoruz; "error" sonrasi tarayici
+				// daima "close" event'i de yayar ve reconnect orada (tek noktada)
+				// tetiklenir. Bu, cift reconnect planlamasini onler.
 			}
 		});
 
@@ -346,6 +496,8 @@ export const chatListener = (slug?: string) => {
 			if (activeSockets.get(channelName) !== socket) {
 				return;
 			}
+			// FIX-1: herhangi bir mesaj = aktivite. Watchdog bunu kullanir.
+			lastActivityAt.set(channelName, Date.now());
 			let parsedEvent: EventType;
 			try {
 				parsedEvent = JSON.parse(event.data);
@@ -355,7 +507,46 @@ export const chatListener = (slug?: string) => {
 			}
 			try {
 				switch (parsedEvent.event) {
+					// FIX-1: Pusher protokol mesajlari ────────────────────────
+					case "pusher:connection_established": {
+						// data.activity_timeout (sn) — watchdog bunu baz alir.
+						try {
+							const payload = JSON.parse(parsedEvent.data || "{}");
+							const timeoutS = Number(payload?.activity_timeout);
+							if (Number.isFinite(timeoutS) && timeoutS > 0) {
+								channelActivityTimeoutMs.set(
+									channelName,
+									timeoutS * 1000
+								);
+								verboseLog(
+									"[chat] connection_established",
+									channelName,
+									`activity_timeout=${timeoutS}s`
+								);
+							}
+						} catch {
+							// noop: timeout okunamazsa default kalir
+						}
+						break;
+					}
+					case "pusher:ping":
+						// Sunucu ping atti — derhal pong ile cevapla, yoksa
+						// activity_timeout sonra socket kapanir.
+						try {
+							socket.send('{"event":"pusher:pong","data":{}}');
+							verboseLog("[chat] pong sent", channelName);
+						} catch {
+							// noop
+						}
+						break;
+					case "pusher:pong":
+						// Bizim proaktif ping'imize sunucu yaniti — sadece aktivite
+						// (yukarida lastActivityAt guncellendi). Ek is yok.
+						break;
 					case "pusher_internal:subscription_succeeded":
+						// FIX-2: basarili abonelik = saglikli baglanti, backoff sayacini
+						// sifirla. (Bir sonraki kopusta tekrar 1sn'den baslar.)
+						reconnectAttempts.set(channelName, 0);
 						dispatch(
 							MessageActionsFunc.setConnectionStatus("connected", channelName)
 						);
@@ -378,6 +569,39 @@ export const chatListener = (slug?: string) => {
 						} catch (autoErr) {
 							console.log("automation chat eval failed", autoErr);
 						}
+						// FIX-2: celebration (re-sub) chat mesaji = sub event de.
+						// Reducer banner+activity uretir; otomasyon tetigini burada
+						// (event noktasi) cagiriyoruz. months: metadata.celebration
+						// .total_months ?? subscriber badge count.
+						try {
+							if (parsedMessage?.type === "celebration") {
+								const celeb = (parsedMessage as any)?.metadata
+									?.celebration;
+								const badge = parsedMessage?.sender?.identity?.badges?.find(
+									(b: any) =>
+										String(b?.type).toLowerCase() === "subscriber"
+								);
+								const celebMonths =
+									typeof celeb?.total_months === "number"
+										? celeb.total_months
+										: typeof badge?.count === "number"
+										? badge.count
+										: undefined;
+								const celebIsRenewal =
+									celebMonths === undefined || celebMonths > 1;
+								evaluateSubEvent(
+									channelName,
+									parsedMessage?.sender?.username,
+									celebMonths,
+									celebIsRenewal
+								);
+							}
+						} catch (autoErr) {
+							console.log(
+								"automation celebration sub eval failed",
+								autoErr
+							);
+						}
 						break;
 				case "App\\Events\\SubscriptionEvent":
 					const parsedSubMessage: LegacySubscriptionPayload = JSON.parse(
@@ -392,12 +616,26 @@ export const chatListener = (slug?: string) => {
 								})
 							)
 					);
-					// Sprint 58: sub_event trigger
+					// Sprint 58 + FIX-3: sub_event trigger. months>1 → yenileme.
+					// streak destekçi sinyal (bazı kanallarda months yok).
 					try {
+						const subMonthsRaw =
+							(parsedSubMessage as any)?.months;
+						const subStreakRaw =
+							(parsedSubMessage as any)?.streak;
+						const subMonths =
+							typeof subMonthsRaw === "number"
+								? subMonthsRaw
+								: Number(subMonthsRaw);
+						const subStreak = Number(subStreakRaw);
+						const subIsRenewal =
+							(Number.isFinite(subMonths) && subMonths > 1) ||
+							(Number.isFinite(subStreak) && subStreak > 1);
 						evaluateSubEvent(
 							channelName,
 							(parsedSubMessage as any)?.username,
-							(parsedSubMessage as any)?.months
+							Number.isFinite(subMonths) ? subMonths : undefined,
+							subIsRenewal
 						);
 					} catch (autoErr) {
 						console.log("automation sub eval failed", autoErr);
@@ -785,4 +1023,71 @@ export const chatListener = (slug?: string) => {
 			}
 		});
 	};
+};
+
+// ─── FIX-2: Kanal disconnect (bilincli kapatma) ──────────────────────────────
+// Kullanici bir kanali listeden cikardiginda / disconnect dediginde cagrilir.
+// intentionalClose isaretler (reconnect tetiklenmez), tum timer'lari temizler ve
+// socket'i kapatir. Mevcut "kanal kapatinca socket acik kaliyor" leak'ini de
+// kapatir.
+export const disconnectChannel = (slug?: string) => {
+	const channelName = slug?.trim().toLowerCase();
+	if (!channelName) return;
+	intentionalClose.add(channelName);
+	clearWatchdog(channelName);
+	clearReconnectTimer(channelName);
+	reconnectAttempts.delete(channelName);
+	stopStreamMetaPolling(channelName);
+	const socket = activeSockets.get(channelName);
+	if (socket) {
+		activeSockets.delete(channelName);
+		try {
+			socket.close();
+		} catch {
+			// noop
+		}
+	}
+};
+
+// ─── FIX-4: Online/offline reconnect (shell-agnostic) ────────────────────────
+// Classic Layout.tsx'te olan ag listener'i modern shell'e tasinmamisti
+// (regresyon). Burada modul seviyesinde, bir kez kurulur → shell degisse de
+// yasar. online → izlenen tum kanallar icin reconnect; offline → status
+// disconnected. LayoutModern'a koymadan, tek-kanal sinirina takilmadan calisir.
+let networkListenersInstalled = false;
+
+export const installNetworkResilience = (dispatch: FanthalDispatch) => {
+	if (networkListenersInstalled) return;
+	if (typeof window === "undefined") return;
+	networkListenersInstalled = true;
+
+	const handleOnline = () => {
+		verboseLog("[chat] network online — reconnecting watched channels");
+		// Izlenen (bilincli kapatilmamis) tum kanallar icin reconnect.
+		// activeSockets + reconnect bekleyen kanallar birlikte dusunulur.
+		const channels = new Set<string>([
+			...activeSockets.keys(),
+			...reconnectTimers.keys(),
+			...watchdogTimers.keys(),
+		]);
+		for (const channelName of channels) {
+			if (intentionalClose.has(channelName)) continue;
+			// Reconnect bekleyen timer'i iptal et, aninda yeniden baglan.
+			clearReconnectTimer(channelName);
+			reconnectAttempts.set(channelName, 0);
+			dispatch(chatListener(channelName));
+		}
+	};
+
+	const handleOffline = () => {
+		verboseLog("[chat] network offline — marking channels disconnected");
+		for (const channelName of activeSockets.keys()) {
+			dispatch(
+				MessageActionsFunc.setConnectionStatus("disconnected", channelName)
+			);
+		}
+	};
+
+	window.addEventListener("online", handleOnline);
+	window.addEventListener("offline", handleOffline);
 };
