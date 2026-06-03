@@ -169,6 +169,36 @@ interface ChatRowProps {
 	canModerate: boolean;
 }
 
+/**
+ * Per-row hata sınırı. Tek bir bozuk mesaj (örn. beklenmeyen Kick payload
+ * şekli) render sırasında throw ederse, error boundary olmadan tüm
+ * `messageList.map` çöküyor → chat donuyor → ancak reload düzeltiyordu.
+ * Bu sınır yalnız o satırı atlar (null render), liste akmaya devam eder.
+ */
+class RowErrorBoundary extends React.Component<
+	{ children: React.ReactNode },
+	{ hasError: boolean }
+> {
+	constructor(props: { children: React.ReactNode }) {
+		super(props);
+		this.state = { hasError: false };
+	}
+
+	static getDerivedStateFromError() {
+		return { hasError: true };
+	}
+
+	componentDidCatch(error: unknown) {
+		// Sessiz yutma yok — hangi mesajın patladığını görebilmek için logla.
+		console.log("[ChatModern] mesaj satırı render hatası — satır atlandı", error);
+	}
+
+	render() {
+		if (this.state.hasError) return null;
+		return this.props.children;
+	}
+}
+
 const ChatRow: FunctionComponent<ChatRowProps> = ({
 	message,
 	username,
@@ -200,7 +230,7 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 	const isMention =
 		!!username &&
 		(originalSenderUsername.toLowerCase() === username.toLowerCase() ||
-			message.content.toLowerCase().includes(username.toLowerCase()));
+			(message.content || "").toLowerCase().includes(username.toLowerCase()));
 
 	const isSus = susUsers.some(
 		(u) => u.toLowerCase() === senderUsername.toLowerCase()
@@ -1315,8 +1345,8 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							? "🎁"
 							: "👑";
 						return (
+							<RowErrorBoundary key={`chat-row-${msg.id}`}>
 							<div
-								key={`chat-row-${msg.id}`}
 								className={`chat-sub-banner${variantClass}`}
 								role="status"
 								aria-live="polite"
@@ -1349,6 +1379,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 									</div>
 								</div>
 							</div>
+							</RowErrorBoundary>
 						);
 					}
 					const badgesHtml = buildBadgesHtml(
@@ -1368,8 +1399,8 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 								)
 							: "";
 					return (
+						<RowErrorBoundary key={`chat-row-${msg.id}`}>
 						<ChatRow
-							key={`chat-row-${msg.id}`}
 							message={msg}
 							username={username}
 							susUsers={susUsers}
@@ -1398,6 +1429,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							onContextMenu={(m, x, y) => setUserMenu({ message: m, x, y })}
 							canModerate={canModerateChannel}
 						/>
+						</RowErrorBoundary>
 					);
 				})}
 			</div>

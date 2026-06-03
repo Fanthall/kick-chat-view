@@ -1,3 +1,16 @@
+# 4.6.12 — 2026-06-03
+
+Render-crash kaynaklı mesaj kaybı + gift event yakalama düzeltmeleri.
+
+## [Mesaj kaybı — render crash] — 2026-06-03
+
+- **Fix (kritik):** Kick chatinde gelen bazı mesajlar app'te görünmüyor, **ancak uygulamayı yenileyince (reload) geliyordu**. Kök neden: `content: null` ile gelen mesajlar (salt-emote / sistem mesajları) kullanıcı adı ayarlıyken `message.content.toLowerCase()` çağrısında **throw** ediyor → tüm mesaj listesi render'ı çöküyor → error boundary olmadığı için chat donuyordu. `(message.content || "")` guard eklendi.
+- **Fix:** Her mesaj satırı artık `RowErrorBoundary` ile sarılı — beklenmeyen payload şekli olan tek bir mesaj artık yalnızca o satırı atlar (loglar), **liste akmaya devam eder**. Bir daha reload gerekmez.
+
+## [Gift event yakalama] — 2026-06-03
+
+- **Fix:** Hediye abonelik (gift) bazı kanallarda activity'de hiç görünmüyor ve gift rutini hiç tetiklenmiyordu (sub yenileme çalışırken). Kök: gift olayı resmi `GiftedSubscriptionsEvent` adıyla gelmeyip işlenmeden düşüyordu. Artık gift-benzeri her event (ad veya `gifter`/`gifted_*` alanları) yakalanıp resmi gift yoluna sokuluyor → farklı event adıyla gelse bile activity + rutin çalışır. Gerçek event adı konsola loglanır (`[GiftLikeEvent]`).
+
 # 4.6.11 — 2026-06-01
 
 Güncelleme sonrası otomatik yeniden başlatma (relaunch) düzeltmesi.

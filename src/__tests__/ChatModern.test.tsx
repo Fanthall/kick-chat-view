@@ -270,4 +270,37 @@ describe("ChatModern", () => {
 			expect(screen.queryAllByTitle("Reply").length).toBeGreaterThan(0);
 		}
 	});
+
+	// ── Case 7: REGRESSION — null/undefined content must not crash list ──
+	// Kick bazı mesajları content: null ile gönderiyor (salt-emote/sistem).
+	// username ayarlıyken eski kod `message.content.toLowerCase()` ile throw
+	// edip TÜM messageList.map render'ını çökertiyordu → mesajlar reload'a
+	// kadar gelmiyordu. Guard + RowErrorBoundary ile bozuk satır atlanır,
+	// diğer mesajlar akmaya devam eder.
+	it("does not crash the list when a message has null content (username set)", () => {
+		localStorage.setItem("username", "watcheruser");
+		const badMsg = makeMessage({
+			id: "bad-null-content",
+			// @ts-expect-error — runtime'da Kick null gönderebiliyor (tip string)
+			content: null,
+		});
+		const goodMsg = makeMessage({
+			id: "good-after-bad",
+			content: "still rendering fine",
+			sender: {
+				id: 7,
+				username: "survivor",
+				slug: "survivor",
+				identity: { color: "#0af", badges: [] },
+			},
+		});
+		const store = makeStore({ messageList: [badMsg, goodMsg] });
+
+		// Eski kodda bu render throw ediyordu; artık etmemeli.
+		expect(() => renderWithStore(store)).not.toThrow();
+
+		// Bozuk satır atlansa bile sonraki mesaj görünmeli.
+		expect(screen.getByText("still rendering fine")).toBeInTheDocument();
+		expect(screen.getByText("survivor")).toBeInTheDocument();
+	});
 });

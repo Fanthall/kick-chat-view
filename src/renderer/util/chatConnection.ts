@@ -951,6 +951,62 @@ export const chatListener = (slug?: string) => {
 					try {
 						const evtName: string = parsedEvent.event || "";
 						const p = JSON.parse(parsedEvent.data || "{}");
+						// FIX-GIFT-CAPTURE: Gift event bazı kanallarda resmi
+						// "App\\Events\\GiftedSubscriptionsEvent" adıyla GELMİYOR
+						// (farklı event adı / payload şekli). Bu yüzden gift hem
+						// activity'de görünmüyor hem rutin tetiklenmiyordu (ikisi
+						// de bu case'e düştüğü için sessizce kayboluyordu). Burada
+						// gift-benzeri her event'i (ad veya gifter/gifted alanları)
+						// yakalayıp resmi gift yoluna sokuyoruz; gerçek event adını
+						// da flag'tan BAĞIMSIZ logluyoruz (tek canlı gift ile teyit).
+						const looksLikeGift =
+							/gift/i.test(evtName) ||
+							p?.gifter_username != null ||
+							p?.gifter != null ||
+							Array.isArray(p?.gifted_usernames) ||
+							Array.isArray(p?.gifted_users) ||
+							p?.gifted_username != null;
+						if (looksLikeGift) {
+							console.log(
+								"[GiftLikeEvent] yakalandı — event adı:",
+								evtName,
+								"payload:",
+								p
+							);
+							dispatch(
+								MessageActionsFunc.gifSubMessage(
+									enrichLegacyGiftedSubscriptionsPayload({
+										...p,
+										channelSlug: channelName,
+										create_at: new Date().getTime(),
+									})
+								)
+							);
+							try {
+								const gifter = p?.gifter_username || p?.gifter?.username;
+								const recipientsRaw: any = p?.gifted_usernames;
+								const recipients: string[] = Array.isArray(
+									recipientsRaw
+								)
+									? recipientsRaw.filter(
+											(r: any) => typeof r === "string"
+									  )
+									: [];
+								const giftCount = recipients.length || p?.amount;
+								evaluateGiftSubEvent(
+									channelName,
+									gifter,
+									giftCount,
+									recipients
+								);
+							} catch (autoErr) {
+								console.log(
+									"automation gift-like eval failed",
+									autoErr
+								);
+							}
+							break;
+						}
 						const isReward =
 							/reward|redemption/i.test(evtName) ||
 							(p?.reward && (p?.user || p?.redeemer)) ||
