@@ -743,9 +743,14 @@ const EmotesSection: FunctionComponent = () => {
 const UpdateBlock: FunctionComponent = () => {
 	// Sprint 54: jest + Node 20 + jsdom race condition workaround —
 	// test ortamında UpdateBlock render edilmez (özellik üretimde aktif).
+	// Gate ayrı bileşende: hook'lar Inner'da koşulsuz çağrılır (rules-of-hooks).
 	if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") {
 		return null;
 	}
+	return <UpdateBlockInner />;
+};
+
+const UpdateBlockInner: FunctionComponent = () => {
 	const [status, setStatus] = useState<
 		"idle" | "checking" | "up-to-date" | "available" | "error"
 	>("idle");

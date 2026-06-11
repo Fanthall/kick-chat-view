@@ -1,6 +1,7 @@
 {
 	"compilerOptions": {
 		"incremental": true,
+		"skipLibCheck": true,
 		"target": "es2022",
 		"module": "commonjs",
 		"lib": ["dom", "es2022"],

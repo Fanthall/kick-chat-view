@@ -1,0 +1,28 @@
+{
+	"root": true,
+	"parser": "@typescript-eslint/parser",
+	"parserOptions": {
+		"ecmaVersion": 2022,
+		"sourceType": "module",
+		"ecmaFeatures": { "jsx": true }
+	},
+	"env": {
+		"browser": true,
+		"node": true,
+		"es2022": true,
+		"jest": true
+	},
+	"plugins": ["@typescript-eslint", "react-hooks", "promise", "import"],
+	"ignorePatterns": [".erb/", "release/", "coverage/", "assets/"],
+	"rules": {
+		"no-debugger": "error",
+		"no-dupe-keys": "error",
+		"no-dupe-args": "error",
+		"no-unreachable": "error",
+		"no-cond-assign": "error",
+		"valid-typeof": "error",
+		"use-isnan": "error",
+		"react-hooks/rules-of-hooks": "error",
+		"react-hooks/exhaustive-deps": "warn"
+	}
+}

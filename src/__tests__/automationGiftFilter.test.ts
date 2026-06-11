@@ -16,6 +16,7 @@ import {
 	loadAutomationRules,
 } from "../renderer/util/automationRulesStorage";
 import { ChannelRule, createBlankRule } from "../renderer/util/automationRules";
+import { enrichLegacyGiftedSubscriptionsPayload } from "../renderer/util/legacyPusherBridge";
 
 // react-toastify ESM ile geliyor — sadece toast objesini stub'la.
 jest.mock("react-toastify", () => ({
@@ -109,6 +110,41 @@ describe("automation gift recipient filter (Sprint 58b)", () => {
 		evaluateSubEvent("kanal", "charlie", 1);
 
 		expect(toast).not.toHaveBeenCalled();
+	});
+
+	// FIX-GIFT-AUTOMATION regresyonu: Kick alıcı listesini `gifted_usernames`
+	// yerine `gifted_users[]` / `usernames` / tekil `gifted_username` ile
+	// gönderebiliyor. chatConnection artık otomasyona enrich edilmiş payload'ın
+	// listesini geçiyor — bu sözleşme delinirse alıcılar işaretlenmez ve
+	// sub_event rutini hediye alanlar için de chate mesaj atar.
+	test("standart dışı gift payload'u (gifted_users) enrich edilince alıcı yine filtrelenir", () => {
+		saveAutomationRules([buildSubRule()]);
+		const { toast } = require("react-toastify");
+		(toast as jest.Mock).mockClear();
+
+		// Kick'in alternatif payload şekli — ham gifted_usernames YOK.
+		const enriched = enrichLegacyGiftedSubscriptionsPayload({
+			gifter: { username: "gifter" },
+			gifted_users: [{ username: "alice" }, { username: "bob" }],
+		} as any);
+		expect(enriched.gifted_usernames).toEqual(["alice", "bob"]);
+
+		// chatConnection call-site sözleşmesi: enriched liste otomasyona geçer.
+		evaluateGiftSubEvent(
+			"kanal",
+			enriched.gifter_username,
+			enriched.gifted_usernames.length,
+			enriched.gifted_usernames
+		);
+
+		// Alıcı için gelen SubscriptionEvent rutini tetiklememeli.
+		evaluateSubEvent("kanal", "alice", 1);
+		evaluateSubEvent("kanal", "bob", 1);
+		expect(toast).not.toHaveBeenCalled();
+
+		// Gerçek sub hâlâ tetiklenir.
+		evaluateSubEvent("kanal", "charlie", 1);
+		expect(toast).toHaveBeenCalledTimes(1);
 	});
 
 	test("storage roundtrip — includeGifted persist eder", () => {
