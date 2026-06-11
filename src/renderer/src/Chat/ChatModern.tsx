@@ -1666,7 +1666,13 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 					<div
 						ref={composerRef}
 						className="composer-input"
-						contentEditable={!sendingMessage}
+						// FIX (focus): gönderim sırasında contentEditable=false yapmak
+						// tarayıcının focus'u düşürmesine yol açıyordu; finally'deki
+						// focus() re-render'dan önce koştuğu için tutmuyordu. Composer
+						// hep editable kalır — çift gönderim riski yok çünkü
+						// sendMessage başında messageText senkron temizleniyor ve
+						// boş içerik erken return ediyor.
+						contentEditable
 						role="textbox"
 						suppressContentEditableWarning
 						data-placeholder={

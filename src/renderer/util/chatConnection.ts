@@ -641,37 +641,41 @@ export const chatListener = (slug?: string) => {
 						console.log("automation sub eval failed", autoErr);
 					}
 					break;
-				case "App\\Events\\GiftedSubscriptionsEvent":
+				case "App\\Events\\GiftedSubscriptionsEvent": {
 					const parsedGiftSubMessage: LegacyGiftedSubscriptionsPayload = JSON.parse(
 						parsedEvent.data
 					);
-					dispatch(
-							MessageActionsFunc.gifSubMessage(
-								enrichLegacyGiftedSubscriptionsPayload({
-									...parsedGiftSubMessage,
-									channelSlug: channelName,
-									create_at: new Date().getTime(),
-								})
-							)
-					);
+					// FIX-GIFT-AUTOMATION: enrich SONUCU hem dispatch hem otomasyon
+					// için ortak kullanılır. Önceden otomasyona ham payload'ın
+					// `gifted_usernames` alanı geçiyordu; Kick alıcıları
+					// `usernames` / `gifted_users[]` / `gifted_username` ile
+					// gönderdiğinde liste boş kalıyor, alıcılar gift-recipient
+					// cache'ine işaretlenmiyor ve arkadan gelen SubscriptionEvent
+					// sub_event rutinini alıcı için de tetikliyordu.
+					const enrichedGiftSub = enrichLegacyGiftedSubscriptionsPayload({
+						...parsedGiftSubMessage,
+						channelSlug: channelName,
+						create_at: new Date().getTime(),
+					});
+					dispatch(MessageActionsFunc.gifSubMessage(enrichedGiftSub));
 					// Sprint 58 + 58b: gift_sub_event trigger + recipient cache
 					try {
-						const gifter =
-							(parsedGiftSubMessage as any)?.gifter_username ||
-							(parsedGiftSubMessage as any)?.gifter?.username;
-						const recipientsRaw: any =
-							(parsedGiftSubMessage as any)?.gifted_usernames;
-						const recipients: string[] = Array.isArray(recipientsRaw)
-							? recipientsRaw.filter((r: any) => typeof r === "string")
-							: [];
+						const recipients: string[] =
+							enrichedGiftSub.gifted_usernames ?? [];
 						const giftCount =
 							recipients.length ||
 							(parsedGiftSubMessage as any)?.amount;
-						evaluateGiftSubEvent(channelName, gifter, giftCount, recipients);
+						evaluateGiftSubEvent(
+							channelName,
+							enrichedGiftSub.gifter_username,
+							giftCount,
+							recipients
+						);
 					} catch (autoErr) {
 						console.log("automation gift sub eval failed", autoErr);
 					}
 					break;
+				}
 				case "App\\Events\\MessageDeletedEvent":
 					const parsedDeleteMessage: DeleteMessage = JSON.parse(
 						parsedEvent.data
@@ -973,29 +977,26 @@ export const chatListener = (slug?: string) => {
 								"payload:",
 								p
 							);
+							// FIX-GIFT-AUTOMATION: resmi path ile aynı — otomasyon
+							// alıcı listesini enrich edilmiş (normalize) payload'dan
+							// alır; ham `gifted_usernames` farklı şekillerde
+							// gelebildiği için alıcı işaretleme deliniyordu.
+							const enrichedGiftLike =
+								enrichLegacyGiftedSubscriptionsPayload({
+									...p,
+									channelSlug: channelName,
+									create_at: new Date().getTime(),
+								});
 							dispatch(
-								MessageActionsFunc.gifSubMessage(
-									enrichLegacyGiftedSubscriptionsPayload({
-										...p,
-										channelSlug: channelName,
-										create_at: new Date().getTime(),
-									})
-								)
+								MessageActionsFunc.gifSubMessage(enrichedGiftLike)
 							);
 							try {
-								const gifter = p?.gifter_username || p?.gifter?.username;
-								const recipientsRaw: any = p?.gifted_usernames;
-								const recipients: string[] = Array.isArray(
-									recipientsRaw
-								)
-									? recipientsRaw.filter(
-											(r: any) => typeof r === "string"
-									  )
-									: [];
+								const recipients: string[] =
+									enrichedGiftLike.gifted_usernames ?? [];
 								const giftCount = recipients.length || p?.amount;
 								evaluateGiftSubEvent(
 									channelName,
-									gifter,
+									enrichedGiftLike.gifter_username,
 									giftCount,
 									recipients
 								);

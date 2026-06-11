@@ -39,3 +39,7 @@ docs/README-preview.html
 .env.test.local
 .env.production.local
 kick-oauth.json
+
+# Buyuk release artifact'lari (commit edilmez)
+release/build.zip
+release/*.zip
