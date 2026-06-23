@@ -125,5 +125,5 @@ All Modern UI CSS variables are scoped under `[data-app-shell="modern"]` in the 
 - Websocket event tipi eklerken once `chatInterface.ts`, sonra action/reducer, sonra UI panelini guncelle.
 - Chat HTML'i uretirken kullanici/kaynak verisini sanitize/escape etmeden `dangerouslySetInnerHTML` icine koyma.
 - Ayar davranisi degisirse `localStorage` anahtarlarini ve Settings/Chat/Layout tarafindaki okuma noktalarini birlikte kontrol et.
-- Build veya test calistirirken komutlari bu proje kokunde calistir: `C:\Users\sezer\Desktop\dev-apps\chat-view`.
+- Build veya test calistirirken komutlari bu proje kokunde calistir: `F:\dev-apps\chat-view`.
 - Var olan `package.json`/`package-lock.json` degisiklikleri kullaniciya ait olabilir; bu dosyalari gereksiz formatlama veya revert etme.
