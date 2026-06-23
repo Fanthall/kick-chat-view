@@ -151,7 +151,7 @@ const rewardActivity = makeActivity({
 	amount: 500,
 	message: "pretty please",
 	status: "pending",
-	raw: { secret_token: "abcdefghijklmnopqrstuvwxyz1234567890", user: "testuser" },
+	raw: { secret_token: "test-placeholder-not-a-secret", user: "testuser" },
 });
 
 // ─── Test 1: All 5 activity types render ─────────────────────────────────────
