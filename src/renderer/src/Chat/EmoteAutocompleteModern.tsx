@@ -16,6 +16,7 @@
 
 import React, { FunctionComponent } from "react";
 import { EmoteEntry, EmoteProvider, PROVIDER_LABEL } from "../../constants/emote";
+import { useTranslation } from "../../util/i18n";
 
 // ────────── Provider badge helpers ──────────
 
@@ -96,13 +97,14 @@ const EmoteAutocompleteModern: FunctionComponent<EmoteAutocompleteModernProps> =
 	onPick,
 	onHover,
 }) => {
+	const { t } = useTranslation();
 	if (!suggestions.length) return null;
 
 	return (
 		<div
 			className="autocomplete scroll"
 			role="listbox"
-			aria-label="Emote suggestions"
+			aria-label={t("emotepicker.aria.suggestions")}
 			style={{
 				position: "absolute",
 				bottom: "100%",

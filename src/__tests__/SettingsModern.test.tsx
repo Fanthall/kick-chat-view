@@ -107,19 +107,20 @@ function renderSettings(storeOverrides: Partial<typeof baseMessages> = {}) {
 	);
 }
 
-// ─── Test 1: Side-nav renders 6 items ────────────────────────────────────────
+// ─── Test 1: Side-nav renders 7 items ────────────────────────────────────────
+// (Channel, Account, Permissions, Moderation, Emotes, Routines/automation, Advanced)
 
 describe("SettingsModern — side nav", () => {
-	it("renders exactly 6 nav items", () => {
+	it("renders exactly 7 nav items", () => {
 		renderSettings();
 		const nav = screen.getByRole("navigation", { name: /settings sections/i });
 		const items = nav.querySelectorAll(".set-nav-item");
-		expect(items).toHaveLength(6);
+		expect(items).toHaveLength(7);
 	});
 
 	it("each nav item label is present", () => {
 		renderSettings();
-		["Channel", "Account", "Permissions", "Moderation", "Emotes", "Advanced"].forEach(
+		["Channel", "Account", "Permissions", "Moderation", "Emotes", "Automation", "Advanced"].forEach(
 			(label) => {
 				expect(screen.getByRole("button", { name: new RegExp(label, "i") })).toBeInTheDocument();
 			}

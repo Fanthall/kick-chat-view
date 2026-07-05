@@ -11,6 +11,7 @@
  * 7. Settings button opens settings modal
  * 8. Click modal scrim closes settings modal
  * 9. Escape closes settings modal
+ * 10. Secondary channel tab dot reflects per-channel isLive (Faz 1)
  */
 
 import "@testing-library/jest-dom";
@@ -155,7 +156,7 @@ describe("Topbar — stats row", () => {
 				},
 			},
 		});
-		expect(screen.getByTestId("tb-viewers").textContent).toBe("1,234");
+		expect(screen.getByTestId("tb-viewers").textContent).toBe("1.234");
 	});
 
 	it("shows '--' uptime when not live", () => {
@@ -200,37 +201,71 @@ describe("Topbar — action buttons a11y", () => {
 	});
 });
 
-// ─── Test 7+8+9: Settings modal ───────────────────────────────────────────────
-describe("Topbar — settings modal", () => {
-	it("settings button opens settings modal", async () => {
+// ─── Test 10: secondary channel tab live/offline dot ──────────────────────────
+describe("Topbar — channel tab live dot", () => {
+	it("shows live dot for a live secondary channel and offline dot for another", () => {
+		jest.spyOn(
+			require("../renderer/util/channelSettings"),
+			"getChannelList"
+		).mockReturnValue([
+			{ slug: "testchannel", autoConnect: true },
+			{ slug: "livechannel", autoConnect: true },
+			{ slug: "offlinechannel", autoConnect: true },
+		]);
+
+		renderLayout({
+			streamMetaByChannel: {
+				livechannel: {
+					channelSlug: "livechannel",
+					isLive: true,
+					updatedAt: Date.now(),
+				},
+				offlinechannel: {
+					channelSlug: "offlinechannel",
+					isLive: false,
+					updatedAt: Date.now(),
+				},
+			},
+		});
+
+		const liveTab = screen.getByTitle(/switch to livechannel/i);
+		const offlineTab = screen.getByTitle(/switch to offlinechannel/i);
+		expect(liveTab.querySelector(".dot.live")).toBeInTheDocument();
+		expect(offlineTab.querySelector(".dot.off")).toBeInTheDocument();
+	});
+});
+
+// ─── Test 7+8+9: Settings full-screen (Faz E: modal → app-içi tam ekran) ───────
+describe("Topbar — settings screen", () => {
+	it("settings button opens settings screen", async () => {
 		renderLayout();
 		fireEvent.click(screen.getByTestId("tb-btn-settings"));
 		await waitFor(() => {
-			expect(screen.getByTestId("settings-modal")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-screen")).toBeInTheDocument();
 		});
 	});
 
-	it("click on scrim closes settings modal", async () => {
+	it("back button closes settings screen", async () => {
 		renderLayout();
 		fireEvent.click(screen.getByTestId("tb-btn-settings"));
 		await waitFor(() => {
-			expect(screen.getByTestId("settings-modal-scrim")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-screen")).toBeInTheDocument();
 		});
-		fireEvent.click(screen.getByTestId("settings-modal-scrim"));
+		fireEvent.click(screen.getByTestId("settings-back"));
 		await waitFor(() => {
-			expect(screen.queryByTestId("settings-modal")).not.toBeInTheDocument();
+			expect(screen.queryByTestId("settings-screen")).not.toBeInTheDocument();
 		});
 	});
 
-	it("Escape key closes settings modal", async () => {
+	it("Escape key closes settings screen", async () => {
 		renderLayout();
 		fireEvent.click(screen.getByTestId("tb-btn-settings"));
 		await waitFor(() => {
-			expect(screen.getByTestId("settings-modal")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-screen")).toBeInTheDocument();
 		});
 		fireEvent.keyDown(document, { key: "Escape" });
 		await waitFor(() => {
-			expect(screen.queryByTestId("settings-modal")).not.toBeInTheDocument();
+			expect(screen.queryByTestId("settings-screen")).not.toBeInTheDocument();
 		});
 	});
 });

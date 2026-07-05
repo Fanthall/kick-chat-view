@@ -77,6 +77,14 @@ const getStatusKey = (messages: UserMessage[]): "userwindow.status.active" | "us
 	return diff < 5 * 60 * 1000 ? "userwindow.status.active" : "userwindow.status.offline";
 };
 
+/** Returns i18n key for a mod action's type label (BAN/TIMEOUT/DELETE/UNBAN). */
+const getModTypeKey = (type: ModMessage["type"]): string =>
+	`userwindow.mod.type.${type}`;
+
+/** Returns i18n key for a mod action's status label (success/pending/failed). */
+const getModStatusKey = (status: ModMessage["status"]): string =>
+	`userwindow.mod.status.${status || "success"}`;
+
 /** Derive current ban state: look for latest ban/unban action. */
 const deriveIsBanned = (modActions: ModMessage[]): boolean => {
 	const relevant = modActions.filter(
@@ -361,21 +369,21 @@ const UserWindow: FunctionComponent = () => {
 		message?: UserMessage
 	) => {
 		if (!broadcasterUserId || !hasBanScope) {
-			toast("Kick moderation:ban scope is not available.", { type: "warning" });
+			toast(t("userwindow.toast.scope-ban"), { type: "warning" });
 			return;
 		}
 		if (!payload) return;
 
 		const userId = payload.user.id || message?.sender.id;
 		if (!userId) {
-			toast("User id is missing for moderation.", { type: "warning" });
+			toast(t("userwindow.toast.missing-userid"), { type: "warning" });
 			return;
 		}
 
 		const timeoutSec =
 			action === "timeout" ? timeoutSeconds : undefined;
 		if (action === "timeout" && (!timeoutSec || timeoutSec <= 0)) {
-			toast("Timeout duration must be > 0 seconds.", { type: "warning" });
+			toast(t("userwindow.toast.timeout-positive"), { type: "warning" });
 			return;
 		}
 
@@ -426,9 +434,10 @@ const UserWindow: FunctionComponent = () => {
 								timeoutSec || DEFAULT_TIMEOUT_SECONDS
 						  )}`
 						: action;
-				toast(`${actionText} request sent for ${payload.user.username}`, {
-					type: "success",
-				});
+				toast(
+					`${actionText} ${t("userwindow.toast.request-sent")} ${payload.user.username}`,
+					{ type: "success" }
+				);
 			})
 			.catch((err) => {
 				setPayload((current) =>
@@ -448,7 +457,7 @@ const UserWindow: FunctionComponent = () => {
 						  }
 						: current
 				);
-				toast(err.message || `${action} request failed.`, { type: "error" });
+				toast(err.message || `${action} ${t("userwindow.toast.request-failed")}`, { type: "error" });
 			})
 			.finally(() => setModerationLoading(""));
 	};
@@ -459,7 +468,7 @@ const UserWindow: FunctionComponent = () => {
 
 	const runDeleteMessage = (message: UserMessage) => {
 		if (!hasMessageManageScope) {
-			toast("Kick moderation:chat_message:manage scope is not available.", {
+			toast(t("userwindow.toast.scope-delete"), {
 				type: "warning",
 			});
 			return;
@@ -484,7 +493,7 @@ const UserWindow: FunctionComponent = () => {
 						  }
 						: current
 				);
-				toast("Delete request sent.", { type: "success" });
+				toast(t("userwindow.toast.delete-sent"), { type: "success" });
 			})
 			.catch((err) => {
 				setPayload((current) =>
@@ -496,7 +505,7 @@ const UserWindow: FunctionComponent = () => {
 										? {
 												...item,
 												status: "failed",
-												error: err.message || "Delete request failed.",
+												error: err.message || t("userwindow.toast.delete-failed"),
 										  }
 										: item
 								),
@@ -504,7 +513,7 @@ const UserWindow: FunctionComponent = () => {
 						  }
 						: current
 				);
-				toast(err.message || "Delete request failed.", { type: "error" });
+				toast(err.message || t("userwindow.toast.delete-failed"), { type: "error" });
 			})
 			.finally(() => setModerationLoading(""));
 	};
@@ -535,7 +544,7 @@ const UserWindow: FunctionComponent = () => {
 				data-app-shell="modern"
 				style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
 			>
-				<span className="uw-muted">Loading user details...</span>
+				<span className="uw-muted">{t("userwindow.loading")}</span>
 			</div>
 		);
 	}
@@ -609,23 +618,23 @@ const UserWindow: FunctionComponent = () => {
 							<button
 								type="button"
 								className="uw-copy"
-								title="Copy username"
+								title={t("userwindow.copy-username")}
 								onClick={() => {
 									navigator.clipboard
 										.writeText(user.username)
 										.then(() => {
-											setCopyStatus("Copied");
+											setCopyStatus(t("userwindow.copied"));
 											setTimeout(() => setCopyStatus(""), 1400);
 										})
-										.catch(() => setCopyStatus("Failed"));
+										.catch(() => setCopyStatus(t("userwindow.copy-failed")));
 								}}
 							>
 								<FiCopy size={12} />
-								{copyStatus || "Copy"}
+								{copyStatus || t("userwindow.copy")}
 							</button>
 							<span
 								className={`uw-status${isActive ? " active-now" : " offline"}`}
-								title={isActive ? "Last message < 5 min ago" : "No recent messages"}
+								title={isActive ? t("userwindow.status.active-title") : t("userwindow.status.offline-title")}
 							>
 								<span className="uw-status-dot" />
 								{statusLabel}
@@ -634,9 +643,9 @@ const UserWindow: FunctionComponent = () => {
 						<div className="uw-subtitle">
 							{channelName || "—"}
 							{" · "}
-							<strong>{messages.length}</strong> messages
+							<strong>{messages.length}</strong> {t("userwindow.subtitle.messages")}
 							{" · "}
-							<strong>{modActions.length}</strong> mod actions
+							<strong>{modActions.length}</strong> {t("userwindow.subtitle.mod-actions")}
 						</div>
 					</div>
 
@@ -644,7 +653,7 @@ const UserWindow: FunctionComponent = () => {
 					{subBadge && (
 						<div className="uw-header-badge-area">
 							<span className="pbadge sub">
-								Sub{" "}
+								{t("userwindow.sub-badge")}{" "}
 								{typeof subBadge.count === "number" && subBadge.count > 0
 									? `· ${subBadge.count}mo`
 									: ""}
@@ -657,7 +666,7 @@ const UserWindow: FunctionComponent = () => {
 						<button
 							type="button"
 							className="uw-icon-btn"
-							title="Mention in chat (no-op)"
+							title={t("userwindow.mention-noop")}
 							disabled
 						>
 							<FiMessageSquare size={16} />
@@ -665,7 +674,7 @@ const UserWindow: FunctionComponent = () => {
 						<button
 							type="button"
 							className="uw-icon-btn uw-close-btn"
-							title="Close"
+							title={t("userwindow.close")}
 							onClick={() => window.close()}
 						>
 							<FiX size={16} />
@@ -677,27 +686,27 @@ const UserWindow: FunctionComponent = () => {
 				<div className="uw-stats">
 					<div className="uw-stat">
 						<span className="uw-stat-num">{messages.length}</span>
-						<span className="uw-stat-label">msgs this session</span>
+						<span className="uw-stat-label">{t("userwindow.stat.msgs-session")}</span>
 					</div>
 					<div className="uw-stat">
 						<span className="uw-stat-num">—</span>
-						<span className="uw-stat-label">msgs lifetime</span>
+						<span className="uw-stat-label">{t("userwindow.stat.msgs-lifetime")}</span>
 					</div>
 					<div className="uw-stat">
 						<span className="uw-stat-num">—</span>
-						<span className="uw-stat-label">watch time</span>
+						<span className="uw-stat-label">{t("userwindow.stat.watch-time")}</span>
 					</div>
 					<div className="uw-stat">
 						<span className="uw-stat-num">{timeoutCount}</span>
-						<span className="uw-stat-label">timeouts</span>
+						<span className="uw-stat-label">{t("userwindow.stat.timeouts")}</span>
 					</div>
 					<div className="uw-stat">
 						<span className="uw-stat-num">{banCount}</span>
-						<span className="uw-stat-label">bans</span>
+						<span className="uw-stat-label">{t("userwindow.stat.bans")}</span>
 					</div>
 					<div className="uw-stat">
 						<span className="uw-stat-num">{notes.length}</span>
-						<span className="uw-stat-label">notes</span>
+						<span className="uw-stat-label">{t("userwindow.stat.notes")}</span>
 					</div>
 				</div>
 
@@ -707,7 +716,7 @@ const UserWindow: FunctionComponent = () => {
 					{canUseModerationUi && hasBanScope ? (
 						<>
 							<div className="uw-strip-group uw-strip-timeout">
-								<span className="uw-strip-heading">TIMEOUT</span>
+								<span className="uw-strip-heading">{t("userwindow.strip.timeout")}</span>
 								<span className="uw-strip-current">{timeoutLabel}</span>
 								<div className="uw-strip-chips">
 									{TIMEOUT_PRESETS.map((p) => (
@@ -762,7 +771,7 @@ const UserWindow: FunctionComponent = () => {
 									className="uw-btn-danger uw-strip-ban"
 									disabled={!canModerateUser || moderationLoading === "ban"}
 									onClick={() => runUserModeration("ban")}
-									title={isBanned ? "Kullanıcı zaten banlı görünüyor" : "Permanently ban"}
+									title={isBanned ? t("userwindow.ban.title-already") : t("userwindow.ban.title-permanent")}
 								>
 									{moderationLoading === "ban" ? "..." : t("userwindow.mod.ban")}
 								</button>
@@ -771,7 +780,7 @@ const UserWindow: FunctionComponent = () => {
 									className="uw-btn-primary uw-strip-unban"
 									disabled={!canModerateUser || moderationLoading === "unban"}
 									onClick={() => runUserModeration("unban")}
-									title="Önceki ban'ı kaldır (varsa)"
+									title={t("userwindow.unban.title")}
 								>
 									{moderationLoading === "unban" ? "..." : t("userwindow.mod.unban")}
 								</button>
@@ -788,7 +797,7 @@ const UserWindow: FunctionComponent = () => {
 					) : (
 						<div className="uw-strip-empty">
 							<span className="uw-muted">
-								Mod aksiyonlari icin moderator yetkisi gerekli.
+								{t("userwindow.mod.requires-mod")}
 							</span>
 						</div>
 					)}
@@ -820,11 +829,11 @@ const UserWindow: FunctionComponent = () => {
 						<div className="uw-tab-content">
 							<div className="uw-card uw-messages-card">
 								<div className="uw-card-hd">
-									<h3>Messages</h3>
-									<span className="uw-card-meta">{messages.length} this session</span>
+									<h3>{t("userwindow.card.messages")}</h3>
+									<span className="uw-card-meta">{messages.length} {t("userwindow.card.this-session")}</span>
 								</div>
 								{messages.length === 0 ? (
-									<p className="uw-empty-state">No messages this session.</p>
+									<p className="uw-empty-state">{t("userwindow.empty.no-messages")}</p>
 								) : (
 									<ul className="uw-msg-list">
 										{messages.slice(-3).map((msg) => (
@@ -856,11 +865,11 @@ const UserWindow: FunctionComponent = () => {
 
 							<div className="uw-card uw-mod-card">
 								<div className="uw-card-hd">
-									<h3>Moderation</h3>
-									<span className="uw-card-meta">{modActions.length} actions</span>
+									<h3>{t("userwindow.card.moderation")}</h3>
+									<span className="uw-card-meta">{modActions.length} {t("userwindow.card.actions")}</span>
 								</div>
 								{modActions.length === 0 ? (
-									<p className="uw-empty-state">No moderation actions captured.</p>
+									<p className="uw-empty-state">{t("userwindow.empty.no-mod-actions")}</p>
 								) : (
 									<ul className="uw-msg-list">
 										{modActions.slice(-3).map((a) => (
@@ -869,17 +878,17 @@ const UserWindow: FunctionComponent = () => {
 													{moment(new Date(a.created_at)).format("HH:mm")}
 												</span>
 												<span className={`uw-action-pill uw-action-${a.type}`}>
-													{a.type.toUpperCase()}
+													{t(getModTypeKey(a.type))}
 												</span>
 												<span className="uw-muted">
 													{a.banned_by?.username ||
 														a.unbanned_by?.username ||
-														"system"}
+														t("userwindow.mod.system")}
 												</span>
 												<span
 													className={`uw-status-pill uw-status-${a.status || "success"}`}
 												>
-													{a.status || "success"}
+													{t(getModStatusKey(a.status))}
 												</span>
 											</li>
 										))}
@@ -893,7 +902,7 @@ const UserWindow: FunctionComponent = () => {
 					{activeTab === "messages" && (
 						<div className="uw-tab-content">
 							{messages.length === 0 ? (
-								<p className="uw-empty-state">No messages this session.</p>
+								<p className="uw-empty-state">{t("userwindow.empty.no-messages")}</p>
 							) : (
 								<ul className="uw-msg-list uw-msg-list--full">
 									{messages.map((msg) => (
@@ -924,7 +933,7 @@ const UserWindow: FunctionComponent = () => {
 													disabled={!canDeleteMessages || msg.removed || moderationLoading === `delete-${msg.id}`}
 													onClick={() => runDeleteMessage(msg)}
 												>
-													{moderationLoading === `delete-${msg.id}` ? "..." : "Delete"}
+													{moderationLoading === `delete-${msg.id}` ? "..." : t("userwindow.msg.delete")}
 												</button>
 											)}
 										</li>
@@ -938,7 +947,7 @@ const UserWindow: FunctionComponent = () => {
 					{activeTab === "activity" && (
 						<div className="uw-tab-content">
 							<p className="uw-empty-state">
-								No per-user activity captured yet.
+								{t("userwindow.empty.no-activity")}
 							</p>
 						</div>
 					)}
@@ -947,7 +956,7 @@ const UserWindow: FunctionComponent = () => {
 					{activeTab === "modhistory" && (
 						<div className="uw-tab-content">
 							{modActions.length === 0 ? (
-								<p className="uw-empty-state">No moderation actions captured.</p>
+								<p className="uw-empty-state">{t("userwindow.empty.no-mod-actions")}</p>
 							) : (
 								<ul className="uw-msg-list uw-msg-list--full">
 									{modActions.map((a) => (
@@ -956,13 +965,13 @@ const UserWindow: FunctionComponent = () => {
 												{moment(new Date(a.created_at)).format("HH:mm:ss")}
 											</span>
 											<span className={`uw-action-pill uw-action-${a.type}`}>
-												{a.type.toUpperCase()}
+												{t(getModTypeKey(a.type))}
 											</span>
 											<span className="uw-muted">
-												by{" "}
+												{t("userwindow.mod.by")}{" "}
 												{a.banned_by?.username ||
 													a.unbanned_by?.username ||
-													"system"}
+													t("userwindow.mod.system")}
 											</span>
 											{a.message?.messageList?.[0] && (
 												<span
@@ -983,7 +992,7 @@ const UserWindow: FunctionComponent = () => {
 											<span
 												className={`uw-status-pill uw-status-${a.status || "success"}`}
 											>
-												{a.status || "success"}
+												{t(getModStatusKey(a.status))}
 											</span>
 										</li>
 									))}
@@ -996,7 +1005,7 @@ const UserWindow: FunctionComponent = () => {
 					{activeTab === "notes" && (
 						<div className="uw-tab-content uw-notes-tab">
 							{notes.length === 0 ? (
-								<p className="uw-empty-state">No notes yet. Add one below.</p>
+								<p className="uw-empty-state">{t("userwindow.empty.no-notes")}</p>
 							) : (
 								<ul className="uw-notes-list">
 									{notes.map((n, i) => (
@@ -1012,7 +1021,7 @@ const UserWindow: FunctionComponent = () => {
 							<div className="uw-notes-composer">
 								<textarea
 									className="uw-notes-input"
-									placeholder="Add a note..."
+									placeholder={t("userwindow.notes.placeholder")}
 									value={noteInput}
 									rows={2}
 									onChange={(e) => setNoteInput(e.target.value)}
@@ -1028,7 +1037,7 @@ const UserWindow: FunctionComponent = () => {
 									onClick={handleSaveNote}
 									disabled={!noteInput.trim()}
 								>
-									Save note
+									{t("userwindow.notes.save")}
 								</button>
 							</div>
 						</div>

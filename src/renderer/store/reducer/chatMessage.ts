@@ -133,9 +133,33 @@ const isLocalModAction = (message: ModMessage) =>
 
 const normalizeMessageContent = (content: string) => content.trim();
 
+// Faz H: liste (mesaj/aktivite/mod) truncate limiti artık AYARLANABİLİR.
+// localStorage.chatViewMessageLimit (varsayılan 2000, 100–5000 arası clamp).
+// Ayarlar → Gelişmiş'ten değiştirilir; "chat-view-message-limit-changed" event'i
+// ile canlı güncellenir.
+const DEFAULT_LIST_LIMIT = 2000;
+const readListLimit = (): number => {
+	try {
+		const raw =
+			typeof localStorage !== "undefined"
+				? localStorage.getItem("chatViewMessageLimit")
+				: null;
+		const n = raw ? parseInt(raw, 10) : NaN;
+		return Number.isFinite(n) ? Math.min(5000, Math.max(100, n)) : DEFAULT_LIST_LIMIT;
+	} catch {
+		return DEFAULT_LIST_LIMIT;
+	}
+};
+let LIST_LIMIT = readListLimit();
+if (typeof window !== "undefined") {
+	window.addEventListener("chat-view-message-limit-changed", () => {
+		LIST_LIMIT = readListLimit();
+	});
+}
+
 const trimList = <T,>(list: T[]) => {
-	if (list.length > 500) {
-		list.shift();
+	if (list.length > LIST_LIMIT) {
+		return list.slice(list.length - LIST_LIMIT);
 	}
 	return list;
 };
@@ -681,22 +705,56 @@ const ChatMessageReducers = (
 			create_at: action.message.create_at,
 			raw: action.message,
 		});
-		// Sprint 35: gift sub için chat banner satırı.
-		const giftCount = giftedUsernames.length;
+		// Faz H: gift banner metni gifter-odaklı ("abonelik hediye etti") + adet.
+		const buildGiftContent = (gifter: string, recipients: string[]): string => {
+			const shown = recipients.slice(0, 3).join(", ");
+			const tail = recipients.length > 3 ? ` +${recipients.length - 3}` : "";
+			if (recipients.length === 0) return `${gifter} abonelik hediye etti`;
+			if (recipients.length === 1)
+				return `${gifter} abonelik hediye etti → ${shown}`;
+			return `${gifter} ${recipients.length} kişiye abonelik hediye etti → ${shown}${tail}`;
+		};
+		// Faz H fix (çift banner): Kick aynı hediye için summary + per-recipient
+		// olmak üzere BİRDEN ÇOK GiftedSubscriptionsEvent gönderiyor → "hediye
+		// abonelik verdi" + "1 kişiye → x" çift görünüyordu. Aynı gifter'ın kısa
+		// süredeki event'lerini TEK banner'da birleştir (alıcıların birleşimi).
+		const GIFT_MERGE_MS = 15000;
+		const giftNowTs = action.message.create_at;
+		const existingGiftBanner = state.messageList.find(
+			(m) =>
+				m.type === "gift-sub-banner" &&
+				m.channelSlug === action.message.channelSlug &&
+				m.sender?.username === gifterUsername &&
+				Math.abs(new Date(m.created_at).getTime() - giftNowTs) < GIFT_MERGE_MS
+		);
+		if (existingGiftBanner) {
+			const mergedRecipients = Array.from(
+				new Set([
+					...(existingGiftBanner.giftedUsernames ?? []),
+					...giftedUsernames,
+				])
+			);
+			return {
+				...state,
+				activityList: newList,
+				messageList: state.messageList.map((m) =>
+					m.id === existingGiftBanner.id
+						? {
+								...m,
+								giftedUsernames: mergedRecipients,
+								content: buildGiftContent(gifterUsername, mergedRecipients),
+						  }
+						: m
+				),
+			};
+		}
 		const giftBannerId = `gift-sub-banner-${action.message.id || gifterUsername}-${action.message.create_at}`;
-		const targetList = giftedUsernames.slice(0, 3).join(", ");
-		const tailNote =
-			giftedUsernames.length > 3
-				? ` +${giftedUsernames.length - 3} kişi daha`
-				: "";
 		const giftBanner: UserMessage = {
 			id: giftBannerId,
 			channelSlug: action.message.channelSlug,
 			chatroom_id: action.message.chatroom_id,
-			content:
-				giftCount > 0
-					? `${gifterUsername}, ${giftCount} kişiye hediye abonelik verdi → ${targetList}${tailNote}`
-					: `${gifterUsername} hediye abonelik verdi`,
+			giftedUsernames,
+			content: buildGiftContent(gifterUsername, giftedUsernames),
 			type: "gift-sub-banner",
 			created_at: new Date(action.message.create_at).toISOString(),
 			sender: {

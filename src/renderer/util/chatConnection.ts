@@ -50,7 +50,10 @@ const sevenTvRefreshDebounce = new Map<string, ReturnType<typeof setTimeout>>();
 const streamMetaPollers = new Map<string, ReturnType<typeof setInterval>>();
 const CHANNEL_EMOTE_TTL_MS = 10 * 60 * 1000;
 const SEVENTV_REFRESH_DEBOUNCE_MS = 750;
-const STREAM_META_POLL_MS = 60 * 1000;
+// FIX (2026-07-04): topbar canli verisi (izleyici/CANLI/baslik/uptime) guncel gorunsun
+// diye 60sn -> 30sn. Poll her seferinde resmi API'yi, basarisizsa OAuth'suz getChannelData
+// fallback'ini dener; boylece OAuth olmadan da topbar surekli tazelenir.
+const STREAM_META_POLL_MS = 30 * 1000;
 
 // ─── FIX-1/FIX-2: Pusher heartbeat (ping/pong) + backoff reconnect ───────────
 // Pusher protokolu: bagli istemci sunucudan `pusher:ping` alir ve
@@ -161,7 +164,32 @@ const loadStreamMeta = (dispatch: FanthalDispatch, channelSlug: string) => {
 			);
 		})
 		.catch(() => {
-			// noop: kanal okuma yoksa essiz
+			// FIX (2026-07-04): Resmi API (OAuth) yok/başarısızsa, OAuth'SUZ public
+			// endpoint'ten (getChannelData = kick.com/api/v2 — chat bootstrap'ı zaten
+			// bununla çalışıyor) canlı bilgisini doldur. Böylece topbar CANLI / izleyici /
+			// başlık / kategori OAuth olmadan da gösterilir; poller bunu N sn'de tazeler.
+			getChannelData(channelSlug)
+				.then((res) => {
+					const ls = res?.data?.livestream;
+					const cat = ls?.categories?.[0];
+					dispatch(
+						MessageActionsFunc.setStreamMeta({
+							channelSlug,
+							broadcasterUserId: res?.data?.user_id,
+							streamTitle: ls?.session_title,
+							category: cat
+								? { id: cat.id, name: cat.name, thumbnail: undefined }
+								: undefined,
+							viewerCount: ls?.viewer_count,
+							isLive: !!ls?.is_live,
+							startedAt: ls?.start_time,
+							updatedAt: Date.now(),
+						})
+					);
+				})
+				.catch(() => {
+					// noop: iki kaynak da başarısız
+				});
 		});
 };
 

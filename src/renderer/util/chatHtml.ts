@@ -98,6 +98,21 @@ const emoteImgHtml = (entry: EmoteEntry, options: { blocked: boolean }) => {
  * Token akisini HTML string'e cevirir (renderMessageHtml ve snippet variant
  * arasinda paylasilan ic helper).
  */
+// Faz 8: metin-ici @mention token'ini renklendir (prototip `.mention-tok`).
+// Guvenlik: kullanici verisi ONCE escape edilir, sonra statik class'li span'a
+// sarilir. Attribute'a hicbir dinamik veri girmez → CONSTRAINT-4 korunur.
+// Sadece basi `@` + [A-Za-z0-9_] olan on-eki sarar; sondaki noktalama disarida
+// kalir (orn. "@john," → span sadece "@john").
+const MENTION_TOKEN_REGEX = /^(@[A-Za-z0-9_]+)([\s\S]*)$/;
+
+const renderTextTokenHtml = (value: string): string => {
+	const m = MENTION_TOKEN_REGEX.exec(value);
+	if (!m) return escapeHtml(value);
+	const mention = escapeHtml(m[1]);
+	const rest = m[2] ? escapeHtml(m[2]) : "";
+	return `<span class="mention-tok">${mention}</span>${rest}`;
+};
+
 const renderTokensToHtml = (
 	tokens: import("./messageTokens").MessageToken[],
 	blockedLower: Set<string>
@@ -110,7 +125,7 @@ const renderTokensToHtml = (
 			continue;
 		}
 		if (token.kind === "text") {
-			parts.push(escapeHtml(token.value));
+			parts.push(renderTextTokenHtml(token.value));
 			continue;
 		}
 		const blocked = blockedLower.has(token.emote.name.toLowerCase());

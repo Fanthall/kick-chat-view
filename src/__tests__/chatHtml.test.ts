@@ -90,6 +90,26 @@ describe("renderMessageHtml", () => {
 		expect(html).not.toContain("<script>");
 		expect(html).toContain("&lt;script&gt;");
 	});
+
+	it("wraps in-text @mention in a mention-tok span", () => {
+		const html = renderMessageHtml("hey @john how are you", EMPTY_EMOTE_INDEX);
+		expect(html).toContain('<span class="mention-tok">@john</span>');
+		// Trailing text stays outside the span
+		expect(html).toContain("how are you");
+	});
+
+	it("keeps trailing punctuation outside the mention span", () => {
+		const html = renderMessageHtml("thanks @john!", EMPTY_EMOTE_INDEX);
+		expect(html).toContain('<span class="mention-tok">@john</span>!');
+	});
+
+	it("still escapes a malicious mention word (no XSS via @)", () => {
+		// Not a valid mention prefix after @, so it must be fully escaped, not span-wrapped.
+		const html = renderMessageHtml("@<script>x</script>", EMPTY_EMOTE_INDEX);
+		expect(html).not.toContain("<script>");
+		expect(html).toContain("&lt;script&gt;");
+		expect(html).not.toContain('class="mention-tok"');
+	});
 });
 
 describe("renderMessageHtmlSnippet", () => {

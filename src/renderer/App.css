@@ -91,7 +91,7 @@ body.modern-shell-root #root {
 	width: 10px;
 	height: 10px;
 	border-radius: 999px;
-	background: #26d39b;
+	background: var(--ms-ac-mint, #26d39b);
 	box-shadow: 0 0 0 4px rgba(38, 211, 155, 0.12);
 	flex: 0 0 auto;
 }
@@ -102,17 +102,17 @@ body.modern-shell-root #root {
 }
 
 .stream-status-connecting {
-	background: #f2c94c;
+	background: var(--ms-ac-warn, #f2c94c);
 	box-shadow: 0 0 0 4px rgba(242, 201, 76, 0.14);
 }
 
 .stream-status-connected {
-	background: #26d39b;
+	background: var(--ms-ac-mint, #26d39b);
 	box-shadow: 0 0 0 4px rgba(38, 211, 155, 0.12);
 }
 
 .stream-status-disconnected {
-	background: #ff4d6d;
+	background: var(--ms-ac-live, #ff4d6d);
 	box-shadow: 0 0 0 4px rgba(255, 77, 109, 0.14);
 }
 
@@ -161,7 +161,7 @@ body.modern-shell-root #root {
 	height: 36px;
 	border: 1px solid rgba(128, 159, 177, 0.2);
 	border-radius: 8px;
-	color: #2fd3a0;
+	color: var(--ms-ac-mint, #2fd3a0);
 	background: rgba(255, 255, 255, 0.04);
 }
 
@@ -287,7 +287,7 @@ body.modern-shell-root #root {
 	border: 1px solid rgba(128, 159, 177, 0.14);
 	border-radius: 6px;
 	background: rgba(255, 255, 255, 0.035);
-	color: #2fd3a0;
+	color: var(--ms-ac-mint, #2fd3a0);
 	font-size: 13px;
 	font-weight: 700;
 	letter-spacing: 0;
@@ -500,11 +500,11 @@ body.modern-shell-root #root {
 }
 
 .connection-status-connecting {
-	color: #f2c94c;
+	color: var(--ms-ac-warn, #f2c94c);
 }
 
 .connection-status-connected {
-	color: #26d39b;
+	color: var(--ms-ac-mint, #26d39b);
 }
 
 .connection-status-disconnected {
@@ -513,7 +513,7 @@ body.modern-shell-root #root {
 
 .settings-message {
 	margin-top: 8px;
-	color: #2fd3a0;
+	color: var(--ms-ac-mint, #2fd3a0);
 	font-size: 12px;
 }
 
@@ -593,7 +593,7 @@ body.modern-shell-root #root {
 .connection-window-title {
 	font-size: 18px;
 	font-weight: 800;
-	color: #2fd3a0;
+	color: var(--ms-ac-mint, #2fd3a0);
 }
 
 .connection-window-subtitle {
@@ -627,7 +627,7 @@ body.modern-shell-root #root {
 }
 
 .connection-message {
-	color: #2fd3a0;
+	color: var(--ms-ac-mint, #2fd3a0);
 	font-size: 12px;
 }
 
@@ -702,7 +702,7 @@ body.modern-shell-root #root {
 
 .chat-user-context-title {
 	padding: 7px 9px;
-	color: #2fd3a0;
+	color: var(--ms-ac-mint, #2fd3a0);
 	font-size: 12px;
 	font-weight: 800;
 	border-bottom: 1px solid rgba(128, 159, 177, 0.12);
@@ -748,7 +748,7 @@ body.modern-shell-root #root {
 }
 
 .newAction {
-	border: 1px solid #26d39b !important;
+	border: 1px solid var(--ms-ac-mint, #26d39b) !important;
 	background: rgba(38, 211, 155, 0.08);
 }
 
@@ -802,8 +802,8 @@ body.modern-shell-root #root {
 }
 
 .activity-status-accepted {
-	color: #26d39b;
-	border-color: #26d39b;
+	color: var(--ms-ac-mint, #26d39b);
+	border-color: var(--ms-ac-mint, #26d39b);
 }
 
 .activity-status-rejected {
@@ -1007,7 +1007,7 @@ body.modern-shell-root #root {
 .user-window-title {
 	font-size: 18px;
 	font-weight: 800;
-	color: #2fd3a0;
+	color: var(--ms-ac-mint, #2fd3a0);
 }
 
 .user-window-title-row {
@@ -1092,7 +1092,7 @@ body.modern-shell-root #root {
 .user-window-section-title {
 	padding: 10px 12px;
 	border-bottom: 1px solid rgba(128, 159, 177, 0.14);
-	color: #2fd3a0;
+	color: var(--ms-ac-mint, #2fd3a0);
 	font-weight: 700;
 }
 
@@ -1371,7 +1371,7 @@ body.modern-shell-root #root {
 	width: 8px;
 	height: 8px;
 	border-radius: 999px;
-	background: #f2c94c;
+	background: var(--ms-ac-warn, #f2c94c);
 	box-shadow: 0 0 0 3px rgba(242, 201, 76, 0.18);
 	animation: chat-pause-pulse 1.8s ease-in-out infinite;
 }
@@ -1983,25 +1983,26 @@ body.modern-shell-root #root {
 	--ms-row-h: 30px;
 	--ms-topbar-h: 68px;
 
-	/* OKLCH color tokens (Designs/ prototype-aligned) */
-	--ms-bg-0: oklch(0.18 0.015 240);
-	--ms-bg-1: oklch(0.22 0.015 240);
-	--ms-bg-2: oklch(0.26 0.015 240);
-	--ms-fg-1: oklch(0.95 0.005 240);
-	--ms-fg-2: oklch(0.78 0.01 240);
-	--ms-fg-3: oklch(0.62 0.01 240);
-	--ms-border: oklch(0.32 0.01 240 / 0.5);
-	--ms-bg-hover: oklch(0.28 0.015 240);
+	/* Faz A (2026-07-05): prototip HEX paleti. Önceden OKLCH primary vardı; Electron
+	   OKLCH render edip prototip hex'iyle uyuşmuyordu → renk teması farklıydı. */
+	--ms-bg-0: #131820;
+	--ms-bg-1: #181d26;
+	--ms-bg-2: #1d242e;
+	--ms-fg-1: #ecedef;
+	--ms-fg-2: #b8bcc2;
+	--ms-fg-3: #8a8f97;
+	--ms-border: rgba(110, 120, 135, 0.5);
+	--ms-bg-hover: #1f2630;
 
-	/* Accent palette */
-	--ms-ac-sub: oklch(0.78 0.1 295);
-	--ms-ac-gift: oklch(0.82 0.1 80);
-	--ms-ac-kicks: oklch(0.82 0.1 200);
-	--ms-ac-reward: oklch(0.82 0.1 140);
-	--ms-ac-mod: oklch(0.75 0.1 25);
-	--ms-ac-mint: oklch(0.85 0.08 165);
-	--ms-ac-warn: oklch(0.78 0.12 60);
-	--ms-ac-live: oklch(0.72 0.18 25);
+	/* Accent palette — prototip hex */
+	--ms-ac-sub: #b39ddb;
+	--ms-ac-gift: #ddb377;
+	--ms-ac-kicks: #79c8d2;
+	--ms-ac-reward: #88c4a4;
+	--ms-ac-mod: #d68a82;
+	--ms-ac-mint: #7adbb4;
+	--ms-ac-warn: #d4a851;
+	--ms-ac-live: #d65c4e;
 
 	/* Z-index scale */
 	--ms-z-topbar: 10;
@@ -2009,12 +2010,15 @@ body.modern-shell-root #root {
 	--ms-z-modal: 1000;
 	--ms-z-toast: 2000;
 
-	/* Sprint 4: additional bg/border/fg aliases for activity panel */
-	--ms-bg-3: oklch(0.30 0.015 240);
-	--ms-bd-1: oklch(0.28 0.01 240 / 0.5);
-	--ms-bd-2: oklch(0.34 0.01 240 / 0.6);
-	--ms-bd-3: oklch(0.38 0.01 240 / 0.7);
-	--ms-fg-4: oklch(0.45 0.01 240);
+	/* Sprint 4 aliases — Faz A: prototip hex */
+	--ms-bg-3: #222930;
+	--ms-bd-1: rgba(90, 100, 115, 0.5);
+	--ms-bd-2: rgba(100, 112, 128, 0.6);
+	--ms-bd-3: rgba(110, 125, 140, 0.7);
+	--ms-fg-4: #606870;
+
+	/* Faz 0: pop-out/modal gölgesi (prototip birebir) */
+	--ms-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
 }
 
 /* Hex fallback for environments without OKLCH support */
@@ -2057,57 +2061,62 @@ body.modern-shell-root #root {
    Activated when root carries data-theme="light". Default = dark (no
    attribute or "dark"). User toggles via Settings → Account/Advanced. */
 [data-app-shell="modern"][data-theme="light"] {
-	/* Backgrounds */
-	--ms-bg-0: oklch(0.98 0.005 240);
-	--ms-bg-1: oklch(0.95 0.008 240);
-	--ms-bg-2: oklch(0.92 0.01 240);
-	--ms-bg-3: oklch(0.88 0.012 240);
-	--ms-bg-hover: oklch(0.90 0.015 240);
+	/* Faz A: prototip açık-tema HEX */
+	--ms-bg-0: #fafbfd;
+	--ms-bg-1: #f3f5f9;
+	--ms-bg-2: #eaedf3;
+	--ms-bg-3: #e2e6ee;
+	--ms-bg-hover: #e8ebf2;
 	/* Foregrounds */
-	--ms-fg-1: oklch(0.20 0.015 240);
-	--ms-fg-2: oklch(0.38 0.015 240);
-	--ms-fg-3: oklch(0.52 0.012 240);
-	--ms-fg-4: oklch(0.65 0.01 240);
+	--ms-fg-1: #1c2230;
+	--ms-fg-2: #495063;
+	--ms-fg-3: #6b7385;
+	--ms-fg-4: #98a0b0;
 	/* Borders */
-	--ms-border: oklch(0.82 0.01 240 / 0.7);
-	--ms-bd-1: oklch(0.84 0.01 240 / 0.6);
-	--ms-bd-2: oklch(0.78 0.01 240 / 0.7);
-	--ms-bd-3: oklch(0.72 0.01 240 / 0.8);
-	/* Accents need slight darkening for contrast on light bg */
-	--ms-ac-sub: oklch(0.58 0.13 295);
-	--ms-ac-gift: oklch(0.65 0.13 60);
-	--ms-ac-kicks: oklch(0.55 0.13 220);
-	--ms-ac-reward: oklch(0.55 0.13 145);
-	--ms-ac-mod: oklch(0.58 0.14 25);
-	--ms-ac-mint: oklch(0.55 0.13 165);
-	--ms-ac-warn: oklch(0.62 0.15 55);
-	--ms-ac-live: oklch(0.58 0.18 25);
+	--ms-border: rgba(120, 132, 150, 0.42);
+	--ms-bd-1: rgba(120, 132, 150, 0.32);
+	--ms-bd-2: rgba(120, 132, 150, 0.5);
+	--ms-bd-3: rgba(120, 132, 150, 0.6);
+	/* Accents — prototip açık hex */
+	--ms-ac-sub: #7a5bbd;
+	--ms-ac-gift: #b07d2e;
+	--ms-ac-kicks: #2f8f9c;
+	--ms-ac-reward: #2f9d7c;
+	--ms-ac-mod: #c0503f;
+	--ms-ac-mint: #2f9d7c;
+	--ms-ac-warn: #b07d2e;
+	--ms-ac-live: #d65c4e;
+
+	/* Faz 0: pop-out/modal gölgesi (prototip birebir, açık tema) */
+	--ms-shadow: 0 10px 34px rgba(40, 55, 80, 0.16);
 }
 
 /* Hex fallback for light theme */
 @supports not (color: oklch(0% 0 0)) {
 	[data-app-shell="modern"][data-theme="light"] {
+		/* Faz 0: prototip (workspace/plan/chat-view/prototype/chat-view-full.html)
+		   ile hex-hex uzlaştırıldı — prototip değeri esas alındı. */
 		--ms-bg-0: #fafbfd;
 		--ms-bg-1: #f3f5f9;
-		--ms-bg-2: #e8ecf2;
-		--ms-bg-3: #dde2ea;
-		--ms-bg-hover: #e3e8ee;
+		--ms-bg-2: #eaedf3;
+		--ms-bg-3: #e2e6ee;
+		--ms-bg-hover: #e8ebf2;
 		--ms-fg-1: #1c2230;
 		--ms-fg-2: #495063;
-		--ms-fg-3: #6b7283;
+		--ms-fg-3: #6b7385;
 		--ms-fg-4: #98a0b0;
-		--ms-border: rgba(180, 188, 200, 0.7);
-		--ms-bd-1: rgba(200, 207, 218, 0.6);
-		--ms-bd-2: rgba(170, 178, 192, 0.7);
-		--ms-bd-3: rgba(150, 160, 175, 0.8);
-		--ms-ac-sub: #6a4cb8;
-		--ms-ac-gift: #c08a3c;
-		--ms-ac-kicks: #2e7eb0;
-		--ms-ac-reward: #3c9268;
-		--ms-ac-mod: #b8543a;
+		--ms-border: rgba(120, 132, 150, 0.42);
+		--ms-bd-1: rgba(120, 132, 150, 0.32);
+		--ms-bd-2: rgba(120, 132, 150, 0.5);
+		--ms-bd-3: rgba(120, 132, 150, 0.6);
+		--ms-ac-sub: #7a5bbd;
+		--ms-ac-gift: #b07d2e;
+		--ms-ac-kicks: #2f8f9c;
+		--ms-ac-reward: #2f9d7c;
+		--ms-ac-mod: #c0503f;
 		--ms-ac-mint: #2f9d7c;
-		--ms-ac-warn: #c08930;
-		--ms-ac-live: #c84035;
+		--ms-ac-warn: #b07d2e;
+		--ms-ac-live: #d65c4e;
 	}
 }
 
@@ -2617,19 +2626,27 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 /* ── B: Global thin scrollbar — all modern-shell scroll surfaces ─────────── */
+/* Faz 0: prototip (chat-view-full.html) ile birebir uzlaştırıldı — 10px,
+   yuvarlak thumb (border-radius:999px + padding-box border tekniği).
+   NextUI/classic shell'e sızmaması için [data-app-shell="modern"] scope'u
+   korunuyor (prototipte global `*`, ama App.css zaten bu izolasyonu
+   bilinçli tercih etmiş — bkz. dosya başı Sprint 2 notu). */
 [data-app-shell="modern"] *::-webkit-scrollbar {
-	width: 6px;
-	height: 6px;
+	width: 10px;
+	height: 10px;
 }
 [data-app-shell="modern"] *::-webkit-scrollbar-track {
 	background: transparent;
 }
 [data-app-shell="modern"] *::-webkit-scrollbar-thumb {
 	background: var(--ms-bd-2, rgba(100,112,128,0.6));
-	border-radius: 4px;
+	border-radius: 999px;
+	border: 2px solid transparent;
+	background-clip: padding-box;
 }
 [data-app-shell="modern"] *::-webkit-scrollbar-thumb:hover {
 	background: var(--ms-bd-3, rgba(110,125,140,0.7));
+	background-clip: padding-box;
 }
 [data-app-shell="modern"] *::-webkit-scrollbar-corner {
 	background: transparent;
@@ -2837,7 +2854,7 @@ html.modern-shell-root[data-theme="light"] {
 /* ── Chat row ── */
 [data-app-shell="modern"] .chat-row {
 	display: grid;
-	grid-template-columns: 56px minmax(0, 1fr) auto;
+	grid-template-columns: 52px minmax(0, 1fr) auto; /* Faz C: prototip 52px zaman kolonu */
 	column-gap: 10px;
 	padding: 3px 8px 3px 14px;
 	align-items: baseline;
@@ -2857,36 +2874,42 @@ html.modern-shell-root[data-theme="light"] {
 	border: 1px solid color-mix(in oklch, var(--ms-ac-sub, #7c3aed) 35%, transparent);
 }
 [data-app-shell="modern"] .chat-sub-banner.is-gift {
-	background: color-mix(in oklch, #ec4899 14%, transparent);
-	border-color: color-mix(in oklch, #ec4899 35%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-gift) 15%, transparent);
+	border-color: color-mix(in oklch, var(--ms-ac-gift) 38%, transparent);
 }
 /* Sprint 39: host/raid banner — amber. */
 [data-app-shell="modern"] .chat-sub-banner.is-host {
-	background: color-mix(in oklch, #f59e0b 14%, transparent);
-	border-color: color-mix(in oklch, #f59e0b 38%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-warn) 15%, transparent);
+	border-color: color-mix(in oklch, var(--ms-ac-warn) 40%, transparent);
 }
 [data-app-shell="modern"] .chat-sub-banner.is-host .csb-actor {
-	color: #fcd34d;
+	color: var(--ms-ac-warn);
 }
 /* Sprint 40: KICKs banner — mavi. */
 [data-app-shell="modern"] .chat-sub-banner.is-kicks {
-	background: color-mix(in oklch, #61a8ff 14%, transparent);
-	border-color: color-mix(in oklch, #61a8ff 38%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-kicks) 15%, transparent);
+	border-color: color-mix(in oklch, var(--ms-ac-kicks) 38%, transparent);
 }
 [data-app-shell="modern"] .chat-sub-banner.is-kicks .csb-actor {
-	color: #93c5fd;
+	color: var(--ms-ac-kicks);
 }
 /* Sprint 41: Follow banner — cyan. */
 [data-app-shell="modern"] .chat-sub-banner.is-follow {
-	background: color-mix(in oklch, #22d3ee 14%, transparent);
-	border-color: color-mix(in oklch, #22d3ee 38%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-reward) 15%, transparent);
+	border-color: color-mix(in oklch, var(--ms-ac-reward) 38%, transparent);
 }
 [data-app-shell="modern"] .chat-sub-banner.is-follow .csb-actor {
-	color: #67e8f9;
+	color: var(--ms-ac-reward);
 }
 [data-app-shell="modern"] .chat-sub-banner .csb-icon {
-	font-size: 18px;
+	font-size: 15px;
 	flex: 0 0 auto;
+	width: 24px;
+	height: 24px;
+	display: grid;
+	place-items: center;
+	border-radius: 7px;
+	background: color-mix(in oklch, var(--ms-bg-0) 45%, transparent);
 }
 [data-app-shell="modern"] .chat-sub-banner .csb-body {
 	flex: 1 1 auto;
@@ -2905,7 +2928,7 @@ html.modern-shell-root[data-theme="light"] {
 	color: var(--ms-ac-sub, #c4a8ff);
 }
 [data-app-shell="modern"] .chat-sub-banner.is-gift .csb-actor {
-	color: #f9a8d4;
+	color: var(--ms-ac-gift);
 }
 [data-app-shell="modern"] .chat-sub-banner .csb-text {
 	color: var(--ms-fg-2);
@@ -2932,6 +2955,11 @@ html.modern-shell-root[data-theme="light"] {
 	border-left: 2px solid var(--ms-ac-warn);
 	padding-left: 12px;
 	background: color-mix(in oklch, var(--ms-ac-warn) 5%, transparent);
+}
+/* Faz 8: metin-ici @mention kelimesi (prototip .mention-tok) */
+[data-app-shell="modern"] .chat-text .mention-tok {
+	color: var(--ms-ac-warn);
+	font-weight: 600;
 }
 [data-app-shell="modern"] .chat-row.is-suspicious {
 	border-left: 2px solid var(--ms-ac-mod);
@@ -2973,8 +3001,8 @@ html.modern-shell-root[data-theme="light"] {
 	color: var(--ms-fg-3);
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
-	line-height: var(--ms-row-h, 30px);
-	padding-top: 1px;
+	text-align: right; /* Faz H: prototip — zaman sağa hizalı (isme yakın) */
+	line-height: 1.45; /* Faz H: gövdeyle baseline hizası (30px anomali kaldırıldı) */
 }
 
 /* ── Chat body ── */
@@ -2984,7 +3012,7 @@ html.modern-shell-root[data-theme="light"] {
 	line-height: 1.45;
 }
 [data-app-shell="modern"] .chat-name {
-	font-weight: 600;
+	font-weight: 700;
 	margin-right: 2px;
 }
 [data-app-shell="modern"] .chat-name:hover {
@@ -3015,6 +3043,17 @@ html.modern-shell-root[data-theme="light"] {
 	font-weight: 600;
 	color: var(--ms-fg-2);
 	white-space: nowrap;
+}
+/* Faz 4: reply ↳ ipucu (prototip ile uyum) */
+[data-app-shell="modern"] .chat-reply-name::before {
+	content: "↳ ";
+	color: var(--ms-fg-4, #606870);
+	font-weight: 400;
+}
+/* Faz 4: ad ↔ mesaj ayracı (hardcoded ": " yerine tutarlı token'lı sınıf) */
+[data-app-shell="modern"] .chat-sep {
+	color: var(--ms-fg-4, #606870);
+	margin: 0 4px 0 1px;
 }
 
 /* ── Chat tools (hover) ── */
@@ -3144,13 +3183,15 @@ html.modern-shell-root[data-theme="light"] {
 }
 [data-app-shell="modern"] .composer {
 	position: relative;
+	/* Prototip: iki-satir composer — input ustte, arac seridi altta */
 	display: flex;
-	align-items: flex-end;
-	gap: 6px;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
 	border: 1px solid var(--ms-border);
 	border-radius: var(--ms-r-3);
 	background: var(--ms-bg-2);
-	padding: 4px 6px 4px 10px;
+	padding: 10px 12px 8px;
 	transition: border-color 0.15s;
 }
 [data-app-shell="modern"] .composer:focus-within {
@@ -3189,22 +3230,27 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .composer-tools {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	justify-content: flex-end;
+	gap: 6px;
 	flex-shrink: 0;
+	width: 100%;
+	padding-top: 8px;
+	border-top: 1px solid var(--ms-bd-1, var(--ms-border));
 }
 [data-app-shell="modern"] .composer-send {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
-	padding: 4px 10px;
+	padding: 6px 16px;
 	border-radius: var(--ms-r-2);
+	/* Gönder butonu: tema primary (mint) rengi, ikonsuz */
 	background: var(--ms-ac-mint);
 	color: var(--ms-bg-0);
-	font-size: var(--ms-fs-12);
+	font-size: var(--ms-fs-13, 13px);
 	font-weight: 600;
 	border: none;
 	cursor: pointer;
-	transition: opacity 0.15s;
+	transition: filter 0.15s, opacity 0.15s;
 }
 [data-app-shell="modern"] .composer-send:disabled {
 	opacity: 0.4;
@@ -3213,13 +3259,61 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .composer-send:not(:disabled):hover {
 	opacity: 0.88;
 }
-[data-app-shell="modern"] .composer-meta {
+/* Faz C: composer-tools içi bağlı durumu (prototip .composer-status) */
+[data-app-shell="modern"] .composer-status {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	gap: 5px;
 	font-size: 11px;
 	color: var(--ms-fg-3);
-	gap: 8px;
+	white-space: nowrap;
+}
+[data-app-shell="modern"] .composer-status .dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--ms-ac-mint);
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .composer-status b {
+	color: var(--ms-fg-1);
+	font-weight: 600;
+}
+[data-app-shell="modern"] .composer-tsp {
+	flex: 1 1 auto;
+}
+
+/* Faz E: Ayarlar tam-ekran (modal yerine app-içi screen) */
+[data-app-shell="modern"] .settings-screen {
+	position: fixed;
+	inset: 0;
+	z-index: var(--ms-z-modal, 1000);
+	background: var(--ms-bg-0);
+	display: flex;
+	flex-direction: column;
+}
+[data-app-shell="modern"] .settings-screen-hd {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 56px;
+	padding: 0 16px;
+	border-bottom: 1px solid var(--ms-border);
+	background: var(--ms-bg-1);
+	flex: 0 0 auto;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .settings-screen-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+	display: flex;
+}
+[data-app-shell="modern"] .settings-screen-body > * {
+	flex: 1 1 auto;
+	min-height: 0;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -3705,11 +3799,12 @@ html.modern-shell-root[data-theme="light"] {
 	display: none;
 }
 [data-app-shell="modern"] .chip {
-	padding: 4px 9px;
+	padding: 3px 9px;
 	font-size: 11.5px;
-	border-radius: var(--ms-r-2);
-	color: var(--ms-fg-3);
-	border: 1px solid transparent;
+	border-radius: 999px; /* Faz D: prototip PILL şekli */
+	color: var(--ms-fg-2);
+	background: var(--ms-bg-2);
+	border: 1px solid var(--ms-border);
 	white-space: nowrap;
 	display: flex;
 	align-items: center;
@@ -3717,12 +3812,13 @@ html.modern-shell-root[data-theme="light"] {
 }
 [data-app-shell="modern"] .chip:hover {
 	background: var(--ms-bg-3);
-	color: var(--ms-fg-2);
+	color: var(--ms-fg-1);
 }
 [data-app-shell="modern"] .chip.is-active {
-	background: var(--ms-bg-3);
+	/* Faz D: prototip aktif chip = mint tint */
+	background: color-mix(in oklch, var(--ms-ac-mint) 18%, transparent);
 	color: var(--ms-fg-1);
-	border-color: var(--ms-bd-2);
+	border-color: var(--ms-ac-mint);
 }
 [data-app-shell="modern"] .chip-count {
 	font-size: 10px;
@@ -3939,13 +4035,13 @@ html.modern-shell-root[data-theme="light"] {
 	border-color: var(--ms-ac-mint, #2fd3a0);
 }
 [data-app-shell="modern"] .act-reward-btn.reject {
-	background: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 16%, transparent);
-	color: var(--ms-ac-live, #ef4f5f);
-	border-color: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 45%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-live, var(--ms-ac-live, #ef4f5f)) 16%, transparent);
+	color: var(--ms-ac-live, var(--ms-ac-live, #ef4f5f));
+	border-color: color-mix(in oklch, var(--ms-ac-live, var(--ms-ac-live, #ef4f5f)) 45%, transparent);
 }
 [data-app-shell="modern"] .act-reward-btn.reject:hover {
-	background: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 28%, transparent);
-	border-color: var(--ms-ac-live, #ef4f5f);
+	background: color-mix(in oklch, var(--ms-ac-live, var(--ms-ac-live, #ef4f5f)) 28%, transparent);
+	border-color: var(--ms-ac-live, var(--ms-ac-live, #ef4f5f));
 }
 
 [data-app-shell="modern"] .act-message-card {
@@ -3978,22 +4074,39 @@ html.modern-shell-root[data-theme="light"] {
 	font-size: 11.5px;
 }
 
-/* Recipients pill list */
+/* Recipients list — prototip birebir: dikey liste, ★+isim, maks ~5 satır
+   görünür (170px), gerisi scroll (global özel scrollbar). */
 [data-app-shell="modern"] .act-recipients {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	max-height: 100px;
-	overflow: auto;
+	flex-direction: column;
+	gap: 1px;
+	max-height: 170px;
+	overflow-y: auto;
 }
-[data-app-shell="modern"] .pill {
-	background: var(--ms-bg-1);
-	border: 1px solid var(--ms-bd-2);
-	padding: 2px 7px;
-	border-radius: 999px;
+[data-app-shell="modern"] .rcp {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px;
+	border-radius: var(--ms-r-1);
+	font-size: 12px;
+}
+[data-app-shell="modern"] .rcp:hover {
+	background: var(--ms-bg-2);
+}
+[data-app-shell="modern"] .rcp-star {
+	color: var(--ms-ac-sub);
 	font-size: 11px;
-	color: var(--ms-fg-2);
-	font-family: "Geist Mono", ui-monospace, monospace;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .rcp-name {
+	font-weight: 600;
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .rcp-name.anon {
+	color: var(--ms-fg-3);
+	font-weight: 500;
+	font-style: italic;
 }
 
 /* Raw JSON toggle + block */
@@ -4186,10 +4299,10 @@ html.modern-shell-root[data-theme="light"] {
 	background: var(--ms-bg-hover, #22252c);
 }
 [data-app-shell="modern"] .chat-user-menu button.danger {
-	color: var(--live, #ef4f5f);
+	color: var(--live, var(--ms-ac-live, #ef4f5f));
 }
 [data-app-shell="modern"] .chat-user-menu button.danger:hover {
-	background: color-mix(in oklch, var(--live, #ef4f5f) 18%, transparent);
+	background: color-mix(in oklch, var(--live, var(--ms-ac-live, #ef4f5f)) 18%, transparent);
 }
 [data-app-shell="modern"] .chat-user-menu-divider {
 	height: 1px;
@@ -4223,9 +4336,9 @@ html.modern-shell-root[data-theme="light"] {
 	transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 [data-app-shell="modern"] .mod-target-clear:hover {
-	background: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 18%, transparent);
-	color: var(--ms-ac-live, #ef4f5f);
-	border-color: color-mix(in oklch, var(--ms-ac-live, #ef4f5f) 35%, transparent);
+	background: color-mix(in oklch, var(--ms-ac-live, var(--ms-ac-live, #ef4f5f)) 18%, transparent);
+	color: var(--ms-ac-live, var(--ms-ac-live, #ef4f5f));
+	border-color: color-mix(in oklch, var(--ms-ac-live, var(--ms-ac-live, #ef4f5f)) 35%, transparent);
 }
 [data-app-shell="modern"] .mod-target-ava {
 	width: 36px;
@@ -4389,11 +4502,11 @@ html.modern-shell-root[data-theme="light"] {
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
-	color: var(--live, #ef4f5f);
-	background: color-mix(in oklch, var(--live, #ef4f5f) 18%, transparent);
+	color: var(--live, var(--ms-ac-live, #ef4f5f));
+	background: color-mix(in oklch, var(--live, var(--ms-ac-live, #ef4f5f)) 18%, transparent);
 	padding: 1px 6px;
 	border-radius: 4px;
-	border: 1px solid color-mix(in oklch, var(--live, #ef4f5f) 35%, transparent);
+	border: 1px solid color-mix(in oklch, var(--live, var(--ms-ac-live, #ef4f5f)) 35%, transparent);
 }
 [data-app-shell="modern"] .mod-target-unban,
 [data-app-shell="modern"] .mod-target-detail {
@@ -4437,8 +4550,8 @@ html.modern-shell-root[data-theme="light"] {
 	background: var(--ms-bg-3, #1e2127);
 }
 [data-app-shell="modern"] .mod-action-ban {
-	background: color-mix(in oklch, var(--live, #ef4f5f) 30%, var(--ms-bg-3, #1e2127));
-	color: var(--live, #ef4f5f);
+	background: color-mix(in oklch, var(--live, var(--ms-ac-live, #ef4f5f)) 30%, var(--ms-bg-3, #1e2127));
+	color: var(--live, var(--ms-ac-live, #ef4f5f));
 }
 [data-app-shell="modern"] .mod-action-to {
 	background: color-mix(in oklch, var(--ms-ac-warn, #d4a851) 30%, var(--ms-bg-3, #1e2127));
@@ -4535,10 +4648,10 @@ html.modern-shell-root[data-theme="light"] {
 	font-family: "Geist Mono", ui-monospace, monospace;
 }
 [data-app-shell="modern"] .mod-btn.danger:hover {
-	border-color: color-mix(in oklch, var(--ms-live, #ef4f5f) 50%, var(--ms-bd-3, #3a4049));
+	border-color: color-mix(in oklch, var(--ms-live, var(--ms-ac-live, #ef4f5f)) 50%, var(--ms-bd-3, #3a4049));
 }
 [data-app-shell="modern"] .mod-btn.danger .label {
-	color: var(--ms-live, #ef4f5f);
+	color: var(--ms-live, var(--ms-ac-live, #ef4f5f));
 }
 [data-app-shell="modern"] .mod-list {
 	display: flex;
@@ -4650,7 +4763,7 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .set-nav-item:hover {
-	background: rgba(47, 211, 160, 0.08);
+	background: color-mix(in oklch, var(--ac-mint, var(--ms-ac-mint, #2fd3a0)) 8%, transparent);
 	color: var(--ms-fg-1, #f2f7f5);
 }
 
@@ -4667,7 +4780,7 @@ html.modern-shell-root[data-theme="light"] {
 	width: 7px;
 	height: 7px;
 	border-radius: 50%;
-	background: var(--ac-warn, #f2c94c);
+	background: var(--ac-warn, var(--ms-ac-warn, #f2c94c));
 }
 
 [data-app-shell="modern"] .set-content {
@@ -4721,7 +4834,7 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .set-block-row.danger {
-	background: rgba(255, 77, 109, 0.04);
+	background: color-mix(in oklch, var(--ac-live, var(--ms-ac-live)) 4%, transparent);
 }
 
 [data-app-shell="modern"] .set-block-row .l {
@@ -4783,7 +4896,7 @@ html.modern-shell-root[data-theme="light"] {
 
 [data-app-shell="modern"] .set-toggle[aria-checked="true"] .set-toggle-thumb {
 	left: 16px;
-	background: #052420;
+	background: var(--ms-bg-0, #052420);
 }
 
 /* ── Stepper ── */
@@ -4849,14 +4962,14 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .set-btn.primary {
-	background: var(--ac-mint, #2fd3a0);
-	color: #052420;
+	background: var(--ac-mint, var(--ms-ac-mint, #2fd3a0));
+	color: var(--ms-bg-0, #052420);
 	border-color: transparent;
 	font-weight: 600;
 }
 
 [data-app-shell="modern"] .set-btn.primary:hover {
-	background: #3de0ad;
+	filter: brightness(1.06);
 }
 
 [data-app-shell="modern"] .set-btn.ghost {
@@ -4866,12 +4979,12 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .set-btn.danger {
-	color: #ff8da1;
-	border-color: rgba(255,77,109,0.32);
+	color: var(--ac-live, var(--ms-ac-live, #ff4d6d));
+	border-color: color-mix(in oklch, var(--ac-live, var(--ms-ac-live, #ff4d6d)) 32%, transparent);
 }
 
 [data-app-shell="modern"] .set-btn.danger:hover {
-	background: rgba(255,77,109,0.12);
+	background: color-mix(in oklch, var(--ac-live, var(--ms-ac-live, #ff4d6d)) 12%, transparent);
 }
 
 /* ── Input ── */
@@ -4924,8 +5037,8 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .scope-ic.miss {
-	background: color-mix(in oklch, var(--ac-warn, #f2c94c) 20%, transparent);
-	color: var(--ac-warn, #f2c94c);
+	background: color-mix(in oklch, var(--ac-warn, var(--ms-ac-warn, #f2c94c)) 20%, transparent);
+	color: var(--ac-warn, var(--ms-ac-warn, #f2c94c));
 }
 
 [data-app-shell="modern"] .scope-name {
@@ -4949,8 +5062,8 @@ html.modern-shell-root[data-theme="light"] {
 	padding: 10px 14px;
 	margin-bottom: 14px;
 	border-radius: var(--ms-r-3, 8px);
-	border: 1px solid color-mix(in oklch, var(--ac-warn, #f2c94c) 30%, transparent);
-	background: color-mix(in oklch, var(--ac-warn, #f2c94c) 10%, transparent);
+	border: 1px solid color-mix(in oklch, var(--ac-warn, var(--ms-ac-warn, #f2c94c)) 30%, transparent);
+	background: color-mix(in oklch, var(--ac-warn, var(--ms-ac-warn, #f2c94c)) 10%, transparent);
 	font-size: 12.5px;
 	color: var(--ms-fg-1, #f2f7f5);
 }
@@ -5209,6 +5322,41 @@ html.modern-shell-root[data-theme="light"] {
 	color: var(--ms-ac-gift, #d97706);
 }
 
+/* Faz 7 — Emote Seçici "Kanal" sekmesi kanala göre gruplu gösterim */
+[data-app-shell="modern"] .ep-group-hd {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: var(--ms-fg-3, #8a8f98);
+	padding: 8px 2px 2px;
+}
+
+[data-app-shell="modern"] .ep-group-hd:first-child {
+	padding-top: 2px;
+}
+
+[data-app-shell="modern"] .ep-group-hd .ava {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--ms-bg-3, #1e2127);
+	display: grid;
+	place-items: center;
+	font-size: 8px;
+	color: var(--ms-ac-mint, #2dd4bf);
+}
+
+[data-app-shell="modern"] .ep-group-hd .cnt {
+	margin-left: auto;
+	font-weight: 600;
+	color: var(--ms-fg-4, #5a5f68);
+}
+
 /* Preview pane */
 [data-app-shell="modern"] .ep-preview {
 	border-left: 1px solid var(--ms-bd-1, #22262e);
@@ -5334,21 +5482,23 @@ html.modern-shell-root[data-theme="light"] {
 /* We alias the Designs CSS var names so shared classes (topbar, modal, etc.)
    that use --bg-0..3, --fg-1..4, --live, --ac-mint, --bd-1..3 work. */
 [data-app-shell="modern"] {
-	--bg-0: #0c0d10;
-	--bg-1: #131418;
-	--bg-2: #181a20;
-	--bg-3: #1e2127;
-	--bg-hover: #22252c;
-	--bd-1: #22262e;
-	--bd-2: #2d323b;
-	--bd-3: #3a4049;
-	--fg-1: #ebecef;
-	--fg-2: #b6b9c0;
-	--fg-3: #828690;
-	--fg-4: #5a5e68;
-	--ac-mint: oklch(0.82 0.09 175);
-	--ac-warn: oklch(0.78 0.13 55);
-	--live: #ef4f5f;
+	/* Faz A: sabit değerler yerine --ms-*'a bağlandı → topbar/modal vb.
+	   prototip rengini alır + tema-farkında (light) olur. */
+	--bg-0: var(--ms-bg-0);
+	--bg-1: var(--ms-bg-1);
+	--bg-2: var(--ms-bg-2);
+	--bg-3: var(--ms-bg-3);
+	--bg-hover: var(--ms-bg-hover);
+	--bd-1: var(--ms-bd-1);
+	--bd-2: var(--ms-bd-2);
+	--bd-3: var(--ms-bd-3);
+	--fg-1: var(--ms-fg-1);
+	--fg-2: var(--ms-fg-2);
+	--fg-3: var(--ms-fg-3);
+	--fg-4: var(--ms-fg-4);
+	--ac-mint: var(--ms-ac-mint);
+	--ac-warn: var(--ms-ac-warn);
+	--live: var(--ms-ac-live);
 	--r-1: 4px;
 	--r-2: 6px;
 	--r-3: 8px;
@@ -5384,16 +5534,16 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .tb-ava {
 	width: 44px;
 	height: 44px;
-	border-radius: var(--r-3);
-	background: linear-gradient(135deg, #3b3f4a, #1e2128);
+	border-radius: 50%; /* Faz B: prototip yuvarlak avatar */
+	background: linear-gradient(155deg, var(--ms-bg-2), var(--ms-bg-3));
 	display: grid;
 	place-items: center;
-	font-weight: 600;
+	font-weight: 700;
 	font-size: 15px;
-	color: var(--fg-1);
+	color: var(--ms-ac-mint);
 	flex: 0 0 auto;
 	position: relative;
-	border: 1px solid var(--bd-2);
+	border: 1px solid var(--ms-bd-2);
 }
 
 /* Fix 3: LIVE dot on avatar when live */
@@ -5459,13 +5609,14 @@ html.modern-shell-root[data-theme="light"] {
 /* Fix 3: LIVE pill (.tb-live) */
 [data-app-shell="modern"] .tb-live {
 	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.06em;
-	background: color-mix(in oklch, var(--live) 15%, transparent);
-	color: var(--live);
-	padding: 1px 6px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	background: var(--ms-ac-live); /* Faz B: prototip dolu-kırmızı + beyaz metin */
+	color: #fff;
+	padding: 2px 7px;
 	border-radius: var(--r-1);
-	border: 1px solid color-mix(in oklch, var(--live) 35%, transparent);
+	border: 1px solid transparent;
 	white-space: nowrap;
 	flex: 0 0 auto;
 }
@@ -5551,6 +5702,18 @@ html.modern-shell-root[data-theme="light"] {
 	flex: 0 0 auto;
 }
 
+/* Faz 1: kanal-başı canlı/çevrimdışı noktası — streamMetaByChannel[slug].isLive
+   ile beslenir (bkz. LayoutModern.tsx secondaryChannels.map). Seçili olmasa da
+   her sekmede görünür. Prototip: chat-view-full.html .tb-dot.live/.off. */
+[data-app-shell="modern"] .tb-tab .dot.live {
+	background: var(--live);
+	animation: tb-pulse 1.8s ease-in-out infinite;
+}
+[data-app-shell="modern"] .tb-tab .dot.off {
+	background: var(--fg-4);
+	animation: none;
+}
+
 [data-app-shell="modern"] .tb-tab-body {
 	display: inline-flex;
 	align-items: center;
@@ -5587,20 +5750,21 @@ html.modern-shell-root[data-theme="light"] {
 
 [data-app-shell="modern"] .tb-tab-close:hover {
 	opacity: 1;
-	background: color-mix(in oklch, var(--live, #ef4f5f) 25%, transparent);
-	color: var(--live, #ef4f5f);
+	background: color-mix(in oklch, var(--live, var(--ms-ac-live, #ef4f5f)) 25%, transparent);
+	color: var(--live, var(--ms-ac-live, #ef4f5f));
 }
 
 /* Fix 2: + add button in tab row */
 [data-app-shell="modern"] .tb-add {
-	width: 22px;
-	height: 22px;
-	display: grid;
-	place-items: center;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 10px;
+	font-size: 12px;
 	color: var(--fg-3);
-	border-radius: var(--r-1);
-	background: none;
-	border: none;
+	border-radius: var(--r-2);
+	background: var(--bg-2);
+	border: 1px dashed var(--ms-border); /* Faz B: "+ ekle" metinli dashed tab */
 	cursor: pointer;
 }
 
@@ -5637,14 +5801,15 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .tb-role {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 4px 8px 4px 4px;
-	background: var(--bg-3);
-	border: 1px solid var(--bd-2);
-	border-radius: var(--r-2);
+	gap: 5px;
 	font-size: 12px;
+	font-weight: 600;
 	color: var(--fg-2);
 }
+/* Faz B: rol rengi (prototip) — viewer/mod/owner */
+[data-app-shell="modern"] .tb-role.viewer { color: var(--ms-fg-3); }
+[data-app-shell="modern"] .tb-role.mod { color: var(--ms-ac-mint); }
+[data-app-shell="modern"] .tb-role.owner { color: var(--ms-ac-warn); }
 
 [data-app-shell="modern"] .tb-role-badge {
 	font-size: 10px;
@@ -5778,8 +5943,10 @@ html.modern-shell-root[data-theme="light"] {
 	grid-template-rows: 1fr;
 	min-height: 0;
 	height: 100%;
-	gap: 1px;
-	background: var(--bd-1);
+	/* Prototip: paneller ayri kart — aralarinda bosluk + disari padding */
+	gap: 10px;
+	padding: 10px;
+	background: var(--ms-bg-0);
 	/* Sprint 13: dar viewport'ta panel'leri gizleme yerine yatay scroll —
 	   chat min 520, activity 360, moderation 360 hep tam goruntude */
 	overflow-x: auto;
@@ -5903,6 +6070,9 @@ html.modern-shell-root[data-theme="light"] {
 	min-width: 0;
 	overflow: hidden;
 	background: var(--ms-bg-1);
+	/* Prototip: kart gorunumu — kenarlik + yuvarlak kose */
+	border: 1px solid var(--ms-border);
+	border-radius: var(--ms-r-3, 8px);
 }
 
 [data-app-shell="modern"] .main.no-act {
@@ -5958,7 +6128,7 @@ html.modern-shell-root[data-theme="light"] {
 
 [data-app-shell="modern"] .add-ch-error {
 	font-size: 11px;
-	color: var(--live, #ef4f5f);
+	color: var(--live, var(--ms-ac-live, #ef4f5f));
 }
 
 [data-app-shell="modern"] .add-ch-actions {
@@ -5977,20 +6147,11 @@ html.modern-shell-root[data-theme="light"] {
 	font-weight: 400;
 }
 
-/* ── Fix 11: ms-bg-0/1/2/3 should use exact Designs hex values ── */
-/* Override to match --bg-0..3 exactly in our OKLCH token aliases */
-[data-app-shell="modern"] {
-	--ms-bg-0: #0c0d10;
-	--ms-bg-1: #131418;
-	--ms-bg-2: #181a20;
-	--ms-bg-3: #1e2127;
-	--ms-ac-mint: oklch(0.82 0.09 175);
-	--ms-ac-live: #ef4f5f;
-	--ms-fg-1: #ebecef;
-	--ms-fg-2: #b6b9c0;
-	--ms-fg-3: #828690;
-	--ms-fg-4: #5a5e68;
-}
+/* Faz A (2026-07-05): "Fix 11" eski-Designs-hex override bloğu KALDIRILDI.
+   Bu blok --ms-bg/fg/mint'i eski palete (#0c0d10 / #131418 / #181a20 …) VE
+   tema-bağımsız ezip Faz A'nın prototip-hex token'larını geçersiz kılıyordu
+   → RENK TEMASI UYUŞMAZLIĞININ KÖK SEBEBİ (app #131418, prototip #181d26).
+   Artık tek otorite: satır ~1988 (koyu) + ~2064 (açık) prototip-hex blokları. */
 
 /* =============================================================================
  * Sprint 12 — UserWindow Modern
@@ -6072,7 +6233,7 @@ html.modern-shell-root[data-theme="light"] {
 	padding: 0 8px;
 	border: 1px solid var(--ms-border, rgba(110,120,135,0.5));
 	border-radius: 5px;
-	background: rgba(255,255,255,0.04);
+	background: var(--ms-bg-2, rgba(255,255,255,0.04));
 	color: var(--ms-fg-2, #b6b9c0);
 	font-size: 11px;
 	cursor: pointer;
@@ -6101,17 +6262,17 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .uw-status.active-now {
-	background: rgba(47, 180, 100, 0.14);
-	color: #4ade80;
+	background: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 14%, transparent);
+	color: var(--ms-ac-mint, #4ade80);
 }
 
 [data-app-shell="modern"] .uw-status.active-now .uw-status-dot {
-	background: #4ade80;
-	box-shadow: 0 0 0 3px rgba(74,222,128,0.2);
+	background: var(--ms-ac-mint, #4ade80);
+	box-shadow: 0 0 0 3px color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 20%, transparent);
 }
 
 [data-app-shell="modern"] .uw-status.offline {
-	background: rgba(130, 134, 144, 0.12);
+	background: color-mix(in oklch, var(--ms-fg-3, oklch(0.6 0.01 240)) 12%, transparent);
 	color: var(--ms-fg-3, #828690);
 }
 
@@ -6163,9 +6324,9 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .uw-close-btn:hover {
-	background: rgba(239,79,95,0.14) !important;
-	color: #ef4f5f !important;
-	border-color: rgba(239,79,95,0.28) !important;
+	background: color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 14%, transparent) !important;
+	color: var(--ms-ac-live, #ef4f5f) !important;
+	border-color: color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 28%, transparent) !important;
 }
 
 /* ── Stats row ── */
@@ -6417,10 +6578,10 @@ html.modern-shell-root[data-theme="light"] {
 	flex-shrink: 0;
 	height: 22px;
 	padding: 0 8px;
-	border: 1px solid rgba(239,79,95,0.28);
+	border: 1px solid color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 28%, transparent);
 	border-radius: 4px;
-	background: rgba(239,79,95,0.10);
-	color: #ef4f5f;
+	background: color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 10%, transparent);
+	color: var(--ms-ac-live, #ef4f5f);
 	font-size: 11px;
 	cursor: pointer;
 }
@@ -6431,7 +6592,7 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .uw-inline-del:hover:not(:disabled) {
-	background: rgba(239,79,95,0.20);
+	background: color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 20%, transparent);
 }
 
 /* ── Action / status pills ── */
@@ -6447,23 +6608,23 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .uw-action-ban {
-	background: rgba(239,79,95,0.15);
-	color: #ef4f5f;
+	background: color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 15%, transparent);
+	color: var(--ms-ac-live, #ef4f5f);
 }
 
 [data-app-shell="modern"] .uw-action-to {
-	background: rgba(242,201,76,0.15);
-	color: #f2c94c;
+	background: color-mix(in oklch, var(--ms-ac-warn, oklch(0.78 0.12 60)) 15%, transparent);
+	color: var(--ms-ac-warn, #f2c94c);
 }
 
 [data-app-shell="modern"] .uw-action-delete {
-	background: rgba(182,185,192,0.12);
+	background: color-mix(in oklch, var(--ms-fg-2, oklch(0.78 0.01 240)) 12%, transparent);
 	color: var(--ms-fg-2, #b6b9c0);
 }
 
 [data-app-shell="modern"] .uw-action-unban {
-	background: rgba(74,222,128,0.12);
-	color: #4ade80;
+	background: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 12%, transparent);
+	color: var(--ms-ac-mint, #4ade80);
 }
 
 [data-app-shell="modern"] .uw-status-pill {
@@ -6478,18 +6639,18 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .uw-status-success {
-	background: rgba(74,222,128,0.12);
-	color: #4ade80;
+	background: color-mix(in oklch, var(--ms-ac-mint, oklch(0.82 0.09 175)) 12%, transparent);
+	color: var(--ms-ac-mint, #4ade80);
 }
 
 [data-app-shell="modern"] .uw-status-pending {
-	background: rgba(242,201,76,0.14);
-	color: #f2c94c;
+	background: color-mix(in oklch, var(--ms-ac-warn, oklch(0.78 0.12 60)) 14%, transparent);
+	color: var(--ms-ac-warn, #f2c94c);
 }
 
 [data-app-shell="modern"] .uw-status-failed {
-	background: rgba(239,79,95,0.12);
-	color: #ef4f5f;
+	background: color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 12%, transparent);
+	color: var(--ms-ac-live, #ef4f5f);
 }
 
 /* ── Notes tab ── */
@@ -6558,7 +6719,7 @@ html.modern-shell-root[data-theme="light"] {
 	border: none;
 	border-radius: 6px;
 	background: var(--ms-ac-mint, oklch(0.82 0.09 175));
-	color: #0c0d10;
+	color: var(--ms-bg-0, #0c0d10);
 	font-size: 13px;
 	font-weight: 700;
 	cursor: pointer;
@@ -6599,10 +6760,10 @@ html.modern-shell-root[data-theme="light"] {
 	justify-content: center;
 	width: 100%;
 	height: 34px;
-	border: 1px solid rgba(239,79,95,0.30);
+	border: 1px solid color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 30%, transparent);
 	border-radius: 6px;
-	background: rgba(239,79,95,0.12);
-	color: #ef4f5f;
+	background: color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 12%, transparent);
+	color: var(--ms-ac-live, #ef4f5f);
 	font-size: 13px;
 	font-weight: 700;
 	cursor: pointer;
@@ -6614,7 +6775,7 @@ html.modern-shell-root[data-theme="light"] {
 }
 
 [data-app-shell="modern"] .uw-btn-danger:hover:not(:disabled) {
-	background: rgba(239,79,95,0.22);
+	background: color-mix(in oklch, var(--ms-ac-live, oklch(0.7 0.19 25)) 22%, transparent);
 }
 
 /* ── Mod panel (right sidebar) ── */
@@ -6986,4 +7147,322 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"][data-theme="light"] .uw-btn-primary:disabled {
 	color: #ffffff !important;
 	opacity: 0.4 !important;
+}
+
+/* ─── State layers: empty / loading / error — Faz 1 (2026-07-04) ──────────────
+   Chat & Activity panellerinde empty/loading/error görsel iskeleti. YALNIZ modern
+   shell scope; classic/NextUI etkilenmez. Tokenlar --ms-* (light/dark otomatik flip),
+   eksik ihtimaline karşı fallback'li. Bu blok yalnız STIL; JSX bağlama Faz 2/3'te. */
+[data-app-shell="modern"] .state-box {
+	flex: 1;
+	display: grid;
+	place-items: center;
+	text-align: center;
+	padding: var(--ms-sp-5, 24px);
+	min-height: 0;
+}
+[data-app-shell="modern"] .state-inner {
+	max-width: 260px;
+	color: var(--ms-fg-3, #8a8f97);
+	font-size: 12px;
+	line-height: 1.5;
+}
+[data-app-shell="modern"] .state-inner .state-emoji {
+	font-size: 26px;
+	line-height: 1;
+	margin-bottom: 8px;
+	opacity: 0.85;
+}
+[data-app-shell="modern"] .state-inner .state-title {
+	color: var(--ms-fg-1, #ecedef);
+	font-weight: 600;
+	font-size: 14px;
+	margin-bottom: 4px;
+}
+/* Loading skeleton */
+[data-app-shell="modern"] .skel {
+	padding: 6px 14px;
+}
+[data-app-shell="modern"] .skel-row {
+	display: grid;
+	grid-template-columns: 52px 1fr;
+	gap: 10px;
+	padding: 5px 0;
+}
+[data-app-shell="modern"] .skel-row.skel-act {
+	grid-template-columns: 26px 1fr;
+}
+[data-app-shell="modern"] .sk {
+	height: 11px;
+	border-radius: 4px;
+	background: linear-gradient(
+		90deg,
+		var(--ms-bg-2, #1d242e),
+		var(--ms-bg-3, #222930),
+		var(--ms-bg-2, #1d242e)
+	);
+	background-size: 200% 100%;
+	animation: ms-shimmer 1.3s linear infinite;
+}
+[data-app-shell="modern"] .sk.sk-t {
+	width: 38px;
+}
+[data-app-shell="modern"] .sk.sk-a {
+	width: 70%;
+}
+[data-app-shell="modern"] .sk.sk-b {
+	width: 52%;
+}
+[data-app-shell="modern"] .sk.sk-c {
+	width: 84%;
+}
+@keyframes ms-shimmer {
+	to {
+		background-position: -200% 0;
+	}
+}
+/* Error / reconnect banner */
+[data-app-shell="modern"] .err-banner {
+	margin: 10px;
+	padding: 10px 12px;
+	border-radius: var(--ms-r-3, 8px);
+	background: color-mix(in oklch, var(--ms-ac-mod) 12%, transparent);
+	border: 1px solid color-mix(in oklch, var(--ms-ac-mod) 45%, transparent);
+	color: var(--ms-fg-1, #ecedef);
+	font-size: 12px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+[data-app-shell="modern"] .err-banner .err-retry {
+	margin-left: auto;
+	flex: 0 0 auto;
+	font-size: 11px;
+	padding: 4px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 1px solid color-mix(in oklch, var(--ms-ac-mod) 50%, transparent);
+	background: transparent;
+	color: var(--ms-fg-1, #ecedef);
+	cursor: pointer;
+}
+[data-app-shell="modern"] .err-banner .err-retry:hover {
+	background: color-mix(in oklch, var(--ms-ac-mod) 18%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+	[data-app-shell="modern"] .sk {
+		animation: none;
+	}
+}
+
+/* =============================================================================
+ * Faz 0 — Rol mekanizması (CSS + attribute iskeleti, prototip birebir)
+ * Gerçek rol kaynağı Faz 4'te `useChannelRole` ile bağlanır; burada yalnız
+ * CSS kuralı + shell kökündeki `data-role` attribute'u tanımlanır.
+ * ========================================================================== */
+[data-app-shell="modern"] .mod-only {
+	display: none !important;
+}
+[data-app-shell="modern"][data-role="mod"] .mod-only,
+[data-app-shell="modern"][data-role="owner"] .mod-only {
+	display: revert !important;
+}
+[data-app-shell="modern"] .viewer-only {
+	display: none;
+}
+[data-app-shell="modern"][data-role="viewer"] .viewer-only {
+	display: block;
+}
+
+/* ── Moderasyon paneli — prototip yapısı (worktree rebuild'den entegre) ── */
+[data-app-shell="modern"] .hd-sp {
+	flex: 1;
+}
+[data-app-shell="modern"] .mod-scroll {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+}
+[data-app-shell="modern"] .mod-hint {
+	margin: 10px 12px 0;
+	padding: 8px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	font-size: 11px;
+	color: var(--ms-fg-2, #b6b9c0);
+	background: var(--ms-bg-2, #181a20);
+	border: 1px solid var(--ms-bd-1, #22262e);
+}
+[data-app-shell="modern"] .mod-sec {
+	border-bottom: 1px solid var(--ms-bd-1, #22262e);
+	padding: 10px 12px;
+}
+[data-app-shell="modern"] .mod-sec h4 {
+	margin: 0 0 8px;
+	font-size: 12px;
+	color: var(--ms-fg-2, #b6b9c0);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+[data-app-shell="modern"] .mod-target {
+	display: grid;
+	grid-template-columns: 40px 1fr;
+	gap: 10px;
+}
+[data-app-shell="modern"] .mt-ava {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: var(--ms-bg-3, #1e2127);
+	display: grid;
+	place-items: center;
+	color: var(--ms-ac-warn, #d4a851);
+	font-weight: 700;
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	overflow: hidden;
+}
+[data-app-shell="modern"] .mt-name {
+	font-weight: 700;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+[data-app-shell="modern"] .mt-name:hover {
+	text-decoration: underline;
+}
+[data-app-shell="modern"] .mt-status {
+	font-size: 11px;
+	color: var(--ms-ac-mod, var(--live, #ef4f5f));
+	margin-top: 2px;
+}
+[data-app-shell="modern"] .mt-meta {
+	font-size: 11px;
+	color: var(--ms-fg-3, #828690);
+}
+[data-app-shell="modern"] .mod-target-empty {
+	padding: 16px 12px;
+	border: 1px dashed var(--ms-bd-2, #2d323b);
+	border-radius: var(--ms-r-2, 6px);
+	color: var(--ms-fg-3, #828690);
+	font-size: 12px;
+	text-align: center;
+}
+[data-app-shell="modern"] .mod-actions {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-top: 8px;
+}
+[data-app-shell="modern"] .mod-btn {
+	font-size: 11px;
+	padding: 5px 10px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	background: var(--ms-bg-2, #181a20);
+	color: var(--ms-fg-2, #b6b9c0);
+	cursor: pointer;
+	transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+[data-app-shell="modern"] .mod-btn:hover {
+	color: var(--ms-fg-1, #ebecef);
+	border-color: var(--ms-bd-3, #3a4049);
+}
+[data-app-shell="modern"] .mod-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+[data-app-shell="modern"] .mod-btn.danger {
+	color: var(--ms-ac-mod, var(--live, #ef4f5f));
+	border-color: color-mix(in oklch, var(--ms-ac-mod, var(--live, #ef4f5f)) 40%, transparent);
+}
+[data-app-shell="modern"] .mod-btn.danger:hover {
+	background: color-mix(in oklch, var(--ms-ac-mod, var(--live, #ef4f5f)) 14%, transparent);
+}
+[data-app-shell="modern"] .to-presets {
+	display: flex;
+	gap: 5px;
+	flex-wrap: wrap;
+}
+[data-app-shell="modern"] .to-chip {
+	font-size: 11px;
+	padding: 4px 9px;
+	border-radius: var(--ms-r-2, 6px);
+	border: 1px solid var(--ms-bd-2, #2d323b);
+	background: var(--ms-bg-2, #181a20);
+	color: var(--ms-fg-2, #b6b9c0);
+	cursor: pointer;
+	transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+[data-app-shell="modern"] .to-chip:hover:not(:disabled) {
+	color: var(--ms-fg-1, #ebecef);
+}
+[data-app-shell="modern"] .to-chip.on {
+	color: var(--ms-fg-1, #ebecef);
+	border-color: var(--ms-ac-warn, #d4a851);
+	background: color-mix(in oklch, var(--ms-ac-warn, #d4a851) 16%, transparent);
+}
+[data-app-shell="modern"] .to-chip:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+[data-app-shell="modern"] .mod-hist {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+[data-app-shell="modern"] .mh-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px;
+	border-radius: var(--ms-r-2, 6px);
+	cursor: pointer;
+}
+[data-app-shell="modern"] .mh-row:hover {
+	background: var(--ms-bg-2, #181a20);
+}
+[data-app-shell="modern"] .mh-tag {
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+	padding: 2px 6px;
+	border-radius: 3px;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .mh-tag.ban {
+	color: #fff;
+	background: var(--ms-ac-mod, var(--live, #ef4f5f));
+}
+[data-app-shell="modern"] .mh-tag.to {
+	color: var(--ms-bg-0, #0c0d10);
+	background: var(--ms-ac-warn, #d4a851);
+}
+[data-app-shell="modern"] .mh-tag.unban {
+	color: var(--ms-bg-0, #0c0d10);
+	background: var(--ms-ac-reward, #88c4a4);
+}
+[data-app-shell="modern"] .mh-tag.del {
+	color: var(--ms-fg-1, #ebecef);
+	background: var(--ms-bg-3, #1e2127);
+}
+[data-app-shell="modern"] .mh-body {
+	min-width: 0;
+	font-size: 12px;
+	color: var(--ms-fg-2, #b6b9c0);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	flex: 1 1 auto;
+}
+[data-app-shell="modern"] .mh-body b {
+	font-weight: 700;
+	color: var(--ms-fg-1, #ebecef);
+}
+[data-app-shell="modern"] .mh-meta {
+	margin-left: auto;
+	font-size: 10px;
+	color: var(--ms-fg-4, #606870);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	flex: 0 0 auto;
 }

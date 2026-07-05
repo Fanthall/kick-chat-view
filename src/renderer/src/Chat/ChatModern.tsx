@@ -28,7 +28,6 @@ import {
 	LuInfo,
 	LuPin,
 	LuRefreshCw,
-	LuSend,
 	LuShield,
 	LuSmile,
 	LuTrash2,
@@ -46,7 +45,10 @@ import {
 } from "../../util/chatCommands";
 import { User, UserMessage } from "../../util/chatInterface";
 import { getActiveChannelSlug } from "../../util/channelSettings";
-import { refreshChannelEmoteBundle } from "../../util/chatConnection";
+import {
+	refreshChannelEmoteBundle,
+	chatListener,
+} from "../../util/chatConnection";
 import {
 	buildBadgesHtml,
 	renderMessageHtml,
@@ -298,13 +300,13 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 				>
 					{senderUsername}
 				</span>
-				{": "}
+				<span className="chat-sep">:</span>
 				<span
 					className="chat-text"
 					dangerouslySetInnerHTML={{ __html: contentHtml }}
 				/>
 			</div>
-			<div className="chat-tools" role="toolbar" aria-label="Message actions">
+			<div className="chat-tools" role="toolbar" aria-label={t("chat.aria.message-actions")}>
 				<button
 					title={t("chat.tools.reply")}
 					aria-label={t("chat.tools.reply")}
@@ -413,6 +415,12 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	const listRef = useRef<HTMLDivElement>(null);
 
 	const channelName = getActiveChannelSlug();
+	// Faz 2: bağlantı durumundan chat state matrisi türet (salt okuma; chatConnection
+	// davranışına dokunulmaz). connecting/idle→skeleton, connected+0 mesaj→boş, disconnected→banner.
+	const connState =
+		(channelName && messages.connectionStatusByChannel?.[channelName]) ||
+		messages.connectionStatus ||
+		"idle";
 	const channelBadges =
 		(channelName && messages.channelBadgesByChannel[channelName]) ||
 		messages.channelBadges;
@@ -452,6 +460,15 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	const emoteIndex: EmoteIndex = useMemo(
 		() => buildEmoteIndex(channelEmoteSets, messages.globalEmoteSets, channelName),
 		[channelEmoteSets, messages.globalEmoteSets, channelName]
+	);
+
+	// Faz 7: Emote Seçici "Kanal" sekmesi izlenen TÜM kanallara göre gruplanır.
+	// emoteIndex (yukarıda) sanitize/precedence/autocomplete için aktif-kanal
+	// odaklıdır ve DEĞİŞTİRİLMEDİ (CONSTRAINT-5). Bu ayrı liste yalnız picker'ın
+	// görsel gruplaması içindir — her izlenen kanalın ham setlerini toplar.
+	const allChannelEmoteSets = useMemo(
+		() => Object.values(messages.emoteSetsByChannel).flat(),
+		[messages.emoteSetsByChannel]
 	);
 
 	const blockedEmotesSet = useMemo(
@@ -1271,7 +1288,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 			{/* Panel header */}
 			<div className="panel-hd">
 				<h2>
-					Chat
+					{t("chat.title")}
 					{/* Fix 12: message count badge */}
 					<span className="count num" style={{ fontFamily: "var(--ms-font-mono, ui-monospace, monospace)", fontVariantNumeric: "tabular-nums", fontSize: 11, color: "var(--ms-fg-3, #828690)", fontWeight: 400 }}>
 						{messageList.length}
@@ -1280,8 +1297,8 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				<div className="panel-hd-actions">
 					<button
 						className="icon-btn"
-						title={paused ? "Resume scroll" : "Pause scroll"}
-						aria-label={paused ? "Resume auto-scroll" : "Pause auto-scroll"}
+						title={paused ? t("chat.resume-scroll") : t("chat.pause-scroll")}
+						aria-label={paused ? t("chat.resume-auto-scroll") : t("chat.pause-auto-scroll")}
 						onClick={() => setPaused((v) => !v)}
 					>
 						{paused ? (
@@ -1290,14 +1307,8 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							<LuRefreshCw size={14} aria-hidden />
 						)}
 					</button>
-					<button
-						className="icon-btn"
-						title="Refresh emotes"
-						aria-label="Refresh emotes"
-						onClick={handleRefresh}
-					>
-						<LuRefreshCw size={14} aria-hidden />
-					</button>
+					{/* Faz H: emote-refresh butonu başlıktan kaldırıldı (redundant + kafa
+					    karıştırıcı 2. refresh ikonu). Emote yenileme: Ayarlar → Emote. */}
 				</div>
 			</div>
 
@@ -1309,8 +1320,50 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				style={{ flex: "1 1 auto", overflowY: "auto", position: "relative" }}
 				role="log"
 				aria-live="polite"
-				aria-label="Chat messages"
+				aria-label={t("chat.aria.messages")}
 			>
+				{connState === "disconnected" && (
+					<div className="err-banner" role="alert">
+						<span>{t("chat.state.disconnected")}</span>
+						<button
+							type="button"
+							className="err-retry"
+							onClick={() => {
+								if (channelName) dispatch(chatListener(channelName));
+							}}
+						>
+							{t("chat.state.retry")}
+						</button>
+					</div>
+				)}
+				{messageList.length === 0 &&
+					(connState === "connecting" || connState === "idle") && (
+						<div className="skel" aria-hidden="true">
+							{[0, 1, 2, 3, 4, 5].map((i) => (
+								<div className="skel-row" key={i}>
+									<div className="sk sk-t" />
+									<div
+										className={`sk ${
+											["sk-a", "sk-c", "sk-b", "sk-c", "sk-a", "sk-b"][i]
+										}`}
+									/>
+								</div>
+							))}
+						</div>
+					)}
+				{messageList.length === 0 && connState === "connected" && (
+					<div className="state-box">
+						<div className="state-inner">
+							<div className="state-emoji" aria-hidden="true">
+								💬
+							</div>
+							<div className="state-title">
+								{t("chat.state.empty-title")}
+							</div>
+							{t("chat.state.empty-sub")}
+						</div>
+					</div>
+				)}
 				{messageList.map((msg) => {
 					// Sprint 35: subscription + gift-sub banner rows — Pusher
 					// SubscriptionEvent / GiftedSubscriptionsEvent reducer
@@ -1568,7 +1621,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							/>
 						</span>
 						<button
-							aria-label="Cancel reply"
+							aria-label={t("chat.cancel-reply")}
 							style={{ color: "var(--ms-fg-3)" }}
 							onClick={() => setReplyTarget(undefined)}
 						>
@@ -1596,7 +1649,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						<div
 							className="autocomplete chat-suggestion-menu"
 							role="listbox"
-							aria-label="Mention suggestions"
+							aria-label={t("chat.aria.mention-suggestions")}
 						>
 							{mentionSuggestions.map((uname, i) => (
 								<div
@@ -1635,7 +1688,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						<div
 							className="autocomplete chat-suggestion-menu"
 							role="listbox"
-							aria-label="Chat commands"
+							aria-label={t("chat.aria.commands")}
 						>
 							{slashSuggestions.map((def, i) => (
 								<div
@@ -1690,15 +1743,39 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							setMessageText(text);
 						}}
 						onKeyDown={handleKeyDown as any}
-						aria-label="Chat message input"
+						aria-label={t("chat.aria.message-input")}
 					/>
 
 					<div className="composer-tools" style={{ position: "relative" }}>
+							<span className="composer-status">
+								{username ? (
+									<>
+										<span className="dot" />
+										{" "}{t("chat.connected-as")}{" "}
+										<b>{username}</b>
+									</>
+								) : (
+									<span className="composer-status-off">
+										{t("chat.not-connected")}
+									</span>
+								)}
+							</span>
+							<span className="composer-tsp" />
+						{/* Faz 2: prototip sırası — Gönder solda, emoji/emote sağda */}
+						<button
+							className="composer-send"
+							type="button"
+							disabled={!messageText.trim() || sendingMessage}
+							onClick={sendMessage}
+							aria-label={t("chat.send")}
+						>
+							{t("chat.send")}
+						</button>
 						<button
 							ref={emojiButtonRef}
 							className="icon-btn"
-							title="Emoji (😀)"
-							aria-label="Open emoji picker"
+							title={t("chat.aria.emoji-title")}
+							aria-label={t("chat.aria.open-emoji")}
 							type="button"
 							style={{ width: 28, height: 28, fontSize: 15 }}
 							onClick={() => {
@@ -1712,8 +1789,8 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						<button
 							ref={smileButtonRef}
 							className="icon-btn"
-							title="Emote picker (Ctrl+E)"
-							aria-label="Open emote picker"
+							title={t("chat.aria.emote-title")}
+							aria-label={t("chat.aria.open-emote")}
 							type="button"
 							style={{ width: 28, height: 28 }}
 							onClick={() => {
@@ -1724,15 +1801,6 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						>
 							<LuSmile size={15} aria-hidden />
 						</button>
-						<button
-							className="composer-send"
-							type="button"
-							disabled={!messageText.trim() || sendingMessage}
-							onClick={sendMessage}
-							aria-label="Send message"
-						>
-							Send <LuSend size={11} aria-hidden />
-						</button>
 
 						{/* Sprint 59: Unicode emoji popover */}
 						{emojiPickerOpen && (
@@ -1740,12 +1808,12 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 								ref={emojiPopoverRef}
 								className="emoji-popover"
 								role="dialog"
-								aria-label="Emoji picker"
+								aria-label={t("chat.aria.emoji-picker")}
 								data-testid="emoji-popover"
 							>
 								<React.Suspense
 									fallback={
-										<div className="emoji-popover-loading">Yükleniyor…</div>
+										<div className="emoji-popover-loading">{t("chat.emoji-loading")}</div>
 									}
 								>
 									<EmojiPicker
@@ -1757,7 +1825,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 										autoFocusSearch={false}
 										previewConfig={{ showPreview: false }}
 										skinTonesDisabled
-										searchPlaceholder="Ara..."
+										searchPlaceholder={t("chat.emoji-search")}
 										theme={
 											(document.documentElement.getAttribute(
 												"data-theme"
@@ -1772,22 +1840,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 					</div>
 				</div>
 
-				<div className="composer-meta">
-					<span>
-						{username ? (
-							<>
-								<span style={{ color: "var(--ms-ac-mint)" }}>●</span>
-								{" Connected as "}
-								<b style={{ color: "var(--ms-fg-1)" }}>{username}</b>
-							</>
-						) : (
-							<span style={{ color: "var(--ms-fg-3)" }}>Not connected</span>
-						)}
-					</span>
-					<span className="mono num" style={{ color: "var(--ms-fg-3)", fontSize: 11 }}>
-						⏎ send · ⇧⏎ newline · : emote · Ctrl+E picker · 😀 emoji
-					</span>
-				</div>
+				{/* Faz C: composer-meta bar kaldırıldı — bağlı durumu artık composer-tools içinde (prototip parite) */}
 			</div>
 
 			{/* Emote picker modal */}
@@ -1795,6 +1848,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				open={pickerOpen}
 				onClose={() => setPickerOpen(false)}
 				index={emoteIndex}
+				allChannelSets={allChannelEmoteSets}
 				onPick={(entry) => {
 					handlePickerInsert(entry);
 				}}

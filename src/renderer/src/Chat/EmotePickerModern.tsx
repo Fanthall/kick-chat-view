@@ -33,6 +33,7 @@ import {
 	isFavoriteEmote,
 	toggleFavoriteEmote,
 } from "../../util/emoteFavorites";
+import { useTranslation } from "../../util/i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,19 @@ export interface EmotePickerModernProps {
 	onPick: (entry: EmoteEntry, options: { keepOpen: boolean }) => void;
 	onRefresh?: (tab?: EpTabKey) => void;
 	anchorRef?: React.RefObject<HTMLElement>;
+	/**
+	 * Faz 7: "Kanal" sekmesi kanala göre gruplu gösterim içindir. Tüm izlenen
+	 * kanalların ham emote set'lerini taşır (channelSlug etiketli). Verilmezse
+	 * `index.allSets` kullanılır (tek-kanal / eski davranış — geriye dönük uyumlu).
+	 */
+	allChannelSets?: EmoteSet[];
+}
+
+/** Grup gösterimi için kanal etiketi: avatar kısaltması + slug + emote sayısı. */
+interface ChannelEmoteGroup {
+	slug: string;
+	avatarLabel: string;
+	emotes: EmoteEntry[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -55,13 +69,20 @@ export interface EmotePickerModernProps {
 // dahil hepsi).
 const TAB_ORDER: EpTabKey[] = ["favorites", "kick", "seventv", "emoji"];
 
+// Values are i18n keys (resolved via t()) or literal provider names.
 const TAB_LABEL: Record<EpTabKey, string> = {
-	favorites: "Favorites",
-	kick: "Kanal",
+	favorites: "emotepicker.tab.favorites",
+	kick: "emotepicker.tab.channel",
 	seventv: "7TV",
 	bttv: "BTTV",
 	ffz: "FFZ",
-	emoji: "Kick",
+	emoji: "emotepicker.tab.emoji",
+};
+
+/** Resolve a TAB_LABEL entry: translate i18n keys, pass literal provider names through. */
+const tabLabel = (t: (k: string) => string, key: EpTabKey): string => {
+	const v = TAB_LABEL[key];
+	return v.includes(".") ? t(v) : v;
 };
 
 // ─── Provider helpers ─────────────────────────────────────────────────────────
@@ -106,6 +127,45 @@ const countForTab = (
 		(acc, s) => acc + s.emotes.length,
 		0
 	);
+};
+
+const avatarLabelFor = (slug: string): string =>
+	slug.slice(0, 2).toUpperCase();
+
+/**
+ * Faz 7 — "kick" (Kanal) sekmesi için izlenen-kanala göre gruplama.
+ * CONSTRAINT-5 (Kick precedence): bu yalnız GÖRSEL gruplamadır; hangi setlerin
+ * "kick" sekmesine dahil olduğu hâlâ filterSetsForTab("kick", ...) belirler —
+ * arama/insert/precedence davranışı değişmez, dedupe de tabEmotes ile aynı
+ * kaynaktan (aynı sets) türetildiği için tutarlıdır.
+ */
+const buildChannelGroups = (kickTabSets: EmoteSet[]): ChannelEmoteGroup[] => {
+	const bySlug = new Map<string, ChannelEmoteGroup>();
+	const noSlug: EmoteEntry[] = [];
+	for (const set of kickTabSets) {
+		const slug = set.channelSlug;
+		if (!slug) {
+			noSlug.push(...set.emotes);
+			continue;
+		}
+		const existing = bySlug.get(slug);
+		if (existing) {
+			existing.emotes.push(...set.emotes);
+		} else {
+			bySlug.set(slug, {
+				slug,
+				avatarLabel: avatarLabelFor(slug),
+				emotes: [...set.emotes],
+			});
+		}
+	}
+	const groups = Array.from(bySlug.values()).sort((a, b) =>
+		a.slug.localeCompare(b.slug)
+	);
+	if (noSlug.length) {
+		groups.push({ slug: "", avatarLabel: "?", emotes: noSlug });
+	}
+	return groups.filter((g) => g.emotes.length > 0);
 };
 
 // Provider group tallies for footer
@@ -204,7 +264,9 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 	onPick,
 	onRefresh,
 	anchorRef,
+	allChannelSets,
 }) => {
+	const { t } = useTranslation();
 	const [tab, setTab] = useState<EpTabKey>("kick");
 	const [query, setQuery] = useState("");
 	const [hovered, setHovered] = useState<EmoteEntry | undefined>();
@@ -292,6 +354,19 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 		return tabSets.flatMap((s) => s.emotes);
 	}, [tab, tabSets, favoriteEntries]);
 
+	// Faz 7: "Kanal" (kick) sekmesi izlenen-kanala göre gruplu gösterilir.
+	// allChannelSets sağlanmışsa (çok-kanallı gerçek app akışı) ondan; yoksa
+	// index.allSets'ten (tek-kanal / test) türetilir — precedence/arama index'ten
+	// gelmeye devam eder, bu yalnız grid'in görsel bölünmesidir.
+	const channelGroups = useMemo(() => {
+		if (tab !== "kick") return [] as ChannelEmoteGroup[];
+		const sourceSets = filterSetsForTab(allChannelSets ?? index.allSets, "kick");
+		return buildChannelGroups(sourceSets);
+	}, [tab, allChannelSets, index]);
+
+	const showChannelGroups =
+		tab === "kick" && !query.trim() && channelGroups.length > 0;
+
 	const queryResults = useMemo(() => {
 		const trimmed = query.trim();
 		if (!trimmed) return [] as EmoteEntry[];
@@ -312,9 +387,9 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 			ffz: 0,
 			emoji: 0,
 		};
-		for (const t of TAB_ORDER) {
-			if (t !== "favorites") {
-				counts[t] = countForTab(t, index.allSets, favoriteEntries);
+		for (const tabId of TAB_ORDER) {
+			if (tabId !== "favorites") {
+				counts[tabId] = countForTab(tabId, index.allSets, favoriteEntries);
 			}
 		}
 		return counts;
@@ -331,6 +406,28 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 	};
 
 	const previewEntry = hovered ?? displayList[0];
+
+	const renderEmoteCell = (entry: EmoteEntry) => {
+		const key = `${entry.provider}:${entry.id}:${entry.name}`;
+		return (
+			<EmoteCell
+				key={key}
+				entry={entry}
+				isFav={favoriteKeys.has(key)}
+				isHovered={
+					hovered
+						? `${hovered.provider}:${hovered.id}:${hovered.name}` === key
+						: false
+				}
+				onSelect={() => setHovered(entry)}
+				onPick={() => handlePick(entry)}
+				onContextMenu={(e) => {
+					e.preventDefault();
+					handleToggleFavorite(entry);
+				}}
+			/>
+		);
+	};
 
 	if (!open) return null;
 
@@ -355,13 +452,13 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 				<div className="modal-hd">
 					<h2 id={titleId}>
 						<LuSmile size={15} aria-hidden />
-						Emote picker
+						{t("emotepicker.title")}
 					</h2>
 					<button
 						type="button"
 						className="icon-btn"
-						aria-label="Close emote picker"
-						title="Close (Esc)"
+						aria-label={t("emotepicker.close")}
+						title={t("emotepicker.close-esc")}
 						onClick={onClose}
 						data-testid="ep-close"
 					>
@@ -371,22 +468,22 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 
 				{/* Tabs */}
 				<div className="ep-tabs" role="tablist">
-					{TAB_ORDER.map((t) => (
+					{TAB_ORDER.map((tabId) => (
 						<button
-							key={t}
+							key={tabId}
 							type="button"
 							role="tab"
-							aria-selected={tab === t}
-							className={`ep-tab${tab === t ? " is-active" : ""}`}
+							aria-selected={tab === tabId}
+							className={`ep-tab${tab === tabId ? " is-active" : ""}`}
 							onClick={() => {
-								setTab(t);
+								setTab(tabId);
 								setQuery("");
 								setHovered(undefined);
 							}}
-							data-testid={`ep-tab-${t}`}
+							data-testid={`ep-tab-${tabId}`}
 						>
-							{TAB_LABEL[t]}
-							<span className="count">{tabCounts[t]}</span>
+							{tabLabel(t, tabId)}
+							<span className="count">{tabCounts[tabId]}</span>
 						</button>
 					))}
 				</div>
@@ -405,8 +502,8 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 								setQuery(e.target.value);
 								setHovered(undefined);
 							}}
-							placeholder={`Search ${TAB_LABEL[tab]}…`}
-							aria-label={`Search ${TAB_LABEL[tab]} emotes`}
+							placeholder={`${t("emotepicker.search")} ${tabLabel(t, tab)}…`}
+							aria-label={`${t("emotepicker.search")} ${tabLabel(t, tab)} ${t("emotepicker.search-emotes")}`}
 							data-testid="ep-search-input"
 						/>
 					</div>
@@ -414,8 +511,8 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 						<button
 							type="button"
 							className="btn ghost"
-							title="Refresh this provider"
-							aria-label="Refresh this provider"
+							title={t("emotepicker.refresh-provider")}
+							aria-label={t("emotepicker.refresh-provider")}
 							onClick={() => onRefresh(tab)}
 						>
 							<LuRefreshCw size={13} aria-hidden />
@@ -429,7 +526,7 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 						className="ep-grid scroll"
 						data-testid="ep-grid"
 					>
-						{displayList.length === 0 ? (
+						{displayList.length === 0 && !showChannelGroups ? (
 							<div
 								className="ep-empty"
 								style={{ gridColumn: "1 / -1" }}
@@ -450,33 +547,24 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 								) : (
 									<div>
 										{tab === "favorites"
-											? "No favorites yet. Right-click an emote to favorite."
-											: `No ${TAB_LABEL[tab]} emotes loaded.`}
+											? t("emotepicker.no-favorites")
+											: `${tabLabel(t, tab)} ${t("emotepicker.no-loaded")}`}
 									</div>
 								)}
 							</div>
+						) : showChannelGroups ? (
+							channelGroups.map((group) => (
+								<React.Fragment key={group.slug || "__no-slug__"}>
+									<div className="ep-group-hd" data-testid={`ep-group-${group.slug}`}>
+										<span className="ava">{group.avatarLabel}</span>
+										{group.slug || t("emotepicker.tab.channel")}
+										<span className="cnt">{group.emotes.length}</span>
+									</div>
+									{group.emotes.map((entry) => renderEmoteCell(entry))}
+								</React.Fragment>
+							))
 						) : (
-							displayList.map((entry) => {
-								const key = `${entry.provider}:${entry.id}:${entry.name}`;
-								return (
-									<EmoteCell
-										key={key}
-										entry={entry}
-										isFav={favoriteKeys.has(key)}
-										isHovered={
-											hovered
-												? `${hovered.provider}:${hovered.id}:${hovered.name}` === key
-												: false
-										}
-										onSelect={() => setHovered(entry)}
-										onPick={() => handlePick(entry)}
-										onContextMenu={(e) => {
-											e.preventDefault();
-											handleToggleFavorite(entry);
-										}}
-									/>
-								);
-							})
+							displayList.map((entry) => renderEmoteCell(entry))
 						)}
 					</div>
 
@@ -507,20 +595,20 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 								</div>
 								<div className="ep-preview-meta" data-testid="ep-preview-meta">
 									<ProviderBadge provider={previewEntry.provider} />
-									{" from "}
+									{" "}{t("emotepicker.from")}{" "}
 									{isKickProvider(previewEntry.provider)
-										? "channel"
-										: "global set"}
+										? t("emotepicker.from-channel")
+										: t("emotepicker.from-global")}
 								</div>
 								<div className="ep-preview-tags" data-testid="ep-preview-tags">
 									{previewEntry.animated && (
 										<span className="pbadge gif">GIF</span>
 									)}
 									{previewEntry.zeroWidth && (
-										<span className="pbadge zw">Zero-width</span>
+										<span className="pbadge zw">{t("emotepicker.tag.zero-width")}</span>
 									)}
 									{previewEntry.subscribersOnly && (
-										<span className="pbadge sub">Subscriber</span>
+										<span className="pbadge sub">{t("emotepicker.tag.subscriber")}</span>
 									)}
 								</div>
 								<div
@@ -531,12 +619,12 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 										marginBottom: 12,
 									}}
 								>
-									Click to insert into composer.
+									{t("emotepicker.insert-hint")}
 									<br />
-									Right-click to{" "}
+									{t("emotepicker.right-click")}{" "}
 									{isFavoriteEmote(refOf(previewEntry))
-										? "unfavorite"
-										: "favorite"}
+										? t("emotepicker.unfavorite")
+										: t("emotepicker.favorite")}
 									.
 								</div>
 								<div className="ep-preview-actions">
@@ -547,8 +635,8 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 									>
 										<LuStar size={12} aria-hidden />
 										{isFavoriteEmote(refOf(previewEntry))
-											? "Unfavorite"
-											: "Favorite"}
+											? t("emotepicker.unfavorite")
+											: t("emotepicker.favorite")}
 									</button>
 									<button
 										type="button"
@@ -556,14 +644,14 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 										onClick={() => handlePick(previewEntry)}
 										data-testid="ep-insert-btn"
 									>
-										Insert
+										{t("emotepicker.insert")}
 									</button>
 								</div>
 							</>
 						) : (
 							<div className="ep-empty">
 								<LuSmile size={22} aria-hidden />
-								Hover an emote to preview
+								{t("emotepicker.hover-preview")}
 							</div>
 						)}
 					</div>
@@ -572,12 +660,12 @@ const EmotePickerModern: FunctionComponent<EmotePickerModernProps> = ({
 				{/* Footer: provider status */}
 				<div className="prov-status">
 					<div className="row">
-						<div className="prov-stat" title="Kick emotes">
+						<div className="prov-stat" title={t("emotepicker.provider.kick-emotes")}>
 							<span className="prov-dot ok" />
 							<span style={{ color: "var(--fg-2)" }}>Kick</span>
 							<span className="mono num">{tally.kick}</span>
 						</div>
-						<div className="prov-stat" title="7TV emotes">
+						<div className="prov-stat" title={t("emotepicker.provider.7tv-emotes")}>
 							<span className="prov-dot ok" />
 							<span style={{ color: "var(--fg-2)" }}>7TV</span>
 							<span className="mono num">{tally.s7tv}</span>

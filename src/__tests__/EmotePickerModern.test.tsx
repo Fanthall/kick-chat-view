@@ -344,7 +344,7 @@ describe("EmotePickerModern", () => {
 		});
 
 		expect(screen.getByTestId("ep-empty")).toBeInTheDocument();
-		expect(screen.getByText(/No favorites yet/i)).toBeInTheDocument();
+		expect(screen.getByText(/Henüz favori yok/i)).toBeInTheDocument();
 	});
 
 	// Case 9: Provider footer shows correct totals
@@ -355,6 +355,111 @@ describe("EmotePickerModern", () => {
 
 		// 4 total emotes — "4 total" should appear
 		expect(screen.getByText(/4 total/i)).toBeInTheDocument();
+	});
+
+	// Case 10 (Faz 7): "Kanal" sekmesi izlenen-kanala göre gruplu gösterir.
+	it("Kanal tab groups channel emotes by watched-channel slug (allChannelSets)", async () => {
+		const fanthallEmote = makeEmoteEntry({
+			id: "1",
+			name: "FanthallEmote",
+			provider: "kick-channel",
+			scope: "channel",
+			channelSlug: "fanthall",
+			insertText: "[emote:1:FanthallEmote]",
+		});
+		const xqcEmote = makeEmoteEntry({
+			id: "2",
+			name: "XqcEmote",
+			provider: "kick-channel",
+			scope: "channel",
+			channelSlug: "xqc",
+			insertText: "[emote:2:XqcEmote]",
+		});
+		const allChannelSets: EmoteSet[] = [
+			{
+				id: "fanthall-set",
+				provider: "kick-channel",
+				scope: "channel",
+				channelSlug: "fanthall",
+				name: "fanthall Kick Channel",
+				emotes: [fanthallEmote],
+			},
+			{
+				id: "xqc-set",
+				provider: "kick-channel",
+				scope: "channel",
+				channelSlug: "xqc",
+				name: "xqc Kick Channel",
+				emotes: [xqcEmote],
+			},
+		];
+		const index = makeIndex([fanthallEmote, xqcEmote]);
+
+		render(
+			<EmotePickerModern
+				open
+				onClose={jest.fn()}
+				index={index}
+				onPick={jest.fn()}
+				allChannelSets={allChannelSets}
+			/>
+		);
+
+		// Default tab is "kick" (Kanal) — two group headers expected.
+		const fanthallGroup = screen.getByTestId("ep-group-fanthall");
+		const xqcGroup = screen.getByTestId("ep-group-xqc");
+		expect(fanthallGroup).toBeInTheDocument();
+		expect(xqcGroup).toBeInTheDocument();
+		expect(fanthallGroup.textContent).toContain("fanthall");
+		expect(fanthallGroup.textContent).toContain("1");
+		expect(xqcGroup.textContent).toContain("xqc");
+
+		const grid = screen.getByTestId("ep-grid");
+		expect(grid.querySelector('img[alt="FanthallEmote"]')).toBeTruthy();
+		expect(grid.querySelector('img[alt="XqcEmote"]')).toBeTruthy();
+	});
+
+	// Case 11 (Faz 7): arama aktifken gruplama gösterilmez (düz liste).
+	it("does not show channel groups while searching", async () => {
+		const fanthallEmote = makeEmoteEntry({
+			id: "1",
+			name: "FanthallEmote",
+			provider: "kick-channel",
+			scope: "channel",
+			channelSlug: "fanthall",
+			insertText: "[emote:1:FanthallEmote]",
+		});
+		const allChannelSets: EmoteSet[] = [
+			{
+				id: "fanthall-set",
+				provider: "kick-channel",
+				scope: "channel",
+				channelSlug: "fanthall",
+				name: "fanthall Kick Channel",
+				emotes: [fanthallEmote],
+			},
+		];
+		const index = makeIndex([fanthallEmote]);
+
+		render(
+			<EmotePickerModern
+				open
+				onClose={jest.fn()}
+				index={index}
+				onPick={jest.fn()}
+				allChannelSets={allChannelSets}
+			/>
+		);
+
+		expect(screen.getByTestId("ep-group-fanthall")).toBeInTheDocument();
+
+		await act(async () => {
+			fireEvent.change(screen.getByTestId("ep-search-input"), {
+				target: { value: "Fanthall" },
+			});
+		});
+
+		expect(screen.queryByTestId("ep-group-fanthall")).toBeFalsy();
 	});
 });
 

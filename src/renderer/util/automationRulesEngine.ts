@@ -18,6 +18,7 @@ import {
 	matchesChatPattern,
 	matchesMentionTrigger,
 	ruleAppliesToChannel,
+	repeatCountForAmount,
 } from "./automationRules";
 import {
 	AUTOMATION_RULES_CHANGED,
@@ -59,6 +60,28 @@ const wasRecentGiftRecipient = (
 		giftRecipients.delete(k);
 		return false;
 	}
+	return true;
+};
+
+// FIX-GIFT (2026-07-04): Adı GELMEYEN hediye alıcıları için sayaç-tabanlı bastırma.
+// Kick bazen gifted_usernames'i BOŞ/eksik yollar ama adet (amount) verir. O zaman
+// per-recipient işaretleme çöker; bunun yerine "adsız beklenen alıcı sayısı" tutulur
+// ve ardından gelen o kadar SubscriptionEvent (recipient çift-yayını) bastırılır.
+// Adı BİLİNEN alıcılar zaten per-recipient işaretle bastırıldığından sayaç yalnız
+// (amount - bilinenAd) kadar artar → GERÇEK (kendi parasıyla) sub'lar ETKİLENMEZ.
+const giftPendingUnnamed = new Map<string, number>(); // slug.toLowerCase → kalan adsız alıcı
+const addGiftPendingUnnamed = (channelSlug: string, n: number) => {
+	if (n <= 0) return;
+	const k = channelSlug.toLowerCase();
+	giftPendingUnnamed.set(k, (giftPendingUnnamed.get(k) || 0) + n);
+};
+/** Bekleyen adsız alıcı varsa 1 azalt + true döndür (bu sub bir hediye alıcısı). */
+const consumeGiftPendingUnnamed = (channelSlug: string): boolean => {
+	const k = channelSlug.toLowerCase();
+	const n = giftPendingUnnamed.get(k) || 0;
+	if (n <= 0) return false;
+	if (n === 1) giftPendingUnnamed.delete(k);
+	else giftPendingUnnamed.set(k, n - 1);
 	return true;
 };
 
@@ -231,15 +254,26 @@ const fireAction = async (rule: ChannelRule, ctx: AutomationContext) => {
 			);
 			return;
 		}
-		try {
-			const w: any = window as any;
-			await w.electron.kick.sendChatMessage({
-				broadcaster_user_id: broadcasterId,
-				content,
-				type: "user",
-			});
-		} catch (err) {
-			console.log("[automation] sendChatMessage failed", err);
+		// FIX-GIFT (2026-07-04): repeat yoksa tek mesaj (default — hediye adedi fark etmez).
+		// "tiered" ise hediye adedine göre count (maxCount tavanlı), aralara delaySec bekleme.
+		const repeat = rule.action.repeat;
+		const count = repeatCountForAmount(repeat, ctx.amount);
+		const delayMs = Math.max(0, repeat?.delaySec ?? 0) * 1000;
+		const w: any = window as any;
+		for (let i = 0; i < count; i++) {
+			if (i > 0 && delayMs > 0) {
+				await new Promise((r) => setTimeout(r, delayMs));
+			}
+			try {
+				await w.electron.kick.sendChatMessage({
+					broadcaster_user_id: broadcasterId,
+					content,
+					type: "user",
+				});
+			} catch (err) {
+				console.log("[automation] sendChatMessage failed", err);
+				break;
+			}
 		}
 	}
 };
@@ -303,13 +337,19 @@ export const evaluateSubEvent = (
 			: typeof months === "number" && months > 1;
 	// Sprint 58b: Eğer bu kullanıcı son 5dk içinde hediye sub aldıysa,
 	// includeGifted=false (default) olan rule'lar atlanır.
-	const isGiftRecipient =
+	// Sprint 58b + FIX-GIFT (2026-07-04): hediye alan kullanıcı için includeGifted=false
+	// rutinleri atlanır. Adı biliniyorsa per-recipient işaret; adı gelmediyse (Kick boş
+	// payload) amount'tan kurulan adsız-alıcı sayacı BU sub'ı tüketir. Gerçek sub'lar
+	// (sayaç 0 + ad işaretsiz) ETKİLENMEZ.
+	const isNamedRecipient =
 		!!username && wasRecentGiftRecipient(channelSlug, username);
+	const suppressAsGift =
+		isNamedRecipient || consumeGiftPendingUnnamed(channelSlug);
 	for (const rule of cachedRules) {
 		if (!ruleAppliesToChannel(rule, channelSlug)) continue;
 		if (rule.trigger.type !== "sub_event") continue;
 		const includeGifted = rule.trigger.includeGifted === true;
-		if (isGiftRecipient && !includeGifted) continue;
+		if (suppressAsGift && !includeGifted) continue;
 		// FIX-3: subType filtresi. "any" (veya tanımsız) → her zaman geçer.
 		const subType = rule.trigger.subType ?? "any";
 		if (subType === "new" && isRenewal) continue;
@@ -326,15 +366,21 @@ export const evaluateGiftSubEvent = (
 	recipients?: string[]
 ) => {
 	ensureInitialized();
-	// Sprint 58b: alıcıları cache'le ki birazdan SubscriptionEvent gelirse
-	// filtreleyebilelim.
+	// Sprint 58b: adı bilinen alıcıları cache'le (per-recipient bastırma).
+	let namedCount = 0;
 	if (Array.isArray(recipients)) {
 		for (const r of recipients) {
 			if (typeof r === "string" && r.trim()) {
 				markGiftRecipient(channelSlug, r.trim());
+				namedCount++;
 			}
 		}
 	}
+	// FIX-GIFT (2026-07-04): amount adı bilinenlerden fazlaysa, adsız alıcılar için
+	// sayaç-tabanlı bastırma kur (gerçek sub'ları etkilemeden).
+	const expectedRecipients =
+		typeof amount === "number" && amount > 0 ? amount : namedCount;
+	addGiftPendingUnnamed(channelSlug, Math.max(0, expectedRecipients - namedCount));
 	for (const rule of cachedRules) {
 		if (!ruleAppliesToChannel(rule, channelSlug)) continue;
 		if (rule.trigger.type !== "gift_sub_event") continue;
@@ -349,6 +395,7 @@ export const evaluateGiftSubEvent = (
 // Test/debug için cache'i sıfırlama helper'ı (sadece test).
 export const __resetGiftRecipientCacheForTest = () => {
 	giftRecipients.clear();
+	giftPendingUnnamed.clear();
 };
 
 export const evaluateFollowEvent = (

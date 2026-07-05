@@ -16,6 +16,9 @@ export interface UserMessage {
 	type: string;
 	created_at: string;
 	sender: User;
+	// Faz H: gift-sub-banner satırında alıcı listesi — aynı gifter'ın birden çok
+	// GiftedSubscriptionsEvent'ini TEK banner'da birleştirmek için (çift banner fix).
+	giftedUsernames?: string[];
 	metadata?: {
 		original_sender?: {
 			id: number;

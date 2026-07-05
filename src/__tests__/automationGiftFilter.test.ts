@@ -147,6 +147,26 @@ describe("automation gift recipient filter (Sprint 58b)", () => {
 		expect(toast).toHaveBeenCalledTimes(1);
 	});
 
+	// FIX-GIFT (2026-07-04): Kick alıcı adlarını HİÇ yollamayıp yalnız amount verince
+	// (gifted_usernames boş), amount kadar sub sayaçla bastırılır; sonraki gerçek sub tetiklenir.
+	test("adsız hediye (boş isim + amount) — amount kadar sub bastırılır, gerçek sub tetiklenir", () => {
+		saveAutomationRules([buildSubRule()]);
+		const { toast } = require("react-toastify");
+		(toast as jest.Mock).mockClear();
+
+		// Kick: isim yok, amount=2.
+		evaluateGiftSubEvent("kanal", "gifter", 2, []);
+
+		// 2 alıcı SubscriptionEvent'i (işaretsiz) — sayaç bastırır.
+		evaluateSubEvent("kanal", "alice", 1);
+		evaluateSubEvent("kanal", "bob", 1);
+		expect(toast).not.toHaveBeenCalled();
+
+		// 3. sub gerçek — tetiklenmeli.
+		evaluateSubEvent("kanal", "charlie", 1);
+		expect(toast).toHaveBeenCalledTimes(1);
+	});
+
 	test("storage roundtrip — includeGifted persist eder", () => {
 		const rule = buildSubRule({
 			trigger: { type: "sub_event", includeGifted: true },

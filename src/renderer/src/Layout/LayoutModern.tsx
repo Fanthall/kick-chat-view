@@ -65,8 +65,8 @@ const computeUptime = (startedAt?: string): string => {
 	const totalSec = Math.floor(ms / 1000);
 	const h = Math.floor(totalSec / 3600);
 	const m = Math.floor((totalSec % 3600) / 60);
-	if (h > 0) return `${h}h ${m}m`;
-	return `${m}m`;
+	if (h > 0) return `${h}s ${m}d`;
+	return `${m}d`;
 };
 
 /**
@@ -203,7 +203,7 @@ const LayoutModern: FunctionComponent = () => {
 	const viewerCount = useMemo(() => {
 		const v = streamMeta?.viewerCount;
 		if (v === undefined || v === null) return "--";
-		return v.toLocaleString("en-US");
+		return v.toLocaleString("tr-TR");
 	}, [streamMeta?.viewerCount]);
 	// Fix 6 category
 	const categoryName = streamMeta?.category?.name ?? (isLive ? "—" : t("topbar.offline"));
@@ -461,12 +461,24 @@ const LayoutModern: FunctionComponent = () => {
 	// Sprint 15: kanal logosu (profile_pic via Kick API, cached)
 	const activeChannelPic = useProfilePic(activeSlug);
 
-	// Secondary channels (not active)
-	const secondaryChannels = channels.filter((c) => c.slug !== activeSlug);
+	// Faz B: aktif kanal da tab olarak (highlighted) gösterilir (prototip parite)
+	const tabChannels = channels;
+
+	// Faz 0: rol CSS iskeleti (.mod-only / .viewer-only, App.css) için shell
+	// köküne data-role yazılır. Kaynak: mevcut roleInfo (owner/mod tespiti,
+	// yukarıda hesaplanıyor). Rol context'inin ortak bir `useChannelRole`
+	// selector'a çıkarılması Faz 4 kapsamındadır — burada yalnız mevcut
+	// veriden attribute türetiliyor.
+	const shellRole: "viewer" | "mod" | "owner" = roleInfo.isOwner
+		? "owner"
+		: roleInfo.isMod
+			? "mod"
+			: "viewer";
 
 	return (
 		<div
 			data-app-shell={SHELL_ATTR}
+			data-role={shellRole}
 			style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100%", width: "100%" }}
 		>
 			{/* ── Topbar ── */}
@@ -497,7 +509,7 @@ const LayoutModern: FunctionComponent = () => {
 								<span
 									className="tb-live"
 									role="status"
-									aria-label="Stream is live"
+									aria-label={t("topbar.stream-live")}
 									data-testid="tb-live-badge"
 								>
 									{t("topbar.live")}
@@ -531,25 +543,31 @@ const LayoutModern: FunctionComponent = () => {
 								)}
 							</div>
 						)}
-						{/* Fix 4+5: secondary channel chips row */}
-						<div className="tb-tabs" role="tablist" aria-label="Channel tabs">
-							{secondaryChannels.map((ch) => {
+					</div>
+					{/* Kanal tab'lari — tb-meta disina alindi (prototip: isim blogunun saginda) */}
+					<div className="tb-tabs" role="tablist" aria-label={t("topbar.channel-tabs")}>
+							{tabChannels.map((ch) => {
 								const unread = unreadCounts[ch.slug] ?? 0;
+								// Faz 1: kanal-başı canlı/çevrimdışı noktası — seçili
+								// olmasa da her sekmede görünür (prototip: .tb-dot.live/.off).
+								const chIsLive = !!messages.streamMetaByChannel?.[ch.slug]?.isLive;
 								return (
-									<div key={ch.slug} className="tb-tab" role="tab" aria-selected={false}>
+									<div
+										key={ch.slug}
+										className={`tb-tab ${ch.slug === activeSlug ? "is-active" : ""}`}
+										role="tab"
+										aria-selected={ch.slug === activeSlug}
+									>
 										<button
 											type="button"
 											className="tb-tab-body"
-											title={`Switch to ${ch.slug}`}
+											title={`${t("topbar.switch-to")} ${ch.slug}`}
 											onClick={() => onSelectChannel(ch.slug)}
 										>
 											<span
-												className="dot"
-												style={
-													messages.connectionStatusByChannel?.[ch.slug] === "connected"
-														? {}
-														: { background: "var(--fg-4, #5a5e68)" }
-												}
+												className={`dot ${chIsLive ? "live" : "off"}`}
+												role="status"
+												aria-label={chIsLive ? t("topbar.stream-live") : t("topbar.offline")}
 											/>
 											{ch.slug}
 											{unread > 0 && (
@@ -564,8 +582,8 @@ const LayoutModern: FunctionComponent = () => {
 										<button
 											type="button"
 											className="tb-tab-close"
-											title={`Close ${ch.slug}`}
-											aria-label={`Close ${ch.slug}`}
+											title={`${t("topbar.close-tab")} ${ch.slug}`}
+											aria-label={`${t("topbar.close-tab")} ${ch.slug}`}
 											onClick={(e) => {
 												e.stopPropagation();
 												onCloseChannel(ch.slug);
@@ -587,7 +605,7 @@ const LayoutModern: FunctionComponent = () => {
 									data-testid="tb-add-btn"
 									onClick={() => setAddPopoverOpen((v) => !v)}
 								>
-									<Icon name="plus" size={12} />
+									<Icon name="plus" size={12} /> {t("topbar.add-channel-short")}
 								</button>
 								<AddChannelPopover
 									open={addPopoverOpen}
@@ -596,16 +614,15 @@ const LayoutModern: FunctionComponent = () => {
 								/>
 							</div>
 						</div>
-					</div>
 				</div>
 
 				{/* Middle zone: .tb-stats — Fix 6 */}
-				<div className="tb-stats" aria-label="Stream stats" data-testid="tb-stats">
-					<div className="tb-stat" title="Viewers">
+				<div className="tb-stats" aria-label={t("topbar.stream-stats")} data-testid="tb-stats">
+					<div className="tb-stat" title={t("topbar.viewers-title")}>
 						<Icon name="eye" size={13} />
 						<span className="num" data-testid="tb-viewers">{viewerCount}</span>
 					</div>
-					<div className="tb-stat" title="Uptime">
+					<div className="tb-stat" title={t("topbar.uptime-title")}>
 						<Icon name="timeout" size={13} />
 						<span className="num mono" data-testid="tb-uptime">{uptime}</span>
 					</div>
@@ -613,21 +630,22 @@ const LayoutModern: FunctionComponent = () => {
 					    .tb-meta-stream satırında (kanal adı altında) gözüküyor,
 					    burada duplicate oluyordu. */}
 					{/* Role — Fix 6 */}
-					{(roleInfo.isOwner || roleInfo.isMod) && (
-						<>
-							<div className="tb-stat-sep" />
-							<div className="tb-role" data-testid="tb-role">
-								{roleInfo.isOwner && (
-									<span className="tb-role-badge">Owner</span>
-								)}
-								{roleInfo.isMod && (
-									<span style={{ fontSize: 12, color: "var(--fg-2, #b6b9c0)" }}>
-										{roleInfo.isOwner ? "+ Moderator badge observed" : "Moderator"}
-									</span>
-								)}
-							</div>
-						</>
-					)}
+					{/* Faz B: rol rozeti HER rolde (viewer dahil) — prototip parite */}
+					<>
+						<div className="tb-stat-sep" />
+						<div
+							className={`tb-role ${roleInfo.isOwner ? "owner" : roleInfo.isMod ? "mod" : "viewer"}`}
+							data-testid="tb-role"
+						>
+							{roleInfo.isOwner ? (
+								<span>📡 {t("topbar.owner")}</span>
+							) : roleInfo.isMod ? (
+								<span>🛡 {t("topbar.moderator")}</span>
+							) : (
+								<span>👤 {t("topbar.viewer")}</span>
+							)}
+						</div>
+					</>
 				</div>
 
 				{/* Right zone: .tb-actions — Fix 7 */}
@@ -643,7 +661,7 @@ const LayoutModern: FunctionComponent = () => {
 								: ""
 						}`}
 						title={t("topbar.activity")}
-						aria-label="Toggle activity panel"
+						aria-label={t("topbar.toggle-activity")}
 						type="button"
 						data-testid="tb-btn-activity"
 						onClick={() => {
@@ -667,7 +685,7 @@ const LayoutModern: FunctionComponent = () => {
 								: ""
 						}`}
 						title={t("topbar.moderation")}
-						aria-label="Toggle moderation panel"
+						aria-label={t("topbar.toggle-moderation")}
 						type="button"
 						data-testid="tb-btn-moderation"
 						onClick={() => {
@@ -688,7 +706,7 @@ const LayoutModern: FunctionComponent = () => {
 					<button
 						className="icon-btn"
 						title={activeSlug ? t("topbar.refresh") : t("topbar.no-channel")}
-						aria-label="Refresh channel data"
+						aria-label={t("topbar.refresh-channel")}
 						type="button"
 						data-testid="tb-btn-refresh"
 						disabled={!activeSlug}
@@ -704,7 +722,7 @@ const LayoutModern: FunctionComponent = () => {
 						<button
 							className={`icon-btn ${streamEditOpen ? "is-on" : ""}`}
 							title={t("topbar.edit-stream")}
-							aria-label="Edit stream"
+							aria-label={t("topbar.edit-stream")}
 							type="button"
 							data-testid="tb-btn-edit-stream"
 							onClick={() => setStreamEditOpen(true)}
@@ -715,7 +733,7 @@ const LayoutModern: FunctionComponent = () => {
 					<button
 						className={`icon-btn ${settingsOpen ? "is-on" : ""}`}
 						title={t("topbar.settings")}
-						aria-label="Open settings"
+						aria-label={t("topbar.open-settings")}
 						type="button"
 						data-testid="tb-btn-settings"
 						onClick={() => setSettingsOpen(true)}
@@ -739,21 +757,21 @@ const LayoutModern: FunctionComponent = () => {
 				<section
 					className="panel"
 					style={{ minWidth: 0 }}
-					aria-label="Chat"
+					aria-label={t("topbar.chat")}
 				>
 					<ChatModern onSelectModUser={setSelectedModUser} />
 				</section>
 
 				{/* Activity panel — narrow viewport'ta grid'den cikar, drawer'da render */}
 				{!isNarrow && showActivity && (
-					<aside className="panel" aria-label="Activity">
+					<aside className="panel" aria-label={t("topbar.activity-panel")}>
 						<ActivityViewModern />
 					</aside>
 				)}
 
 				{/* Moderation panel — narrow viewport'ta grid'den cikar, drawer'da render */}
 				{!isNarrow && showModeration && (
-					<aside className="panel" aria-label="Moderation">
+					<aside className="panel" aria-label={t("topbar.moderation-panel")}>
 						<ModActionsModern
 							isOwner={roleInfo.isOwner}
 							isMod={roleInfo.isMod}
@@ -791,8 +809,8 @@ const LayoutModern: FunctionComponent = () => {
 									?.catch(() => {});
 								setDrawerPanel(undefined);
 							}}
-							aria-label="Open in separate window"
-							title="Open in separate window"
+							aria-label={t("topbar.open-separate")}
+							title={t("topbar.open-separate")}
 							style={{ position: "absolute", top: 6, right: 38, zIndex: 2 }}
 						>
 							<Icon name="popOut" size={14} />
@@ -823,38 +841,29 @@ const LayoutModern: FunctionComponent = () => {
 			{/* Fix 8: Settings modal */}
 			{settingsOpen && (
 				<div
-					className="modal-scrim"
-					data-testid="settings-modal-scrim"
-					onClick={(e) => {
-						if (e.target === e.currentTarget) setSettingsOpen(false);
-					}}
+					className="settings-screen"
+					role="region"
+					aria-label={t("settings.title")}
+					data-testid="settings-screen"
 				>
-					<div
-						className="modal"
-						role="dialog"
-						aria-modal="true"
-						aria-label={t("settings.title")}
-						style={{ maxWidth: 980, height: 640 }}
-						data-testid="settings-modal"
-					>
-						<div className="modal-hd">
-							<h2 style={{ display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
-								<Icon name="settings" size={15} />
-								{t("settings.title")}
-							</h2>
-							<button
-								className="icon-btn"
-								type="button"
-								aria-label={`${t("topbar.close")} ${t("settings.title").toLowerCase()}`}
-								title={t("topbar.close")}
-								onClick={() => setSettingsOpen(false)}
-							>
-								<Icon name="x" size={14} />
-							</button>
-						</div>
-						<div className="modal-body">
-							<SettingsModern />
-						</div>
+					<div className="settings-screen-hd">
+						<button
+							className="icon-btn"
+							type="button"
+							aria-label={t("topbar.close")}
+							title={t("topbar.close")}
+							data-testid="settings-back"
+							onClick={() => setSettingsOpen(false)}
+						>
+							<span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>‹</span>
+						</button>
+						<h2 style={{ display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+							<Icon name="settings" size={15} />
+							{t("settings.title")}
+						</h2>
+					</div>
+					<div className="settings-screen-body">
+						<SettingsModern />
 					</div>
 				</div>
 			)}

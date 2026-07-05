@@ -85,11 +85,28 @@ export type RuleTrigger =
 			fireImmediately?: boolean;
 	  };
 
+/**
+ * FIX-GIFT (2026-07-04): send_message için opsiyonel çok-mesaj / kademeli tekrar.
+ * DEFAULT (repeat yok) = TEK mesaj, hediye adedi fark etmez. "tiered" açıkken
+ * mesaj sayısı hediye adedine göre basamaklanır, maxCount ile sınırlıdır.
+ */
+export interface RuleRepeat {
+	mode: "tiered";
+	/** Mesajlar arası bekleme (saniye). */
+	delaySec: number;
+	/** Güvenlik tavanı — asla bundan fazla mesaj gönderilmez (Kick rate-limit). */
+	maxCount: number;
+	/** amount >= minAmount olan en yüksek tier'ın count'u seçilir. */
+	tiers: { minAmount: number; count: number }[];
+}
+
 export type RuleAction =
 	| {
 			type: "send_message";
 			/** Placeholder destekli mesaj içeriği. */
 			content: string;
+			/** Opsiyonel çok-mesaj / kademeli tekrar. Yoksa tek mesaj. */
+			repeat?: RuleRepeat;
 	  }
 	| {
 			type: "send_toast";
@@ -132,6 +149,40 @@ export const fillPlaceholders = (
 		.replace(/\{channel\}/g, ctx.channelSlug || "")
 		.replace(/\{reward\}/g, ctx.reward || "");
 };
+
+/**
+ * Hediye adedine göre gönderilecek mesaj sayısı. repeat yoksa / amount yoksa /
+ * eşik yoksa → 1 (default). Her zaman [1, maxCount] aralığına kıstırılır.
+ */
+export const repeatCountForAmount = (
+	repeat: RuleRepeat | undefined,
+	amount: number | undefined
+): number => {
+	if (!repeat) return 1;
+	const cap = Math.max(1, repeat.maxCount || 1);
+	if (typeof amount !== "number" || amount <= 0) return 1;
+	let count = 1;
+	for (const tier of repeat.tiers || []) {
+		if (typeof tier.minAmount === "number" && amount >= tier.minAmount) {
+			count = Math.max(count, tier.count || 1);
+		}
+	}
+	return Math.min(Math.max(1, count), cap);
+};
+
+/** UI/yeni kural için makul varsayılan tiered repeat (kullanıcı düzenler). */
+export const defaultRepeat = (): RuleRepeat => ({
+	mode: "tiered",
+	delaySec: 10,
+	maxCount: 5,
+	tiers: [
+		{ minAmount: 1, count: 1 },
+		{ minAmount: 5, count: 2 },
+		{ minAmount: 10, count: 3 },
+		{ minAmount: 25, count: 4 },
+		{ minAmount: 50, count: 5 },
+	],
+});
 
 /** Rule'un bu kanalda aktif olup olmadığını kontrol et. */
 export const ruleAppliesToChannel = (

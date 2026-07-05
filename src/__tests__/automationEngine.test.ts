@@ -381,6 +381,65 @@ describe("Action: send_message", () => {
 		expect(call.content).toBe("Hello alice!");
 		expect(call.type).toBe("user");
 	});
+
+	// FIX-GIFT (2026-07-04): tiered repeat — hediye adedine göre çok mesaj (maxCount tavanlı).
+	test("send_message repeat(tiered) → amount'a göre çok mesaj (delaySec=0)", async () => {
+		saveAutomationRules([
+			buildRule({
+				trigger: { type: "gift_sub_event" },
+				action: {
+					type: "send_message",
+					content: "tebrikler {username}",
+					repeat: {
+						mode: "tiered",
+						delaySec: 0,
+						maxCount: 5,
+						tiers: [
+							{ minAmount: 1, count: 1 },
+							{ minAmount: 5, count: 2 },
+							{ minAmount: 10, count: 3 },
+						],
+					},
+				},
+			}),
+		]);
+		evaluateGiftSubEvent("kanal", "Bob", 10, []); // amount=10 → tier count 3
+		for (let i = 0; i < 12; i++) await new Promise((r) => setTimeout(r, 0));
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(3);
+	});
+
+	test("send_message repeat(tiered) maxCount tavanı aşılmaz", async () => {
+		saveAutomationRules([
+			buildRule({
+				trigger: { type: "gift_sub_event" },
+				action: {
+					type: "send_message",
+					content: "x",
+					repeat: {
+						mode: "tiered",
+						delaySec: 0,
+						maxCount: 5,
+						tiers: [{ minAmount: 1, count: 99 }], // count tavanı aşıyor
+					},
+				},
+			}),
+		]);
+		evaluateGiftSubEvent("kanal", "Bob", 100, []);
+		for (let i = 0; i < 12; i++) await new Promise((r) => setTimeout(r, 0));
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(5); // maxCount
+	});
+
+	test("send_message repeat YOKSA tek mesaj (default — adet fark etmez)", async () => {
+		saveAutomationRules([
+			buildRule({
+				trigger: { type: "gift_sub_event" },
+				action: { type: "send_message", content: "tek" },
+			}),
+		]);
+		evaluateGiftSubEvent("kanal", "Bob", 50, []);
+		for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0));
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(1);
+	});
 });
 
 // ─── Disabled rule ──────────────────────────────────────────────────────────

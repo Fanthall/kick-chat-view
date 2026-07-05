@@ -17,6 +17,7 @@ import React, {
 	useState,
 } from "react";
 import MessageActionsFunc from "../../store/actions/chatMessage";
+import { chatListener } from "../../util/chatConnection";
 import { buildUserWindowPayload } from "../../util/userWindowPayload";
 import {
 	useFanthalDispatch,
@@ -162,19 +163,42 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 	const isBulkGift = activity.kind === "subscription_gift" && (targetUsernames.length > 1 || (activity.amount ?? 0) > 1);
 	const months = activity.months ?? 1;
 
+	// Prototip: alıcı listesinde isimsiz (anonim) alıcılar "birine" (italik) olarak
+	// gösterilir. Kick bazı hediye alıcılarının adını göndermeyebilir (amount >
+	// isim sayısı) — fark kadar anonim satır eklenir.
+	const recipientRows = useMemo(() => {
+		const named = targetUsernames.map((name) => ({ name, anon: false as const }));
+		// Faz H fix: hediyede alıcı SAYISI en az 1'dir (isimsiz olsa da "birine").
+		// Kick amount=0 gönderse bile alıcı var → "0 kişi" gösterme.
+		const isGift = activity.kind === "subscription_gift";
+		const totalCount = isGift
+			? Math.max(activity.amount ?? 0, targetUsernames.length, 1)
+			: (activity.amount ?? targetUsernames.length);
+		const anonCount = Math.max(0, totalCount - targetUsernames.length);
+		const anonRows = Array.from({ length: anonCount }, () => ({
+			name: "",
+			anon: true as const,
+		}));
+		return [...named, ...anonRows];
+	}, [targetUsernames, activity.amount, activity.kind]);
+	// Faz H: hediye alıcı sayısı (metinlerde kullanılır) — en az 1.
+	const giftRecipientCount = recipientRows.length;
+
 	// Build line text
-	const actorName = activity.actor?.username || activity.username || "Anonymous";
+	const actorName = activity.actor?.username || activity.username || t("activity.line.anon");
 
 	let lineNode: React.ReactNode;
 	if (activity.kind === "subscription_new" || activity.kind === "subscription_renewal") {
 		lineNode = (
 			<>
 				<b>{actorName}</b>{" "}
-				{activity.kind === "subscription_new" ? "subscribed" : "renewed"} —{" "}
-				{months}{months === 1 ? " mo" : " mos"}
+				{activity.kind === "subscription_new"
+					? t("activity.line.subscribed")
+					: t("activity.line.renewed")}{" "}
+				— {months} {t("activity.line.months")}
 				{activity.streak != null && activity.streak >= 6 ? (
 					<span className="act-tag" style={{ marginLeft: 6 }}>
-						{activity.streak}mo streak
+						{activity.streak} {t("activity.line.streak")}
 					</span>
 				) : null}
 			</>
@@ -182,36 +206,37 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 	} else if (activity.kind === "subscription_gift") {
 		lineNode = isBulkGift ? (
 			<>
-				<b>{actorName}</b> gifted <b>{activity.amount ?? targetUsernames.length}</b> subs
+				<b>{actorName}</b>{" "}
+				<b>{giftRecipientCount}</b> {t("activity.line.gifted-subs")}
 			</>
 		) : (
 			<>
-				<b>{actorName}</b> gifted sub to{" "}
-				<b>{targetUsernames[0] ?? "someone"}</b>
+				<b>{actorName}</b> {t("activity.line.gift-arrow")}{" "}
+				<b>{targetUsernames[0] ?? t("activity.line.someone")}</b>
 			</>
 		);
 	} else if (activity.kind === "kicks_gifted") {
 		lineNode = (
 			<>
-				<b>{actorName}</b> sent{" "}
-				<b className="mono num">{fmtNum(activity.amount)}</b> KICKs
+				<b>{actorName}</b>{" "}
+				<b className="mono num">{fmtNum(activity.amount)}</b> {t("activity.line.sent-kicks")}
 				{activity.giftName ? <span> · {activity.giftName}</span> : null}
 			</>
 		);
 	} else if (activity.kind === "follow") {
 		lineNode = (
 			<>
-				<b>{actorName}</b> takip etti
+				<b>{actorName}</b> {t("activity.line.followed")}
 			</>
 		);
 	} else if (activity.kind === "host_raid") {
 		lineNode = (
 			<>
-				<b>{actorName}</b> raid yaptı
+				<b>{actorName}</b> {t("activity.line.raided")}
 				{activity.amount != null && (
 					<>
 						{" "}
-						— <b className="mono num">{fmtNum(activity.amount)}</b> izleyici
+						— <b className="mono num">{fmtNum(activity.amount)}</b> {t("activity.line.viewers")}
 					</>
 				)}
 			</>
@@ -219,7 +244,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 	} else if (activity.kind === "reward_redemption") {
 		lineNode = (
 			<>
-				<b>{actorName}</b> redeemed <b>{activity.title || "a reward"}</b>
+				<b>{actorName}</b> <b>{activity.title || t("activity.line.a-reward")}</b> {t("activity.line.redeemed")}
 			</>
 		);
 	}
@@ -236,7 +261,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 			tabIndex={0}
 			aria-expanded={expanded}
 			onKeyDown={(e) => e.key === "Enter" && onToggle()}
-			title="Çift tık: kullanıcı detayı"
+			title={t("activity.dbltap-hint")}
 		>
 			<div className={`act-icon ${meta.cls}`} aria-hidden="true">
 				<Icon name={meta.iconName} size={14} />
@@ -250,12 +275,12 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 							className="act-tag"
 							style={{ color: "var(--ms-ac-sub)", borderColor: "color-mix(in oklch, var(--ms-ac-sub) 30%, var(--ms-bd-2))" }}
 						>
-							NEW
+							{t("activity.tag.new")}
 						</span>
 					)}
 					{activity.kind === "kicks_gifted" && activity.pinnedTimeSeconds != null && (
 						<span className="act-tag">
-							<Icon name="pin" size={10} /> pinned {activity.pinnedTimeSeconds}s
+							<Icon name="pin" size={10} /> {t("activity.tag.pinned")} {activity.pinnedTimeSeconds}s
 						</span>
 					)}
 					{activity.kind === "reward_redemption" && activity.message && (
@@ -264,7 +289,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 						</span>
 					)}
 					{activity.kind === "subscription_gift" && isBulkGift && (
-						<span className="act-tag">tier {(activity.raw as any)?.tier ?? 1}</span>
+						<span className="act-tag">{t("activity.tag.tier")} {(activity.raw as any)?.tier ?? 1}</span>
 					)}
 					{activity.expiresAt && activity.kind !== "subscription_new" && activity.kind !== "subscription_renewal" ? null : null}
 				</div>
@@ -275,7 +300,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 					<div className="act-amount kicks num">{fmtNum(activity.amount)}</div>
 				)}
 				{activity.kind === "subscription_gift" && isBulkGift && (
-					<div className="act-amount gift num">×{activity.amount ?? targetUsernames.length}</div>
+					<div className="act-amount gift num">×{giftRecipientCount}</div>
 				)}
 				{activity.kind === "reward_redemption" && (
 					<>
@@ -304,76 +329,78 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 					<div className="act-summary">
 						{activity.kind === "subscription_new" && (
 							<>
-								<b>{actorName}</b> <b>{months} aylık abonelik</b> aldı.
+								<b>{actorName}</b>{" "}
+								<b>{months}{t("activity.summary.sub-received-1")}</b>{" "}
+								{t("activity.summary.sub-received-2")}
 								{activity.streak != null && activity.streak > 1 ? (
-									<> Streak: <b>{activity.streak}</b> ay.</>
+									<> {t("activity.summary.streak-label")} <b>{activity.streak}</b> {t("activity.summary.streak-months")}</>
 								) : null}
 							</>
 						)}
 						{activity.kind === "subscription_renewal" && (
 							<>
-								<b>{actorName}</b> aboneliğini yeniledi —{" "}
-								<b>{months} ay</b>.
+								<b>{actorName}</b> {t("activity.summary.renewed-1")}{" "}
+								<b>{months} {t("activity.summary.months-dot")}</b>
 								{activity.streak != null && activity.streak > 1 ? (
-									<> Streak: <b>{activity.streak}</b> ay.</>
+									<> {t("activity.summary.streak-label")} <b>{activity.streak}</b> {t("activity.summary.streak-months")}</>
 								) : null}
 							</>
 						)}
 						{activity.kind === "subscription_gift" && (
 							<>
 								<b>{actorName}</b>{" "}
-								<b>{activity.amount ?? targetUsernames.length}</b> kişiye{" "}
-								hediye abonelik gönderdi
+								<b>{giftRecipientCount}</b> {t("activity.summary.gift-people")}{" "}
+								{t("activity.summary.gift-sent")}
 								{targetUsernames.length === 1
 									? <> → <b>{targetUsernames[0]}</b>.</>
 									: "."}
 								{(activity.raw as any)?.tier
-									? <> Tier <b>{(activity.raw as any).tier}</b>.</>
+									? <> {t("activity.summary.tier")} <b>{(activity.raw as any).tier}</b>.</>
 									: null}
-								{activity.anonymous ? <> (Anonim)</> : null}
+								{activity.anonymous ? <> {t("activity.summary.anon-paren")}</> : null}
 							</>
 						)}
 						{activity.kind === "kicks_gifted" && (
 							<>
 								<b>{actorName}</b>{" "}
 								<b className="mono num">{fmtNum(activity.amount)}</b>{" "}
-								KICKs gönderdi
+								{t("activity.summary.sent-kicks")}
 								{activity.giftName ? <> — <b>{activity.giftName}</b></> : null}
 								{activity.giftTier != null ? <> (tier {activity.giftTier})</> : null}
 								{activity.pinnedTimeSeconds != null
-									? <> · <b>{fmtDuration(activity.pinnedTimeSeconds)}</b> sabitlendi.</>
+									? <> · <b>{fmtDuration(activity.pinnedTimeSeconds)}</b> {t("activity.summary.pinned")}</>
 									: "."}
 							</>
 						)}
 						{activity.kind === "host_raid" && (
 							<>
-								<b>{actorName}</b> kanalına{" "}
+								<b>{actorName}</b> {t("activity.summary.raid-into")}{" "}
 								{activity.amount != null ? (
 									<>
 										<b className="mono num">{fmtNum(activity.amount)}</b>{" "}
-										izleyici ile
+										{t("activity.summary.raid-with-viewers")}
 									</>
 								) : null}{" "}
-								raid yaptı.
+								{t("activity.summary.raided")}
 								{activity.message ? (
-									<> Mesaj: <i>&ldquo;{activity.message}&rdquo;</i></>
+									<> {t("activity.summary.message-label")} <i>&ldquo;{activity.message}&rdquo;</i></>
 								) : null}
 							</>
 						)}
 						{activity.kind === "follow" && (
 							<>
-								<b>{actorName}</b> kanalı <b>takip etti</b>.
+								<b>{actorName}</b> {t("activity.summary.followed-1")} <b>{t("activity.summary.followed-2")}</b>.
 							</>
 						)}
 						{activity.kind === "reward_redemption" && (
 							<>
 								<b>{actorName}</b>{" "}
-								<b>{activity.title || "ödülü"}</b> talep etti
+								<b>{activity.title || t("activity.summary.reward-fallback")}</b> {t("activity.summary.redeemed-claim")}
 								{activity.amount != null
-									? <> ({fmtNum(activity.amount)} puan).</>
+									? <> ({fmtNum(activity.amount)} {t("activity.summary.points")}).</>
 									: "."}
 								{activity.message ? (
-									<> Mesaj: <i>&ldquo;{activity.message}&rdquo;</i></>
+									<> {t("activity.summary.message-label")} <i>&ldquo;{activity.message}&rdquo;</i></>
 								) : null}
 							</>
 						)}
@@ -393,7 +420,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 						return (
 							<div className="act-message-card">
 								<div className="act-kv-k" style={{ marginBottom: 4 }}>
-									Mesaj
+									{t("activity.expand.message")}
 								</div>
 								<div className="act-message-body">
 									&ldquo;{msg}&rdquo;
@@ -402,7 +429,7 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 						);
 					})()}
 					<div className="act-kv">
-						<div className="act-kv-k">Saat</div>
+						<div className="act-kv-k">{t("activity.expand.time")}</div>
 						<div className="act-kv-v">
 							{activity.createdAt
 								? new Date(activity.createdAt).toLocaleTimeString("tr-TR")
@@ -415,25 +442,32 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 					{activity.kind === "kicks_gifted" &&
 						activity.pinnedTimeSeconds != null && (
 							<div className="act-kv">
-								<div className="act-kv-k">Sabitlendi</div>
+								<div className="act-kv-k">{t("activity.expand.pinned-label")}</div>
 								<div className="act-kv-v">
 									{fmtDuration(activity.pinnedTimeSeconds)}
 								</div>
 							</div>
 						)}
-					{activity.kind === "subscription_gift" && targetUsernames.length > 0 ? (
+					{activity.kind === "subscription_gift" && recipientRows.length > 0 ? (
 						<div className="act-kv" style={{ gridTemplateColumns: "90px 1fr" }}>
 							<div className="act-kv-k">
-								Alıcılar{" "}
+								{t("activity.expand.recipients-label")}{" "}
 								<span style={{ color: "var(--ms-fg-4)" }}>
-									({targetUsernames.length})
+									({recipientRows.length})
 								</span>
 							</div>
 							<div className="act-recipients">
-								{targetUsernames.map((r) => (
-									<span key={r} className="pill">
-										{r}
-									</span>
+								{recipientRows.map((r, idx) => (
+									<div className="rcp" key={r.anon ? `anon-${idx}` : r.name}>
+										<span className="rcp-star">★</span>
+										{r.anon ? (
+											<span className="rcp-name anon">
+												{t("activity.line.someone")}
+											</span>
+										) : (
+											<span className="rcp-name">{r.name}</span>
+										)}
+									</div>
 								))}
 							</div>
 						</div>
@@ -449,10 +483,10 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 										e.stopPropagation();
 										onRewardAction(activity, "accepted");
 									}}
-									aria-label="Accept reward redemption"
+									aria-label={t("activity.aria.accept-reward")}
 								>
 									<Icon name="check" size={13} />
-									<span>Kabul et</span>
+									<span>{t("activity.accept")}</span>
 								</button>
 								<button
 									type="button"
@@ -461,10 +495,10 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 										e.stopPropagation();
 										onRewardAction(activity, "rejected");
 									}}
-									aria-label="Reject reward redemption"
+									aria-label={t("activity.aria.reject-reward")}
 								>
 									<Icon name="x" size={13} />
-									<span>Reddet</span>
+									<span>{t("activity.reject")}</span>
 								</button>
 							</div>
 						)}
@@ -491,6 +525,7 @@ interface KicksLeaderboardProps {
 }
 
 const KicksLeaderboard: FunctionComponent<KicksLeaderboardProps> = ({ hasScope }) => {
+	const { t } = useTranslation();
 	const [period, setPeriod] = useState<LbPeriod>("week");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -531,26 +566,26 @@ const KicksLeaderboard: FunctionComponent<KicksLeaderboardProps> = ({ hasScope }
 			<div className="lb-empty" style={{ padding: "24px 16px", textAlign: "center", color: "var(--ms-fg-3)", fontSize: 12 }}>
 				<Icon name="bolt" size={24} />
 				<div style={{ marginTop: 8, marginBottom: 12 }}>
-					KICKs leaderboard requires <code>kicks:read</code> permission.
+					{t("activity.leaderboard.scope-required-1")} <code>kicks:read</code> {t("activity.leaderboard.scope-required-perm")}
 				</div>
 				<div style={{ fontSize: 11, color: "var(--ms-fg-4)" }}>
-					Connect with KICKs permission in Settings → Permissions.
+					{t("activity.leaderboard.scope-hint")}
 				</div>
 			</div>
 		);
 	}
 
 	const periods: { id: LbPeriod; label: string }[] = [
-		{ id: "week", label: "Week" },
-		{ id: "month", label: "Month" },
-		{ id: "lifetime", label: "Lifetime" },
+		{ id: "week", label: t("activity.leaderboard.period.week") },
+		{ id: "month", label: t("activity.leaderboard.period.month") },
+		{ id: "lifetime", label: t("activity.leaderboard.period.lifetime") },
 	];
 
 	const rows = data[period];
 
 	return (
 		<div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-			<div className="lb-tabs" role="tablist" aria-label="Leaderboard period">
+			<div className="lb-tabs" role="tablist" aria-label={t("activity.aria.leaderboard-period")}>
 				{periods.map((p) => (
 					<button
 						key={p.id}
@@ -566,8 +601,8 @@ const KicksLeaderboard: FunctionComponent<KicksLeaderboardProps> = ({ hasScope }
 				<button
 					className="icon-btn"
 					onClick={fetchLeaderboard}
-					aria-label="Refresh leaderboard"
-					title="Refresh"
+					aria-label={t("activity.aria.refresh-leaderboard")}
+					title={t("activity.refresh")}
 					style={{ width: 26, height: 26 }}
 				>
 					<Icon name="refresh" size={12} />
@@ -611,7 +646,7 @@ const KicksLeaderboard: FunctionComponent<KicksLeaderboardProps> = ({ hasScope }
 						<Icon name="warn" size={13} /> {error}
 					</span>
 					<button className="btn ghost" onClick={fetchLeaderboard}>
-						<Icon name="refresh" size={12} /> Retry
+						<Icon name="refresh" size={12} /> {t("activity.leaderboard.retry")}
 					</button>
 				</div>
 			)}
@@ -631,7 +666,7 @@ const KicksLeaderboard: FunctionComponent<KicksLeaderboardProps> = ({ hasScope }
 					}}
 				>
 					<Icon name="bolt" size={22} />
-					<span>No KICKs activity yet</span>
+					<span>{t("activity.leaderboard.empty")}</span>
 				</div>
 			)}
 
@@ -671,6 +706,12 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 	const [tokenScopes, setTokenScopes] = useState<string[]>([]);
 
 	const activeChannelSlug = getActiveChannelSlug();
+
+	// Faz 2 ile aynı desen (ChatModern): kanal-bazlı bağlantı durumu, yoksa global.
+	const connState =
+		(activeChannelSlug && messages.connectionStatusByChannel?.[activeChannelSlug]) ||
+		messages.connectionStatus ||
+		"idle";
 
 	const activities = useMemo(
 		() =>
@@ -862,14 +903,12 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 					<span className="count num">{filteredEvents.length}</span>
 				</h2>
 				<div className="panel-hd-actions">
-					<button className="icon-btn" title="Refresh" aria-label="Refresh activity" type="button">
-						<Icon name="refresh" size={13} />
-					</button>
+					{/* Faz H: aktivite refresh butonu kaldırıldı — prototip başlığında yalnız ⧉ + × var. */}
 					{!isPopOut && (
 						<button
 							className="icon-btn"
-							title="Open in new window"
-							aria-label="Open activity panel in new window"
+							title={t("activity.open-new-window")}
+							aria-label={t("activity.aria.open-new-window")}
 							type="button"
 							onClick={() => {
 								window.electron?.panelWindow?.open("activity");
@@ -882,8 +921,8 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 						<button
 							className="icon-btn"
 							onClick={onClose}
-							title="Collapse"
-							aria-label="Collapse activity panel"
+							title={t("activity.collapse")}
+							aria-label={t("activity.aria.collapse")}
 							type="button"
 						>
 							<Icon name="x" size={13} />
@@ -892,10 +931,29 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 				</div>
 			</div>
 
-			{/* Sprint 38b: "KICKs Sıralama" alt tabı kaldırıldı — Kick UI'da
-			    karşılığı olmayan ve kullanıcının ihtiyaç duymadığı bir özellik
-			    olduğu için Olaylar sub-tab navigasyonu da gereksiz. Sadece
-			    Olaylar listesi kalıyor. */}
+			{/* Faz 3: Alt-sekmeler — Aktivite feed / KICKs Liderlik (prototip birebir). */}
+			<div className="act-subtab-strip" role="tablist" aria-label={t("activity.aria.sub-tabs")}>
+				<button
+					type="button"
+					role="tab"
+					className={`act-subtab${subTab === "events" ? " is-active" : ""}`}
+					aria-selected={subTab === "events"}
+					onClick={() => setSubTab("events")}
+				>
+					{t("activity.tab.events")}
+				</button>
+				<button
+					type="button"
+					role="tab"
+					className={`act-subtab${subTab === "leaderboard" ? " is-active" : ""}`}
+					aria-selected={subTab === "leaderboard"}
+					onClick={() => setSubTab("leaderboard")}
+				>
+					{t("activity.tab.leaderboard-full")}
+				</button>
+			</div>
+
+			{subTab === "leaderboard" && <KicksLeaderboard hasScope={hasKicksScope} />}
 
 			{subTab === "events" && (
 				<>
@@ -909,35 +967,67 @@ const ActivityViewModern: FunctionComponent<ActivityViewModernProps> = ({ onClos
 								aria-pressed={filter === f.id}
 							>
 								{t(f.labelKey)}
-								<span className="chip-count num">{counts[f.id] ?? 0}</span>
+								{counts[f.id] > 0 && (
+									<span className="chip-count num">{counts[f.id]}</span>
+								)}
 							</button>
 						))}
 					</div>
 
 					{/* Event list */}
 					<div ref={actListRef} className="act-list scroll" style={{ flex: "1 1 auto", overflowY: "auto" }}>
-						{filteredEvents.length === 0 ? (
-							<div
-								style={{
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									justifyContent: "center",
-									flex: 1,
-									padding: "32px 16px",
-									color: "var(--ms-fg-3)",
-									fontSize: 12,
-									gap: 10,
-								}}
-							>
-								<Icon name="activity" size={22} />
-								<span>No {filter === "all" ? "" : filter + " "}events</span>
-								{filter !== "all" && (
-									<button className="btn ghost" onClick={() => setFilter("all")}>
-										Clear filter
-									</button>
-								)}
+						{/* Faz 3 state matrisi: hata (disconnected) banner önce, sonra skeleton/empty. */}
+						{connState === "disconnected" && (
+							<div className="err-banner" role="alert">
+								<span>{t("activity.state.disconnected")}</span>
+								<button
+									type="button"
+									className="err-retry"
+									onClick={() => {
+										if (activeChannelSlug) dispatch(chatListener(activeChannelSlug));
+									}}
+								>
+									{t("activity.state.retry")}
+								</button>
 							</div>
+						)}
+						{filteredEvents.length === 0 ? (
+							connState === "connecting" || connState === "idle" ? (
+								<div className="skel" aria-hidden="true">
+									{[0, 1, 2].map((i) => (
+										<div className="skel-row skel-act" key={i}>
+											<div className="sk sk-t" style={{ width: 26 }} />
+											<div
+												className={`sk ${["sk-a", "sk-c", "sk-b"][i]}`}
+											/>
+										</div>
+									))}
+								</div>
+							) : connState === "disconnected" ? null : (
+								<div className="state-box">
+									<div className="state-inner">
+										<div className="state-emoji" aria-hidden="true">
+											✨
+										</div>
+										<div className="state-title">
+											{t("activity.empty-title")}
+										</div>
+										{filter === "all"
+											? t("activity.empty-sub")
+											: t("activity.empty-filtered")}
+										{filter !== "all" && (
+											<div style={{ marginTop: 10 }}>
+												<button
+													className="btn ghost"
+													onClick={() => setFilter("all")}
+												>
+													{t("activity.clear-filter")}
+												</button>
+											</div>
+										)}
+									</div>
+								</div>
+							)
 						) : (
 							filteredEvents.map((activity) => {
 								const key =

@@ -164,7 +164,7 @@ describe("ActivityViewModern — activity types", () => {
 			</Provider>
 		);
 		expect(screen.getByText(/subscribed/i)).toBeInTheDocument();
-		expect(screen.getByText(/3 mos/i)).toBeInTheDocument();
+		expect(screen.getByText(/3 mo/i)).toBeInTheDocument();
 	});
 
 	it("renders subscription_renewal row", () => {
@@ -184,7 +184,7 @@ describe("ActivityViewModern — activity types", () => {
 				<ActivityViewModern />
 			</Provider>
 		);
-		expect(screen.getByText(/gifted/i)).toBeInTheDocument();
+		expect(screen.getByText(/gifted a sub/i)).toBeInTheDocument();
 		// bulk shows ×N
 		expect(screen.getByText(/×3/i)).toBeInTheDocument();
 	});
@@ -196,8 +196,8 @@ describe("ActivityViewModern — activity types", () => {
 				<ActivityViewModern />
 			</Provider>
 		);
-		// "sent" is unique to kicks_gifted line text
-		expect(screen.getByText(/sent/i)).toBeInTheDocument();
+		// "sent KICKs" is unique to kicks_gifted line text
+		expect(screen.getByText(/sent KICKs/i)).toBeInTheDocument();
 		// SuperKick gift name appears in meta
 		expect(screen.getByText(/SuperKick/i)).toBeInTheDocument();
 	});
@@ -271,7 +271,7 @@ describe("ActivityViewModern — expand drawer", () => {
 
 		// Expand drawer should now be visible
 		// Sprint 48: yalnız "Saat" satırı (Etkinlik ID, Gönderen, Hediye, Tarih kaldırıldı)
-		expect(screen.getByText("Saat")).toBeInTheDocument();
+		expect(screen.getByText("Time")).toBeInTheDocument();
 	});
 
 	it("clicking expanded row collapses drawer", () => {
@@ -283,11 +283,11 @@ describe("ActivityViewModern — expand drawer", () => {
 		);
 
 		fireEvent.click(screen.getByText(/subscribed/i));
-		expect(screen.getByText("Saat")).toBeInTheDocument();
+		expect(screen.getByText("Time")).toBeInTheDocument();
 
 		// Click again to collapse
 		fireEvent.click(screen.getByText(/subscribed/i));
-		expect(screen.queryByText("Saat")).not.toBeInTheDocument();
+		expect(screen.queryByText("Time")).not.toBeInTheDocument();
 	});
 });
 
@@ -361,9 +361,9 @@ describe("ActivityViewModern — reward redemption actions", () => {
 	});
 });
 
-// ─── Test 7: Bulk gift recipients pill list ───────────────────────────────────
+// ─── Test 7: Bulk gift recipients list (Faz 3 — prototip: ★+isim, dikey liste) ──
 describe("ActivityViewModern — bulk gift recipients", () => {
-	it("recipients pill list renders when expanded", () => {
+	it("recipients list renders when expanded", () => {
 		const store = buildStore([subGiftActivity]);
 		render(
 			<Provider store={store}>
@@ -372,29 +372,55 @@ describe("ActivityViewModern — bulk gift recipients", () => {
 		);
 
 		// Open row
-		fireEvent.click(screen.getByText(/gifted/i));
+		fireEvent.click(screen.getByText(/gifted a sub/i));
 
-		expect(screen.getByText(/Alıcılar/)).toBeInTheDocument();
+		expect(screen.getByText(/Recipients/)).toBeInTheDocument();
 		expect(screen.getByText("alice")).toBeInTheDocument();
 		expect(screen.getByText("bob")).toBeInTheDocument();
 		expect(screen.getByText("carol")).toBeInTheDocument();
 	});
-});
 
-// ─── Test 8: KICKs leaderboard sub-tab ───────────────────────────────────────
-// Sprint 38b: "KICKs Sıralama" alt tab kaldırıldı — Kick UI'da
-// karşılığı olmadığı için Sprint 4'te eklenen leaderboard subtab
-// silindi. Önceki 3 leaderboard testi geçersiz.
-describe("ActivityViewModern — leaderboard removed (Sprint 38b)", () => {
-	it("does not render KICKs Leaderboard sub-tab anymore", () => {
-		const store = buildStore([]);
+	it("shows an anonymous 'someone' row per unnamed recipient (amount > named list)", () => {
+		const anonGift = makeActivity({
+			kind: "subscription_gift",
+			amount: 4,
+			targetUsers: [{ username: "alice" }, { username: "bob" }, { username: "carol" }],
+			anonymous: true,
+		});
+		const store = buildStore([anonGift]);
 		render(
 			<Provider store={store}>
 				<ActivityViewModern />
 			</Provider>
 		);
-		expect(
-			screen.queryByRole("tab", { name: /KICKs Leaderboard/i })
-		).not.toBeInTheDocument();
+
+		fireEvent.click(screen.getByText(/gifted a sub/i));
+
+		expect(screen.getAllByText("someone").length).toBe(1);
+		expect(screen.getByText("alice")).toBeInTheDocument();
+	});
+});
+
+// ─── Test 8: KICKs leaderboard sub-tab (Faz 3 — restored per UYGULAMA-PLANI.md) ─
+describe("ActivityViewModern — KICKs Leaderboard sub-tab", () => {
+	it("renders Events / KICKs Leaderboard sub-tabs and switches view", async () => {
+		const store = buildStore([subNewActivity]);
+		render(
+			<Provider store={store}>
+				<ActivityViewModern />
+			</Provider>
+		);
+
+		const leaderboardTab = screen.getByRole("tab", { name: /KICKs Leaderboard/i });
+		expect(leaderboardTab).toBeInTheDocument();
+
+		fireEvent.click(leaderboardTab);
+
+		// Events list (filter chips) should no longer be in the DOM.
+		expect(screen.queryByText(/subscribed/i)).not.toBeInTheDocument();
+
+		await waitFor(() => {
+			expect(mockGetKicksLeaderboard).toHaveBeenCalled();
+		});
 	});
 });

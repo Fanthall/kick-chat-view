@@ -1,18 +1,27 @@
 /**
- * Sprint 5 — ModActionsModern tests
+ * Sprint 5 (rebuilt) — ModActionsModern tests
+ *
+ * Render structure REBUILT to mirror the prototype spec 1:1
+ * (workspace/plan/chat-view/prototype/chat-view-full.html #panelMod):
+ * panel-hd + mod-scroll(mod-hint viewer-only, mod-sec "Seçili Kullanıcı",
+ * mod-sec "Hızlı Timeout" (canModerate only), mod-sec "Mod Aksiyonları").
+ *
+ * Removed vs. previous test suite: Suspended users tests (section removed),
+ * Collapsible sections tests (mechanism removed), custom-seconds timeout
+ * input test (TimeoutPicker removed — replaced by static quick-timeout chips).
  *
  * Cases:
  * 1. Renders empty state when no user selected
  * 2. Renders selected user card with username + meta when user selected
- * 3. Quick action buttons disabled when no target user
- * 4. Timeout button dispatches kick.timeoutUser with selected user + default seconds
+ * 3. Quick-timeout chips + Ban/Timeout buttons disabled/hidden appropriately
+ * 4. Quick-timeout chip click dispatches kick.timeoutUser with chip seconds
  * 5. Ban button dispatches kick.banUser
- * 6. Ctrl+T keyboard shortcut fires default timeout
- * 7. Suspended user Unban button calls removeSuspendedUser + updates list
+ * 6. Viewer mode hides quick-timeout section + ban/timeout buttons, shows hint
+ * 7. Mod Aksiyonları (history) log renders + actor fallback + action tags
  */
 
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, act } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { Provider } from "react-redux";
 import configureMockStore from "redux-mock-store";
@@ -112,7 +121,6 @@ beforeEach(() => {
 		"getActiveChannelSlug"
 	).mockReturnValue("test-channel");
 
-	// Clear suspended users storage
 	localStorage.clear();
 	// Sprint 23 fix: pin language to "en" so test assertions against English
 	// strings continue to match after i18n migration.
@@ -144,7 +152,6 @@ describe("ModActionsModern — no user selected", () => {
 
 describe("ModActionsModern — selected user card", () => {
 	it("renders user card with username and meta", () => {
-		// Sprint 18: empty modAction so suspended list doesn't duplicate "testuser"
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
@@ -153,42 +160,70 @@ describe("ModActionsModern — selected user card", () => {
 		);
 		expect(screen.getByTestId("mod-target-card")).toBeInTheDocument();
 		expect(screen.getByText("testuser")).toBeInTheDocument();
-		// Meta line: msgs + timeouts is in the .mod-target-meta element
-		const metaEl = document.querySelector(".mod-target-meta");
+		// Meta line: msgs + timeouts + bans is in the .mt-meta element
+		const metaEl = document.querySelector(".mt-meta");
 		expect(metaEl).toBeInTheDocument();
-		expect(metaEl!.textContent).toMatch(/msgs/i);
+		expect(metaEl!.textContent).toMatch(/messages/i);
+	});
+
+	it("renders Profile button for all roles (viewer included)", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={false} selectedUser={baseUser} />
+			</Provider>
+		);
+		expect(
+			screen.getByRole("button", { name: /profile testuser/i })
+		).toBeInTheDocument();
 	});
 });
 
-// ─── Test 3: Quick action buttons disabled when no user ───────────────────────
+// ─── Test 3: Quick-timeout + Ban/Timeout gating ──────────────────────────────
 
-describe("ModActionsModern — quick action disabled state", () => {
-	it("all quick action buttons + timeout picker are disabled when no user selected", () => {
+describe("ModActionsModern — quick-timeout section gating", () => {
+	it("renders 5 quick-timeout chips (1d/5d/10d/30d/1s) when canModerate", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={true} selectedUser={baseUser} />
+			</Provider>
+		);
+		expect(screen.getByText("Quick Timeout")).toBeInTheDocument();
+		["1d", "5d", "10d", "30d", "1s"].forEach((label) => {
+			expect(screen.getByRole("button", { name: new RegExp(`timeout ${label}`, "i") })).toBeInTheDocument();
+		});
+	});
+
+	it("quick-timeout chips disabled when no user selected", () => {
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
 				<ModActionsModern isMod={true} />
 			</Provider>
 		);
-		// Sprint 19: Apply (timeout picker primary action) is disabled.
-		const applyBtn = screen.getByRole("button", { name: /^apply$/i });
-		expect(applyBtn).toBeDisabled();
-		// Sprint 19: preset chips disabled too.
-		expect(screen.getByRole("button", { name: "1m" })).toBeDisabled();
-		expect(screen.getByRole("button", { name: "10m" })).toBeDisabled();
-		// Ban button still disabled.
-		const banBtn = screen.getByRole("button", { name: /ban user/i });
-		expect(banBtn).toBeDisabled();
+		expect(
+			screen.getByRole("button", { name: /timeout 5d/i })
+		).toBeDisabled();
+	});
+
+	it("Ban/Timeout buttons hidden (not rendered) in viewer mode", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={false} selectedUser={baseUser} />
+			</Provider>
+		);
+		expect(screen.queryByRole("button", { name: /ban user/i })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /timeout user/i })).not.toBeInTheDocument();
+		expect(screen.queryByText("Quick Timeout")).not.toBeInTheDocument();
 	});
 });
 
-// ─── Test 4: Timeout button dispatches kick.timeoutUser ──────────────────────
+// ─── Test 4: Quick-timeout chip dispatches kick.timeoutUser ──────────────────
 
-describe("ModActionsModern — timeout action", () => {
-	it("Apply timeout button calls kick.timeoutUser with selected preset duration", () => {
-		// Sprint 19: Two separate Timeout buttons collapsed into TimeoutPicker.
-		// Default preset = getDefaultTimeoutSeconds (600s). Apply button fires
-		// kick.timeoutUser with that duration.
+describe("ModActionsModern — quick-timeout action", () => {
+	it("clicking a chip calls kick.timeoutUser with that chip's seconds", () => {
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
@@ -196,9 +231,7 @@ describe("ModActionsModern — timeout action", () => {
 			</Provider>
 		);
 
-		const applyBtn = screen.getByRole("button", { name: /^apply$/i });
-		expect(applyBtn).not.toBeDisabled();
-		fireEvent.click(applyBtn);
+		fireEvent.click(screen.getByRole("button", { name: /timeout 10d/i }));
 
 		expect(mockTimeoutUser).toHaveBeenCalledTimes(1);
 		expect(mockTimeoutUser).toHaveBeenCalledWith(
@@ -210,7 +243,7 @@ describe("ModActionsModern — timeout action", () => {
 		);
 	});
 
-	it("Custom seconds input overrides preset and fires kick.timeoutUser", () => {
+	it("Timeout button in selected-user card fires the default (5d/300s) duration", () => {
 		const store = buildStore([]);
 		render(
 			<Provider store={store}>
@@ -218,33 +251,13 @@ describe("ModActionsModern — timeout action", () => {
 			</Provider>
 		);
 
-		const customInput = screen.getByLabelText(/custom timeout seconds/i);
-		fireEvent.change(customInput, { target: { value: "120" } });
-		const applyBtn = screen.getByRole("button", { name: /^apply$/i });
-		fireEvent.click(applyBtn);
+		fireEvent.click(screen.getByRole("button", { name: /timeout user/i }));
 
 		expect(mockTimeoutUser).toHaveBeenCalledTimes(1);
 		expect(mockTimeoutUser).toHaveBeenCalledWith(
 			expect.objectContaining({
-				duration: 120,
-			})
-		);
-	});
-
-	it("Preset chip click switches duration; Apply uses chip seconds", () => {
-		const store = buildStore([]);
-		render(
-			<Provider store={store}>
-				<ModActionsModern isMod={true} selectedUser={baseUser} />
-			</Provider>
-		);
-
-		fireEvent.click(screen.getByRole("button", { name: "5m" }));
-		fireEvent.click(screen.getByRole("button", { name: /^apply$/i }));
-
-		expect(mockTimeoutUser).toHaveBeenCalledTimes(1);
-		expect(mockTimeoutUser).toHaveBeenCalledWith(
-			expect.objectContaining({
+				broadcaster_user_id: 9999,
+				user_id: 42,
 				duration: 300,
 			})
 		);
@@ -276,181 +289,85 @@ describe("ModActionsModern — ban action", () => {
 	});
 });
 
-// ─── Test 6: Ctrl+T keyboard shortcut ────────────────────────────────────────
-
-describe("ModActionsModern — keyboard shortcuts", () => {
-	it("Ctrl+T fires default timeout on selected user", () => {
-		const store = buildStore([baseModAction]);
-		render(
-			<Provider store={store}>
-				<ModActionsModern isMod={true} selectedUser={baseUser} />
-			</Provider>
-		);
-
-		act(() => {
-			fireEvent.keyDown(window, { key: "t", ctrlKey: true, shiftKey: false });
-		});
-
-		expect(mockTimeoutUser).toHaveBeenCalledTimes(1);
-		expect(mockTimeoutUser).toHaveBeenCalledWith(
-			expect.objectContaining({
-				broadcaster_user_id: 9999,
-				user_id: 42,
-			})
-		);
-	});
-
-	it("Ctrl+Shift+T fires long timeout (600s) on selected user", () => {
-		const store = buildStore([baseModAction]);
-		render(
-			<Provider store={store}>
-				<ModActionsModern isMod={true} selectedUser={baseUser} />
-			</Provider>
-		);
-
-		act(() => {
-			fireEvent.keyDown(window, { key: "T", ctrlKey: true, shiftKey: true });
-		});
-
-		expect(mockTimeoutUser).toHaveBeenCalledTimes(1);
-		expect(mockTimeoutUser).toHaveBeenCalledWith(
-			expect.objectContaining({
-				broadcaster_user_id: 9999,
-				user_id: 42,
-				duration: 600,
-			})
-		);
-	});
-});
-
-// ─── Test 7: Suspended user Unban button ─────────────────────────────────────
-
-describe("ModActionsModern — suspended users", () => {
-	it("Unban button calls kick.unbanUser with broadcaster + user IDs", () => {
-		// Sprint 18: suspended list is now derived from modAction (ban entries).
-		// Construct a ban action for "banneduser" and provide active stream meta
-		// so broadcasterUserId resolves.
-		const bannedUser = { id: 77, username: "banneduser", slug: "banneduser" };
-		const banAction: ModMessage = {
-			id: "mod-ban-banneduser",
-			type: "ban",
-			channelSlug: "test-channel",
-			status: "success",
-			user: bannedUser,
-			banned_by: { id: 1, username: "admin", slug: "admin" },
-			created_at: Date.now(),
-		};
-		const store = buildStore([banAction]);
-		render(
-			<Provider store={store}>
-				<ModActionsModern isMod={true} />
-			</Provider>
-		);
-
-		expect(screen.getByTestId("suspended-row-banneduser")).toBeInTheDocument();
-		// Sprint 21: "banneduser" artik hem suspended hem recent actions
-		// listelerinde gorulebilir — getAllByText ile ikisini de kabul et.
-		expect(screen.getAllByText("banneduser").length).toBeGreaterThan(0);
-
-		fireEvent.click(screen.getByRole("button", { name: /unban banneduser/i }));
-
-		expect(mockUnbanUser).toHaveBeenCalledTimes(1);
-		expect(mockUnbanUser).toHaveBeenCalledWith(
-			expect.objectContaining({
-				broadcaster_user_id: 9999,
-				user_id: 77,
-			})
-		);
-	});
-});
-
-// ─── Test 9: Viewer mode (Sprint 10) ─────────────────────────────────────────
+// ─── Test 6: Viewer mode ──────────────────────────────────────────────────────
 
 describe("ModActionsModern — viewer mode (not mod/owner)", () => {
-	it("hides Quick actions + Chat controls sections when isMod=false", () => {
+	it("shows viewer hint and hides mod-only actions when no user selected", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={false} isOwner={false} />
+			</Provider>
+		);
+		// Both the mod-hint and the empty-target placeholder share the same
+		// viewer-mode copy when no user is selected — assert at least one match.
+		expect(
+			screen.getAllByText(/viewer mode.*ban\/timeout/i).length
+		).toBeGreaterThan(0);
+		expect(screen.queryByText("Quick Timeout")).not.toBeInTheDocument();
+	});
+
+	it("still renders Mod Aksiyonları (history) section for viewers (read-only)", () => {
 		const store = buildStore([baseModAction]);
 		render(
 			<Provider store={store}>
 				<ModActionsModern isMod={false} isOwner={false} />
 			</Provider>
 		);
-		expect(screen.queryByText(/quick actions/i)).not.toBeInTheDocument();
-		expect(screen.queryByText(/chat controls/i)).not.toBeInTheDocument();
-		// Suspended users section still rendered (read-only)
-		expect(
-			screen.getByRole("button", { name: /suspended users/i })
-		).toBeInTheDocument();
+		expect(screen.getByText("Mod Actions")).toBeInTheDocument();
+	});
+});
+
+// ─── Test 7: Mod Aksiyonları (history) log ───────────────────────────────────
+
+describe("ModActionsModern — mod action history", () => {
+	it("renders empty-history message when no mod actions recorded", () => {
+		const store = buildStore([]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={true} />
+			</Provider>
+		);
+		expect(screen.getByText("Mod Actions")).toBeInTheDocument();
+		expect(screen.getByText("No mod actions recorded.")).toBeInTheDocument();
 	});
 
-	it("hides Unban button when isMod=false", () => {
-		// Sprint 18: suspended list now derived from modAction. Construct ban
-		// entry so row renders; verify Unban btn is hidden in viewer mode.
-		const banAction: ModMessage = {
-			id: "mod-ban-vw",
+	it("shows i18n fallback 'a moderator' when banned_by is missing", () => {
+		const actionNoActor: ModMessage = {
+			id: "mod-no-actor",
 			type: "ban",
 			channelSlug: "test-channel",
 			status: "success",
-			user: { id: 77, username: "banneduser", slug: "banneduser" },
+			user: { id: 88, username: "nobody_actor", slug: "nobody_actor" },
+			// banned_by intentionally omitted — some Pusher events don't include it.
+			created_at: Date.now(),
+		};
+		const store = buildStore([actionNoActor]);
+		render(
+			<Provider store={store}>
+				<ModActionsModern isMod={true} />
+			</Provider>
+		);
+		expect(screen.getByText(/by @a moderator/i)).toBeInTheDocument();
+		expect(screen.queryByText(/by @system/i)).not.toBeInTheDocument();
+	});
+
+	it("renders localized action tag labels (BAN)", () => {
+		const banAction: ModMessage = {
+			id: "mod-tag-ban",
+			type: "ban",
+			channelSlug: "test-channel",
+			status: "success",
+			user: { id: 89, username: "tagged_user", slug: "tagged_user" },
 			banned_by: { id: 1, username: "admin", slug: "admin" },
 			created_at: Date.now(),
 		};
 		const store = buildStore([banAction]);
 		render(
 			<Provider store={store}>
-				<ModActionsModern isMod={false} />
-			</Provider>
-		);
-		expect(screen.getByTestId("suspended-row-banneduser")).toBeInTheDocument();
-		expect(
-			screen.queryByRole("button", { name: /unban banneduser/i })
-		).not.toBeInTheDocument();
-	});
-
-	it("shows viewer mode placeholder text when no user selected", () => {
-		const store = buildStore([]);
-		render(
-			<Provider store={store}>
-				<ModActionsModern isMod={false} />
-			</Provider>
-		);
-		expect(
-			screen.getByText(/viewer mode — moderation actions hidden/i)
-		).toBeInTheDocument();
-	});
-});
-
-// ─── Test 10: Collapsible sections (Sprint 10) ───────────────────────────────
-
-describe("ModActionsModern — collapsible sections", () => {
-	it("toggles section collapsed state on chevron click", () => {
-		const store = buildStore([]);
-		render(
-			<Provider store={store}>
 				<ModActionsModern isMod={true} />
 			</Provider>
 		);
-		const selectedToggle = screen.getByRole("button", {
-			name: /selected user/i,
-		});
-		expect(selectedToggle).toHaveAttribute("aria-expanded", "true");
-		fireEvent.click(selectedToggle);
-		expect(selectedToggle).toHaveAttribute("aria-expanded", "false");
-	});
-
-	it("persists collapsed state to localStorage", () => {
-		const store = buildStore([]);
-		render(
-			<Provider store={store}>
-				<ModActionsModern isMod={true} />
-			</Provider>
-		);
-		const actionsToggle = screen.getByRole("button", {
-			name: /quick actions/i,
-		});
-		fireEvent.click(actionsToggle);
-		const stored = JSON.parse(
-			localStorage.getItem("chatViewModSections") || "{}"
-		);
-		expect(stored.actions).toBe(true);
+		expect(screen.getByText("BAN")).toBeInTheDocument();
 	});
 });

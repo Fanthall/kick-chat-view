@@ -53,18 +53,19 @@ import AutomationSection from "./AutomationSection";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Values are i18n keys resolved via t() at render time.
 const SCOPE_AFFECTS: Record<string, string> = {
-	"chat:write": "Send messages in chat",
-	"moderation:ban": "Ban / unban users",
-	"moderation:chat_message:manage": "Delete chat messages",
-	"channel:rewards:read": "View channel point rewards",
-	"channel:rewards:write": "Accept/reject reward redemptions",
-	"channel:write": "Edit stream title and category",
-	"kicks:read": "View KICKs leaderboard",
-	"events:subscribe": "Subscribe to webhook events",
-	"user:read": "View OAuth user info",
-	"channel:read": "View channel info",
-	"streamkey:read": "Read stream key",
+	"chat:write": "settings.scope.chat-write",
+	"moderation:ban": "settings.scope.moderation-ban",
+	"moderation:chat_message:manage": "settings.scope.moderation-manage",
+	"channel:rewards:read": "settings.scope.rewards-read",
+	"channel:rewards:write": "settings.scope.rewards-write",
+	"channel:write": "settings.scope.channel-write",
+	"kicks:read": "settings.scope.kicks-read",
+	"events:subscribe": "settings.scope.events-subscribe",
+	"user:read": "settings.scope.user-read",
+	"channel:read": "settings.scope.channel-read",
+	"streamkey:read": "settings.scope.streamkey-read",
 };
 
 const EXPECTED_SCOPES = Object.keys(SCOPE_AFFECTS);
@@ -134,12 +135,13 @@ const Stepper: FunctionComponent<StepperProps> = ({
 	step = 1,
 	onChange,
 }) => {
+	const { t } = useTranslation();
 	return (
 		<div className="set-stepper">
 			<button
 				type="button"
 				onClick={() => onChange(Math.max(min, value - step))}
-				aria-label={`Decrease ${unit}`}
+				aria-label={`${t("settings.stepper.decrease")} ${unit}`}
 			>
 				−
 			</button>
@@ -147,7 +149,7 @@ const Stepper: FunctionComponent<StepperProps> = ({
 			<button
 				type="button"
 				onClick={() => onChange(value + step)}
-				aria-label={`Increase ${unit}`}
+				aria-label={`${t("settings.stepper.increase")} ${unit}`}
 			>
 				+
 			</button>
@@ -163,6 +165,7 @@ interface ChannelSectionProps {
 }
 
 const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus }) => {
+	const { t } = useTranslation();
 	const dispatch = useFanthalDispatch();
 	const messages = useFanthalSelector((state) => state.messages);
 	const [channels, setChannels] = useState<ChatViewChannel[]>(() => getChannelList());
@@ -194,7 +197,7 @@ const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus
 		setNewChannelInput("");
 		window.dispatchEvent(new Event("kick-channel-settings-changed"));
 		dispatch(chatListener(slug));
-		toast(`Connecting to ${slug}`, { type: "info" });
+		toast(`${t("settings.channel.connecting-toast")} ${slug}`, { type: "info" });
 	};
 
 	const handleRemove = (slug: string) => {
@@ -216,22 +219,22 @@ const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus
 
 	return (
 		<>
-			<h3>Channel</h3>
+			<h3>{t("settings.channel.title")}</h3>
 			<div className="sub">
-				Connect to channels you watch or moderate. Auto-connect channels open when chat-view launches.
+				{t("settings.channel.sub")}
 			</div>
 
 			{ownChannels.length > 0 && (
 				<div className="set-block">
-					<div className="set-block-section-label">My channel</div>
+					<div className="set-block-section-label">{t("settings.channel.my-channel")}</div>
 					{ownChannels.map((ch) => (
 						<div key={ch.slug} className="set-block-row">
 							<div className="l">
 								<b style={{ display: "flex", alignItems: "center", gap: 8 }}>
 									{ch.slug}
-									<span className="pbadge kick" style={{ fontSize: 9 }}>MY CHANNEL</span>
+									<span className="pbadge kick" style={{ fontSize: 9 }}>{t("settings.channel.my-badge")}</span>
 									{activeSlug === ch.slug && (
-										<span className="pbadge sub" style={{ fontSize: 9, background: "color-mix(in oklch, var(--ac-mint) 18%, transparent)", color: "var(--ac-mint)" }}>ACTIVE</span>
+										<span className="pbadge sub" style={{ fontSize: 9, background: "color-mix(in oklch, var(--ac-mint) 18%, transparent)", color: "var(--ac-mint)" }}>{t("settings.channel.active")}</span>
 									)}
 								</b>
 							</div>
@@ -240,7 +243,7 @@ const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus
 								onClick={() => handleSelect(ch.slug)}
 								type="button"
 							>
-								{activeSlug === ch.slug ? "Connected" : "Connect"}
+								{activeSlug === ch.slug ? t("settings.channel.connected") : t("settings.channel.connect")}
 							</button>
 						</div>
 					))}
@@ -254,16 +257,16 @@ const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus
 							<b style={{ display: "flex", alignItems: "center", gap: 8 }}>
 								{ch.slug}
 								{activeSlug === ch.slug && (
-									<span className="pbadge sub" style={{ fontSize: 9, background: "color-mix(in oklch, var(--ac-mint) 18%, transparent)", color: "var(--ac-mint)" }}>ACTIVE</span>
+									<span className="pbadge sub" style={{ fontSize: 9, background: "color-mix(in oklch, var(--ac-mint) 18%, transparent)", color: "var(--ac-mint)" }}>{t("settings.channel.active")}</span>
 								)}
 							</b>
 							{/* Fix 10: meta line with category */}
 							<span>
 								{activeSlug === ch.slug
-									? `${getChannelMeta(ch.slug)} · auto-connect on launch · default reply channel`
+									? `${getChannelMeta(ch.slug)} · ${t("settings.channel.meta-active")}`
 									: ch.autoConnect
-										? `${getChannelMeta(ch.slug)} · auto-connect`
-										: "Manual connect · last visited recently"}
+										? `${getChannelMeta(ch.slug)} · ${t("settings.channel.meta-auto")}`
+										: t("settings.channel.meta-manual")}
 							</span>
 						</div>
 						<div style={{ display: "flex", gap: 6 }}>
@@ -275,9 +278,9 @@ const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus
 								className="set-btn danger"
 								onClick={() => handleRemove(ch.slug)}
 								type="button"
-								aria-label={`Remove ${ch.slug}`}
+								aria-label={`${t("settings.channel.remove")} ${ch.slug}`}
 							>
-								Remove
+								{t("settings.channel.remove")}
 							</button>
 						</div>
 					</div>
@@ -285,20 +288,20 @@ const ChannelSection: FunctionComponent<ChannelSectionProps> = ({ kickAuthStatus
 
 				<div className="set-block-row">
 					<div className="l">
-						<b>Add a channel</b>
-						<span>Paste a channel handle or URL.</span>
+						<b>{t("settings.channel.add-title")}</b>
+						<span>{t("settings.channel.add-sub")}</span>
 					</div>
 					<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
 						<input
 							className="set-input"
-							placeholder="@channelname"
+							placeholder={t("addchannel.placeholder")}
 							value={newChannelInput}
 							onChange={(e) => setNewChannelInput(e.target.value)}
 							onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-							aria-label="New channel name"
+							aria-label={t("settings.channel.add-input-aria")}
 						/>
 						<button className="set-btn primary" onClick={handleAdd} type="button">
-							<Icon name="plus" size={12} /> Add
+							<Icon name="plus" size={12} /> {t("settings.channel.add")}
 						</button>
 					</div>
 				</div>
@@ -320,10 +323,11 @@ const AccountSection: FunctionComponent<AccountSectionProps> = ({
 	kickUserInfo,
 	onRefreshAuth,
 }) => {
+	const { t } = useTranslation();
 	const isConnected = !!kickAuthStatus?.isConnected;
 	const expiresAtText = kickAuthStatus?.expiresAt
 		? new Date(kickAuthStatus.expiresAt).toLocaleString()
-		: "Not connected";
+		: t("settings.account.not-connected");
 
 	// Sprint 54: autoRefresh + externalLinks toggle'ları kaldırıldı —
 	// hiçbir kod tarafından okunmuyordu (dead UI).
@@ -335,27 +339,27 @@ const AccountSection: FunctionComponent<AccountSectionProps> = ({
 			signOutFn()
 				.then(() => {
 					onRefreshAuth();
-					toast("Signed out", { type: "info" });
+					toast(t("settings.account.signed-out-toast"), { type: "info" });
 				})
-				.catch(() => toast("Sign out failed", { type: "error" }));
+				.catch(() => toast(t("settings.account.sign-out-failed-toast"), { type: "error" }));
 		} else {
-			toast("Sign out not available.", { type: "warning" });
+			toast(t("settings.account.sign-out-unavailable-toast"), { type: "warning" });
 		}
 	};
 
 	return (
 		<>
-			<h3>Account</h3>
-			<div className="sub">Manage the OAuth connection used to authenticate with the chat API.</div>
+			<h3>{t("settings.account.title")}</h3>
+			<div className="sub">{t("settings.account.sub")}</div>
 
 			<div className="set-block">
 				<div className="set-block-row">
 					<div className="l">
 						<b style={{ display: "flex", alignItems: "center", gap: 8 }}>
 							{isConnected ? (
-								<>Connected as <span style={{ color: "var(--ac-mint)" }}>{kickUserInfo?.name || kickAuthStatus?.username || "—"}</span></>
+								<>{t("settings.account.connected-as")} <span style={{ color: "var(--ac-mint)" }}>{kickUserInfo?.name || kickAuthStatus?.username || "—"}</span></>
 							) : (
-								"Not connected"
+								t("settings.account.not-connected")
 							)}
 							<span
 								className="pbadge"
@@ -367,13 +371,13 @@ const AccountSection: FunctionComponent<AccountSectionProps> = ({
 									color: isConnected ? "var(--ac-mint)" : "#ff8da1",
 								}}
 							>
-								{isConnected ? "OK" : "DISCONNECTED"}
+								{isConnected ? t("settings.account.ok") : t("settings.account.disconnected")}
 							</span>
 						</b>
 						<span>
 							{isConnected
-								? `Token expires ${expiresAtText} · client_id `
-								: "No active session · "}
+								? `${t("settings.account.token-expires")} ${expiresAtText} · client_id `
+								: t("settings.account.no-session")}
 							<span className="ms-mono" style={{ fontSize: 11 }}>
 								{maskSensitive(kickAuthStatus?.clientId)}
 							</span>
@@ -384,7 +388,7 @@ const AccountSection: FunctionComponent<AccountSectionProps> = ({
 						onClick={() => window.electron.kickConnectionWindow.open()}
 						type="button"
 					>
-						Manage connection
+						{t("settings.account.manage-connection")}
 					</button>
 				</div>
 			</div>
@@ -393,16 +397,16 @@ const AccountSection: FunctionComponent<AccountSectionProps> = ({
 				{/* Sprint 54: Refresh token / External links toggle'ları kaldırıldı (dead). */}
 				<div className="set-block-row danger">
 					<div className="l">
-						<b style={{ color: "var(--ac-warn, #ff4d6d)" }}>Sign out</b>
-						<span>Disconnects all channels and clears local session state.</span>
+						<b style={{ color: "var(--ac-warn, #ff4d6d)" }}>{t("settings.account.sign-out")}</b>
+						<span>{t("settings.account.sign-out-sub")}</span>
 					</div>
 					<button
 						className="set-btn danger"
 						onClick={handleSignOut}
 						type="button"
-						aria-label="Sign out"
+						aria-label={t("settings.account.sign-out")}
 					>
-						Sign out
+						{t("settings.account.sign-out")}
 					</button>
 				</div>
 			</div>
@@ -423,6 +427,7 @@ const PermissionsSection: FunctionComponent<PermissionsSectionProps> = ({
 	isChannelOwner,
 	hasModBadge,
 }) => {
+	const { t } = useTranslation();
 	const grantedScopes = parseKickScopes(
 		kickAuthStatus?.grantedScopes,
 		kickAuthStatus?.tokenScope,
@@ -435,38 +440,38 @@ const PermissionsSection: FunctionComponent<PermissionsSectionProps> = ({
 
 	return (
 		<>
-			<h3>Permissions</h3>
+			<h3>{t("settings.permissions.title")}</h3>
 			<div className="sub">
-				OAuth scopes granted to chat-view. Missing scopes degrade specific features gracefully.
+				{t("settings.permissions.sub")}
 			</div>
 
 			{missingScopes.length > 0 && (
 				<div className="set-scope-warn-banner" role="alert">
 					<Icon name="warn" size={14} ariaLabel="Warning" />
 					<span style={{ flex: 1 }}>
-						<b>{missingScopes.length} scope{missingScopes.length === 1 ? "" : "s"} missing.</b>{" "}
-						Reconnect to grant: {missingScopes.join(", ")}.
+						<b>{missingScopes.length} {missingScopes.length === 1 ? t("settings.permissions.scope-missing-one") : t("settings.permissions.scope-missing-many")}</b>{" "}
+						{t("settings.permissions.reconnect-grant")} {missingScopes.join(", ")}.
 					</span>
 					<button
 						className="set-btn primary"
 						onClick={() => window.electron.kickConnectionWindow.open()}
 						type="button"
 					>
-						Re-authorize
+						{t("settings.permissions.re-authorize")}
 					</button>
 				</div>
 			)}
 
 			<div className="set-block">
 				<div className="set-block-section-label">
-					Granted <span className="ms-mono" style={{ marginLeft: 4 }}>{grantedScopes.length}</span>
+					{t("settings.permissions.granted")} <span className="ms-mono" style={{ marginLeft: 4 }}>{grantedScopes.length}</span>
 				</div>
 				{grantedScopes.map((s) => (
 					<div key={s} className="scope-row">
 						<span className="scope-ic ok"><Icon name="check" size={10} /></span>
 						<div>
 							<div className="scope-name">{s}</div>
-							<div className="scope-affects">{SCOPE_AFFECTS[s] || "—"}</div>
+							<div className="scope-affects">{SCOPE_AFFECTS[s] ? t(SCOPE_AFFECTS[s]) : "—"}</div>
 						</div>
 					</div>
 				))}
@@ -475,21 +480,21 @@ const PermissionsSection: FunctionComponent<PermissionsSectionProps> = ({
 			{missingScopes.length > 0 && (
 				<div className="set-block">
 					<div className="set-block-section-label">
-						Missing <span className="ms-mono" style={{ marginLeft: 4 }}>{missingScopes.length}</span>
+						{t("settings.permissions.missing")} <span className="ms-mono" style={{ marginLeft: 4 }}>{missingScopes.length}</span>
 					</div>
 					{missingScopes.map((s) => (
 						<div key={s} className="scope-row">
 							<span className="scope-ic miss">!</span>
 							<div>
 								<div className="scope-name">{s}</div>
-								<div className="scope-affects">Disables: {SCOPE_AFFECTS[s] || "—"}</div>
+								<div className="scope-affects">{t("settings.permissions.disables")} {SCOPE_AFFECTS[s] ? t(SCOPE_AFFECTS[s]) : "—"}</div>
 							</div>
 							<button
 								className="set-btn ghost"
 								onClick={() => window.electron.kickConnectionWindow.open()}
 								type="button"
 							>
-								Request
+								{t("settings.permissions.request")}
 							</button>
 						</div>
 					))}
@@ -499,13 +504,13 @@ const PermissionsSection: FunctionComponent<PermissionsSectionProps> = ({
 			<div className="set-block">
 				<div className="set-block-row">
 					<div className="l">
-						<b>Role source</b>
-						<span>Channel role is verified via API; moderator badge confirmed from observed badges.</span>
+						<b>{t("settings.permissions.role-source")}</b>
+						<span>{t("settings.permissions.role-source-sub")}</span>
 					</div>
 					<div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-2)" }}>
-						{isChannelOwner && <span className="pbadge kick">OWNER</span>}
-						{hasModBadge && <span className="pbadge s7tv">MOD</span>}
-						{!isChannelOwner && !hasModBadge && <span className="pbadge ffz">VIEWER</span>}
+						{isChannelOwner && <span className="pbadge kick">{t("settings.permissions.owner")}</span>}
+						{hasModBadge && <span className="pbadge s7tv">{t("settings.permissions.mod")}</span>}
+						{!isChannelOwner && !hasModBadge && <span className="pbadge ffz">{t("settings.permissions.viewer")}</span>}
 					</div>
 				</div>
 			</div>
@@ -516,6 +521,7 @@ const PermissionsSection: FunctionComponent<PermissionsSectionProps> = ({
 // ─── Section: Moderation ──────────────────────────────────────────────────────
 
 const ModerationSection: FunctionComponent = () => {
+	const { t } = useTranslation();
 	const [defaultTimeout, setDefaultTimeoutLocal] = useState(
 		() => getDefaultTimeoutSeconds()
 	);
@@ -538,18 +544,18 @@ const ModerationSection: FunctionComponent = () => {
 
 	return (
 		<>
-			<h3>Moderation</h3>
-			<div className="sub">Defaults applied when you trigger moderation actions from the chat panel.</div>
+			<h3>{t("settings.moderation.title")}</h3>
+			<div className="sub">{t("settings.moderation.sub")}</div>
 
 			<div className="set-block">
 				<div className="set-block-row">
 					<div className="l">
-						<b>Default timeout</b>
-						<span>Used by the timeout button and Ctrl+T.</span>
+						<b>{t("settings.moderation.default-timeout")}</b>
+						<span>{t("settings.moderation.default-timeout-sub")}</span>
 					</div>
 					<Stepper
 						value={defaultTimeout}
-						unit="seconds"
+						unit={t("settings.moderation.seconds")}
 						min={1}
 						step={30}
 						onChange={handleDefaultTimeout}
@@ -558,8 +564,8 @@ const ModerationSection: FunctionComponent = () => {
 				{/* Sprint 54: Long timeout stepper kaldırıldı (binding yok). */}
 				<div className="set-block-row">
 					<div className="l">
-						<b>Mod check message</b>
-						<span>Auto-message when an unknown user is timed out.</span>
+						<b>{t("settings.moderation.mod-check")}</b>
+						<span>{t("settings.moderation.mod-check-sub")}</span>
 					</div>
 					<input
 						className="set-input"
@@ -567,20 +573,20 @@ const ModerationSection: FunctionComponent = () => {
 						placeholder={DEFAULT_MOD_CHECK_MESSAGE}
 						value={modCheckMsg}
 						onChange={(e) => handleModCheckMsg(e.target.value)}
-						aria-label="Mod check message"
+						aria-label={t("settings.moderation.mod-check-input-aria")}
 					/>
 				</div>
 			</div>
 
 			<div className="set-block">
 				<div className="set-block-section-label">
-					Suspicious users (manual list) <span className="ms-mono" style={{ marginLeft: 4 }}>{susUsers.length}</span>
+					{t("settings.moderation.sus-title")} <span className="ms-mono" style={{ marginLeft: 4 }}>{susUsers.length}</span>
 				</div>
 				<div className="set-block-help" style={{ fontSize: 11, color: "var(--ms-fg-4, var(--fg-4))", padding: "0 14px 8px", marginTop: -4 }}>
-					Manual watchlist — kanaldaki aktif ban/timeout listesi degil. Aktif kisitlamalar Moderation panelinde gorulur.
+					{t("settings.moderation.sus-help")}
 				</div>
 				{susUsers.length === 0 ? (
-					<div className="set-block-empty">Listede kimse yok.</div>
+					<div className="set-block-empty">{t("settings.moderation.sus-empty")}</div>
 				) : (
 					susUsers.map((u) => (
 						<div key={u} className="set-block-row" data-testid={`sus-row-${u}`}>
@@ -592,9 +598,9 @@ const ModerationSection: FunctionComponent = () => {
 									setSusUsers(next);
 								}}
 								type="button"
-								aria-label={`Unban ${u}`}
+								aria-label={`${t("settings.moderation.unban")} ${u}`}
 							>
-								Unban
+								{t("settings.moderation.unban")}
 							</button>
 						</div>
 					))
@@ -603,10 +609,10 @@ const ModerationSection: FunctionComponent = () => {
 
 			<div className="set-block">
 				<div className="set-block-section-label">
-					Blocked emotes <span className="ms-mono" style={{ marginLeft: 4 }}>{blockedEmotes.length}</span>
+					{t("settings.moderation.blocked-emotes")} <span className="ms-mono" style={{ marginLeft: 4 }}>{blockedEmotes.length}</span>
 				</div>
 				{blockedEmotes.length === 0 ? (
-					<div className="set-block-empty">No blocked emotes.</div>
+					<div className="set-block-empty">{t("settings.moderation.blocked-empty")}</div>
 				) : (
 					blockedEmotes.map((e) => (
 						<div key={e} className="set-block-row">
@@ -618,9 +624,9 @@ const ModerationSection: FunctionComponent = () => {
 									setBlockedEmotes(next);
 								}}
 								type="button"
-								aria-label={`Unblock ${e}`}
+								aria-label={`${t("settings.moderation.unblock")} ${e}`}
 							>
-								Unblock
+								{t("settings.moderation.unblock")}
 							</button>
 						</div>
 					))
@@ -633,6 +639,7 @@ const ModerationSection: FunctionComponent = () => {
 // ─── Section: Emotes ──────────────────────────────────────────────────────────
 
 const EmotesSection: FunctionComponent = () => {
+	const { t } = useTranslation();
 	const messages = useFanthalSelector((state) => state.messages);
 
 	const emoteCounts = useMemo(() => {
@@ -669,9 +676,9 @@ const EmotesSection: FunctionComponent = () => {
 
 	return (
 		<>
-			<h3>Emotes</h3>
+			<h3>{t("settings.emotes.title")}</h3>
 			<div className="sub">
-				External providers extend the emote set available in chat. Provider errors are isolated and won't break chat.
+				{t("settings.emotes.sub")}
 			</div>
 
 			<div className="set-block">
@@ -682,17 +689,17 @@ const EmotesSection: FunctionComponent = () => {
 								<span className={`pbadge ${p.kind}`}>{p.label}</span>
 							</b>
 							<span>
-								<span className="ms-mono">{p.count}</span> emote{p.count === 1 ? "" : "s"} loaded
+								<span className="ms-mono">{p.count}</span> emote {t("settings.emotes.loaded")}
 							</span>
 						</div>
 						<div style={{ display: "flex", gap: 6 }}>
 							<button
 								className="set-btn"
-								onClick={() => toast(`Refreshing ${p.label}…`, { type: "info" })}
+								onClick={() => toast(`${t("settings.emotes.refreshing-toast")} ${p.label}…`, { type: "info" })}
 								type="button"
-								aria-label={`Refresh ${p.label}`}
+								aria-label={`${t("settings.emotes.refresh")} ${p.label}`}
 							>
-								<Icon name="refresh" size={12} /> Refresh
+								<Icon name="refresh" size={12} /> {t("settings.emotes.refresh")}
 							</button>
 						</div>
 					</div>
@@ -702,28 +709,28 @@ const EmotesSection: FunctionComponent = () => {
 			<div className="set-block">
 				<div className="set-block-row">
 					<div className="l">
-						<b>Favorites</b>
-						<span>{favCount} emote{favCount === 1 ? "" : "s"} pinned to the Favorites tab and autocomplete.</span>
+						<b>{t("settings.emotes.favorites")}</b>
+						<span>{favCount} emote {t("settings.emotes.favorites-sub-1")}</span>
 					</div>
 					<button
 						className="set-btn"
-						onClick={() => toast("Emote favorites manager coming in Sprint 6b.", { type: "info" })}
+						onClick={() => toast(t("settings.emotes.favorites-toast"), { type: "info" })}
 						type="button"
 					>
-						Manage favorites
+						{t("settings.emotes.manage-favorites")}
 					</button>
 				</div>
 				<div className="set-block-row">
 					<div className="l">
-						<b>Blocked emotes</b>
-						<span>{blockedCount} hidden from chat and the picker.</span>
+						<b>{t("settings.emotes.blocked")}</b>
+						<span>{blockedCount} {t("settings.emotes.blocked-sub")}</span>
 					</div>
 					<button
 						className="set-btn"
-						onClick={() => toast("Manage blocked emotes in the Moderation section.", { type: "info" })}
+						onClick={() => toast(t("settings.emotes.blocked-toast"), { type: "info" })}
 						type="button"
 					>
-						Manage blocked
+						{t("settings.emotes.manage-blocked")}
 					</button>
 				</div>
 				{/* Sprint 54: Animate GIF + Provider badges toggle'ları kaldırıldı (dead). */}
@@ -751,6 +758,7 @@ const UpdateBlock: FunctionComponent = () => {
 };
 
 const UpdateBlockInner: FunctionComponent = () => {
+	const { t } = useTranslation();
 	const [status, setStatus] = useState<
 		"idle" | "checking" | "up-to-date" | "available" | "error"
 	>("idle");
@@ -835,13 +843,13 @@ const UpdateBlockInner: FunctionComponent = () => {
 
 	const badge =
 		status === "available"
-			? { text: "GÜNCELLEME VAR", color: "var(--ms-ac-warn, #e89a3c)" }
+			? { text: t("settings.update.badge.available"), color: "var(--ms-ac-warn, #e89a3c)" }
 			: status === "up-to-date"
-			? { text: "GÜNCEL", color: "var(--ms-ac-mint, #2fd3a0)" }
+			? { text: t("settings.update.badge.up-to-date"), color: "var(--ms-ac-mint, #2fd3a0)" }
 			: status === "checking"
-			? { text: "KONTROL...", color: "var(--ms-fg-3)" }
+			? { text: t("settings.update.badge.checking"), color: "var(--ms-fg-3)" }
 			: status === "error"
-			? { text: "AĞ HATASI", color: "var(--ms-ac-live, #ef4f5f)" }
+			? { text: t("settings.update.badge.error"), color: "var(--ms-ac-live, #ef4f5f)" }
 			: { text: "—", color: "var(--ms-fg-3)" };
 
 	const speedLabel = (bps: number): string => {
@@ -853,13 +861,13 @@ const UpdateBlockInner: FunctionComponent = () => {
 
 	return (
 		<div className="set-block">
-			<div className="set-block-section-label">Güncelleme</div>
+			<div className="set-block-section-label">{t("settings.update.section-label")}</div>
 			<div className="set-block-row">
 				<div className="l">
-					<b>Sürüm</b>
+					<b>{t("settings.update.version")}</b>
 					<span style={{ fontFamily: "var(--ms-font-mono)" }}>
-						mevcut: v{current || "?"}
-						{latest && ` · son yayın: ${latest.tag}`}
+						{t("settings.update.current-prefix")}{current || "?"}
+						{latest && ` ${t("settings.update.latest-prefix")}${latest.tag}`}
 					</span>
 				</div>
 				<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -881,7 +889,7 @@ const UpdateBlockInner: FunctionComponent = () => {
 						disabled={status === "checking" || downloadState === "downloading"}
 						onClick={runCheck}
 					>
-						Kontrol et
+						{t("settings.update.check")}
 					</button>
 					{status === "available" && downloadState === "idle" && (
 						<>
@@ -890,15 +898,15 @@ const UpdateBlockInner: FunctionComponent = () => {
 								className="set-btn primary"
 								onClick={startDownload}
 							>
-								İndir ve Kur
+								{t("settings.update.download-install")}
 							</button>
 							<button
 								type="button"
 								className="set-btn"
 								onClick={openReleasePage}
-								title="Tarayıcıda release sayfasını aç"
+								title={t("settings.update.open-browser-title")}
 							>
-								Tarayıcıda aç
+								{t("settings.update.open-browser")}
 							</button>
 						</>
 					)}
@@ -908,7 +916,7 @@ const UpdateBlockInner: FunctionComponent = () => {
 							className="set-btn primary"
 							onClick={installNow}
 						>
-							Şimdi yeniden başlat ve kur
+							{t("settings.update.restart-install")}
 						</button>
 					)}
 				</div>
@@ -944,7 +952,7 @@ const UpdateBlockInner: FunctionComponent = () => {
 							justifyContent: "space-between",
 						}}
 					>
-						<span>İndiriliyor… %{downloadProgress}</span>
+						<span>{t("settings.update.downloading")} %{downloadProgress}</span>
 						{downloadSpeed > 0 && <span>{speedLabel(downloadSpeed)}</span>}
 					</div>
 				</div>
@@ -957,7 +965,7 @@ const UpdateBlockInner: FunctionComponent = () => {
 						color: "var(--ms-ac-mint, #2fd3a0)",
 					}}
 				>
-					✓ Yeni sürüm hazır. Uygulamayı yeniden başlatınca kurulacak.
+					{t("settings.update.ready")}
 				</div>
 			)}
 			{downloadState === "error" && downloadError && (
@@ -968,7 +976,7 @@ const UpdateBlockInner: FunctionComponent = () => {
 						color: "var(--ms-ac-live, #ef4f5f)",
 					}}
 				>
-					⚠ İndirme hatası: {downloadError}
+					{t("settings.update.download-error")} {downloadError}
 				</div>
 			)}
 		</div>
@@ -996,6 +1004,7 @@ const DEFAULT_ENABLED_TOPICS: Record<string, boolean> = {
 };
 
 const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
+	const { t } = useTranslation();
 	// Sprint 54: topics state + handleTopicToggle kaldırıldı (webhook
 	// altyapısı yok, etkisiz idi).
 	const [verboseLogging, setVerboseLogging] = useState(
@@ -1011,7 +1020,7 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 		if ((window.electron as any)?.shell?.openPath) {
 			(window.electron as any).shell.openPath("logs");
 		} else {
-			toast("Log directory: see app data folder.", { type: "info" });
+			toast(t("settings.advanced.log-dir-toast"), { type: "info" });
 		}
 	};
 
@@ -1025,6 +1034,19 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 		setShowFollowers(v);
 		localStorage.setItem("chatViewShowFollowers", String(v));
 		window.dispatchEvent(new Event("chat-view-show-followers-changed"));
+	};
+
+	// Faz H: mesaj limiti (sohbette tutulan en fazla mesaj) — Gelişmiş'ten girilebilir.
+	const [msgLimit, setMsgLimit] = useState<number>(() => {
+		const raw = localStorage.getItem("chatViewMessageLimit");
+		const n = raw ? parseInt(raw, 10) : NaN;
+		return Number.isFinite(n) ? Math.min(5000, Math.max(100, n)) : 2000;
+	});
+	const handleMsgLimit = (v: number) => {
+		const clamped = Math.min(5000, Math.max(100, v));
+		setMsgLimit(clamped);
+		localStorage.setItem("chatViewMessageLimit", String(clamped));
+		window.dispatchEvent(new Event("chat-view-message-limit-changed"));
 	};
 
 	// Sprint 20: theme + language toggles
@@ -1049,8 +1071,8 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 
 	return (
 		<>
-			<h3>Advanced</h3>
-			<div className="sub">Diagnostics and event subscription state. Most users won't need these.</div>
+			<h3>{t("settings.advanced.title")}</h3>
+			<div className="sub">{t("settings.advanced.sub")}</div>
 
 			{/* Sprint 53: Update kontrolü */}
 			<UpdateBlock />
@@ -1059,8 +1081,8 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 			<div className="set-block">
 				<div className="set-block-row">
 					<div className="l">
-						<b>Takipçileri göster</b>
-						<span>Kanala yeni takip olduğunda chat akışında ❤ banner ve aktivite kaydı.</span>
+						<b>{t("settings.advanced.followers-title")}</b>
+						<span>{t("settings.advanced.followers-sub")}</span>
 					</div>
 					<button
 						type="button"
@@ -1074,14 +1096,46 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 				</div>
 			</div>
 
-			{/* Sprint 20: Tema + Dil */}
+			{/* Faz H: Mesaj limiti (sohbette tutulan en fazla mesaj) */}
+				<div className="set-block">
+					<div className="set-block-row">
+						<div className="l">
+							<b>{t("settings.advanced.msg-limit-title")}</b>
+							<span>{t("settings.advanced.msg-limit-sub")}</span>
+						</div>
+						<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+							<input
+								type="text"
+								className="set-input"
+								inputMode="numeric"
+								style={{ width: 90, textAlign: "right" }}
+								value={msgLimit}
+								aria-label={t("settings.advanced.msg-limit-title")}
+								onChange={(e) => {
+									const digits = e.target.value.replace(/[^0-9]/g, "");
+									setMsgLimit(digits === "" ? 0 : parseInt(digits, 10));
+								}}
+								onBlur={() => handleMsgLimit(msgLimit)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter")
+										(e.target as HTMLInputElement).blur();
+								}}
+							/>
+							<span style={{ fontSize: 12, color: "var(--ms-fg-3)" }}>
+								{t("settings.advanced.msg-limit-unit")}
+							</span>
+						</div>
+					</div>
+				</div>
+
+				{/* Sprint 20: Tema + Dil */}
 			<div className="set-block">
 				<div className="set-block-row">
 					<div className="l">
-						<b>Tema / Theme</b>
-						<span>Açık veya koyu görünüm — Modern shell renkleri.</span>
+						<b>{t("settings.advanced.theme-title")}</b>
+						<span>{t("settings.advanced.theme-sub")}</span>
 					</div>
-					<div role="radiogroup" aria-label="Theme" style={{ display: "flex", gap: 6 }}>
+					<div role="radiogroup" aria-label={t("settings.advanced.theme-radiogroup-aria")} style={{ display: "flex", gap: 6 }}>
 						<button
 							type="button"
 							role="radio"
@@ -1089,7 +1143,7 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 							className={`set-btn ${theme === "dark" ? "primary" : ""}`}
 							onClick={() => handleThemeChange("dark")}
 						>
-							Koyu / Dark
+							{t("settings.advanced.theme-dark")}
 						</button>
 						<button
 							type="button"
@@ -1098,16 +1152,16 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 							className={`set-btn ${theme === "light" ? "primary" : ""}`}
 							onClick={() => handleThemeChange("light")}
 						>
-							Açık / Light
+							{t("settings.advanced.theme-light")}
 						</button>
 					</div>
 				</div>
 				<div className="set-block-row">
 					<div className="l">
-						<b>Dil / Language</b>
-						<span>Modern UI metinleri için tercih edilen dil.</span>
+						<b>{t("settings.advanced.language-title")}</b>
+						<span>{t("settings.advanced.language-sub")}</span>
 					</div>
-					<div role="radiogroup" aria-label="Language" style={{ display: "flex", gap: 6 }}>
+					<div role="radiogroup" aria-label={t("settings.advanced.language-radiogroup-aria")} style={{ display: "flex", gap: 6 }}>
 						<button
 							type="button"
 							role="radio"
@@ -1115,7 +1169,7 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 							className={`set-btn ${language === "tr" ? "primary" : ""}`}
 							onClick={() => handleLanguageChange("tr")}
 						>
-							Türkçe
+							{t("settings.advanced.language-tr")}
 						</button>
 						<button
 							type="button"
@@ -1124,7 +1178,7 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 							className={`set-btn ${language === "en" ? "primary" : ""}`}
 							onClick={() => handleLanguageChange("en")}
 						>
-							English
+							{t("settings.advanced.language-en")}
 						</button>
 					</div>
 				</div>
@@ -1139,18 +1193,18 @@ const AdvancedSection: FunctionComponent<AdvancedSectionProps> = () => {
 			<div className="set-block">
 				<div className="set-block-row">
 					<div className="l">
-						<b>Verbose logging</b>
-						<span>Writes raw event JSON to the local log file. Tokens are redacted.</span>
+						<b>{t("settings.advanced.verbose")}</b>
+						<span>{t("settings.advanced.verbose-sub")}</span>
 					</div>
 					<Toggle on={verboseLogging} onChange={handleVerboseLogging} />
 				</div>
 				<div className="set-block-row">
 					<div className="l">
-						<b>Open log directory</b>
+						<b>{t("settings.advanced.open-log")}</b>
 						<span className="set-topic-mono">~/AppData/Roaming/chat-view/logs/</span>
 					</div>
 					<button className="set-btn" onClick={handleOpenLogDir} type="button">
-						Reveal
+						{t("settings.advanced.reveal")}
 					</button>
 				</div>
 				{/* Sprint 51: Classic shell tamamen iptal. Modern UI toggle
@@ -1247,7 +1301,7 @@ const SettingsModern: FunctionComponent = () => {
 			{/* Body: side-nav + content (header is provided by modal-hd in LayoutModern) */}
 			<div className="set-main">
 				{/* Side nav */}
-				<nav className="set-nav" aria-label="Settings sections">
+				<nav className="set-nav" aria-label={t("settings.nav.aria-label")}>
 					{SETTINGS_NAV.map((n) => {
 						const warn = n.id === "permissions" && hasMissingScopes;
 						return (
@@ -1260,7 +1314,7 @@ const SettingsModern: FunctionComponent = () => {
 							>
 								<Icon name={n.icon} size={14} />
 								{t(n.label)}
-								{warn && <span className="set-nav-warn-dot" aria-label="Action needed" title="Action needed" />}
+								{warn && <span className="set-nav-warn-dot" aria-label={t("settings.nav.action-needed")} title={t("settings.nav.action-needed")} />}
 							</button>
 						);
 					})}
