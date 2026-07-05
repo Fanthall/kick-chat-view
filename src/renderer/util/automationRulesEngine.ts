@@ -260,9 +260,25 @@ const fireAction = async (rule: ChannelRule, ctx: AutomationContext) => {
 		const count = repeatCountForAmount(repeat, ctx.amount);
 		const delayMs = Math.max(0, repeat?.delaySec ?? 0) * 1000;
 		const w: any = window as any;
+		// DRY-RUN (2026-07-05): localStorage `chatViewAutomationDryRun === "true"`
+		// iken chate GERÇEK mesaj GÖNDERİLMEZ — yalnız ne gönderileceği loglanır.
+		// Canlı kanalda spam yapmadan rutin/dedup davranışını izlemek için.
+		let dryRun = false;
+		try {
+			dryRun = localStorage.getItem("chatViewAutomationDryRun") === "true";
+		} catch {
+			/* ignore */
+		}
 		for (let i = 0; i < count; i++) {
 			if (i > 0 && delayMs > 0) {
 				await new Promise((r) => setTimeout(r, delayMs));
+			}
+			if (dryRun) {
+				console.log(
+					`[automation][DRYRUN] "${rule.name}" → chate GÖNDERİLMEDİ (test modu) | ` +
+						`kanal=${ctx.channelSlug} mesaj ${i + 1}/${count}: ${content}`
+				);
+				continue;
 			}
 			try {
 				await w.electron.kick.sendChatMessage({

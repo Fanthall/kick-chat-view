@@ -5604,6 +5604,18 @@ html.modern-shell-root[data-theme="light"] {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	max-width: 220px;
+}
+/* Faz B: compact'ta kanal adı iyice dar + switcher minimal (isim switcher'da
+   gizli, aktif kanal zaten .tb-name'de). */
+[data-app-shell="modern"] .topbar[data-compact="true"] .tb-name {
+	max-width: 130px;
+	font-size: 13px;
+}
+[data-app-shell="modern"] .topbar[data-compact="true"] .tb-switcher-btn {
+	max-width: none;
+	padding: 4px 7px;
+	gap: 5px;
 }
 
 /* Fix 3: LIVE pill (.tb-live) */
@@ -5662,6 +5674,207 @@ html.modern-shell-root[data-theme="light"] {
 	gap: 4px;
 	font-size: 11px;
 	color: var(--fg-3);
+}
+
+/* ── Faz B (2026-07-06): kanal switcher — dar ekran / çok kanalda sekmeler
+   dropdown'a katlanır; kanal adı + LIVE + stats hep görünür kalır. ── */
+[data-app-shell="modern"] .tb-switcher {
+	position: relative;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .tb-switcher-btn {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	max-width: 220px;
+	padding: 4px 9px;
+	border-radius: var(--r-2);
+	border: 1px solid var(--bd-2);
+	background: color-mix(in oklch, var(--bg-3) 60%, transparent);
+	color: var(--fg-1);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+	transition: background 0.12s, border-color 0.12s;
+}
+[data-app-shell="modern"] .tb-switcher-btn:hover {
+	background: var(--bg-3);
+	border-color: color-mix(in oklch, var(--ac-mint) 45%, var(--bd-2));
+}
+[data-app-shell="modern"] .tb-switcher-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 600;
+}
+[data-app-shell="modern"] .tb-switcher-count {
+	flex: 0 0 auto;
+	font-size: 10px;
+	font-variant-numeric: tabular-nums;
+	background: color-mix(in oklch, var(--ac-mint) 18%, transparent);
+	color: var(--ac-mint);
+	border-radius: 999px;
+	padding: 0 6px;
+	min-width: 16px;
+	text-align: center;
+}
+[data-app-shell="modern"] .tb-switcher-caret {
+	flex: 0 0 auto;
+	font-size: 10px;
+	color: var(--fg-3);
+}
+[data-app-shell="modern"] .tb-switcher-menu {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	z-index: 60;
+	min-width: 220px;
+	max-height: 320px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px;
+	background: var(--bg-2);
+	border: 1px solid var(--bd-2);
+	border-radius: var(--r-2);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+[data-app-shell="modern"] .tb-switcher-item {
+	display: flex;
+	align-items: center;
+	border-radius: var(--r-2);
+}
+[data-app-shell="modern"] .tb-switcher-item:hover {
+	background: var(--bg-3);
+}
+[data-app-shell="modern"] .tb-switcher-item.is-active {
+	background: color-mix(in oklch, var(--ac-mint) 16%, transparent);
+}
+[data-app-shell="modern"] .tb-switcher-item-body {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	background: none;
+	border: 0;
+	color: var(--fg-1);
+	font: inherit;
+	font-size: 12px;
+	text-align: left;
+	cursor: pointer;
+}
+[data-app-shell="modern"] .tb-switcher-item-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+[data-app-shell="modern"] .tb-switcher-unread {
+	margin-left: auto;
+	font-size: 9.5px;
+	color: var(--fg-4);
+}
+[data-app-shell="modern"] .tb-switcher-item-close {
+	flex: 0 0 auto;
+	padding: 4px 7px;
+	background: none;
+	border: 0;
+	color: var(--fg-3);
+	cursor: pointer;
+	border-radius: var(--r-2);
+}
+[data-app-shell="modern"] .tb-switcher-item-close:hover {
+	color: var(--ac-live);
+	background: color-mix(in oklch, var(--ac-live) 16%, transparent);
+}
+
+[data-app-shell="modern"] .tb-switcher-sep {
+	height: 1px;
+	margin: 4px;
+	background: var(--bd-2);
+}
+[data-app-shell="modern"] .tb-switcher-add {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 8px;
+	border: 0;
+	border-radius: var(--r-2);
+	background: none;
+	color: var(--ac-mint);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.12s;
+}
+[data-app-shell="modern"] .tb-switcher-add:hover {
+	background: color-mix(in oklch, var(--ac-mint) 14%, transparent);
+}
+
+/* ── Faz B (2026-07-06): compact "⋯ menü" — rol + aksiyonlar tek butona toplanır ── */
+[data-app-shell="modern"] .tb-more {
+	position: relative;
+	flex: 0 0 auto;
+}
+[data-app-shell="modern"] .tb-more-dots {
+	font-size: 18px;
+	line-height: 1;
+	letter-spacing: 1px;
+}
+[data-app-shell="modern"] .tb-more-menu {
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	z-index: 60;
+	min-width: 200px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px;
+	background: var(--bg-2);
+	border: 1px solid var(--bd-2);
+	border-radius: var(--r-2);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+[data-app-shell="modern"] .tb-more-role {
+	display: flex;
+	padding: 4px 8px 6px;
+}
+[data-app-shell="modern"] .tb-more-sep {
+	height: 1px;
+	margin: 2px 4px 4px;
+	background: var(--bd-2);
+}
+[data-app-shell="modern"] .tb-more-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 8px;
+	border: 0;
+	border-radius: var(--r-2);
+	background: none;
+	color: var(--fg-1);
+	font: inherit;
+	font-size: 12px;
+	text-align: left;
+	cursor: pointer;
+	transition: background 0.12s, color 0.12s;
+}
+[data-app-shell="modern"] .tb-more-item:hover {
+	background: var(--bg-3);
+}
+[data-app-shell="modern"] .tb-more-item.is-on {
+	background: color-mix(in oklch, var(--ac-mint) 16%, transparent);
+	color: var(--fg-1);
+	box-shadow: inset 2px 0 0 0 var(--ac-mint);
+}
+[data-app-shell="modern"] .tb-more-item:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
 }
 
 /* Sprint 30: channel tabs — make them visually distinct as chips in both

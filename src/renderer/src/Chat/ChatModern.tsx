@@ -201,7 +201,7 @@ class RowErrorBoundary extends React.Component<
 	}
 }
 
-const ChatRow: FunctionComponent<ChatRowProps> = ({
+const ChatRowBase: FunctionComponent<ChatRowProps> = ({
 	message,
 	username,
 	susUsers,
@@ -345,6 +345,11 @@ const ChatRow: FunctionComponent<ChatRowProps> = ({
 	);
 };
 
+// PERF (2026-07-06): satırı memo'la — parent her yeni mesajda re-render olsa da
+// prop'ları değişmeyen satırlar yeniden render EDİLMEZ. Handler prop'ları
+// ChatModern'de ref-pattern + useMemo ile stabilize edildiği için memo tutar.
+const ChatRow = React.memo(ChatRowBase);
+
 // ────────── ChatModern (main component) ──────────
 
 interface ChatModernProps {
@@ -365,7 +370,6 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	const [susUsers, setSusUsers] = useState<string[]>([]);
 	const [blockEmotes, setBlockEmotes] = useState<string[]>([]);
 	const [messageText, setMessageText] = useState<string>("");
-	const [sendingMessage, setSendingMessage] = useState<boolean>(false);
 	const [paused, setPaused] = useState<boolean>(false);
 	const [replyTarget, setReplyTarget] = useState<UserMessage | undefined>(undefined);
 	const [emoteSuggestionIndex, setEmoteSuggestionIndex] = useState<number>(0);
@@ -424,6 +428,44 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	const channelBadges =
 		(channelName && messages.channelBadgesByChannel[channelName]) ||
 		messages.channelBadges;
+
+	// PERF (2026-07-06): Satır handler'ları için STABİL kimlik. Önceden map içinde
+	// her satıra inline arrow veriliyordu → her render'da yeni fonksiyon → React.memo
+	// kırılıyordu. Burada gerçek implementasyonları bir ref'e yazıp (her render'da
+	// güncel), ChatRow'a kimliği ASLA değişmeyen ince sarmalayıcılar geçiyoruz.
+	// Böylece runModerationAction/openUserWindow'a dokunmadan memo çalışır.
+	const rowHandlersRef = useRef<{
+		onReply: (m: UserMessage) => void;
+		onPin: (m: UserMessage) => void;
+		onTimeout: (m: UserMessage) => void;
+		onRemove: (m: UserMessage) => void;
+		onUsernameClick: (m: UserMessage) => void;
+		onUsernameDoubleClick: (m: UserMessage) => void;
+		onContextMenu: (m: UserMessage, x: number, y: number) => void;
+	}>({
+		onReply: () => {},
+		onPin: () => {},
+		onTimeout: () => {},
+		onRemove: () => {},
+		onUsernameClick: () => {},
+		onUsernameDoubleClick: () => {},
+		onContextMenu: () => {},
+	});
+	const stableRowHandlers = useMemo(
+		() => ({
+			onReply: (m: UserMessage) => rowHandlersRef.current.onReply(m),
+			onPin: (m: UserMessage) => rowHandlersRef.current.onPin(m),
+			onTimeout: (m: UserMessage) => rowHandlersRef.current.onTimeout(m),
+			onRemove: (m: UserMessage) => rowHandlersRef.current.onRemove(m),
+			onUsernameClick: (m: UserMessage) =>
+				rowHandlersRef.current.onUsernameClick(m),
+			onUsernameDoubleClick: (m: UserMessage) =>
+				rowHandlersRef.current.onUsernameDoubleClick(m),
+			onContextMenu: (m: UserMessage, x: number, y: number) =>
+				rowHandlersRef.current.onContextMenu(m, x, y),
+		}),
+		[]
+	);
 
 	// Sprint 33: cross-channel subscriber emote union.
 	// Aktif kanal için TÜM emote'lar + diğer subscribed kanalların kick-subscriber
@@ -494,6 +536,31 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		return html;
 	};
 
+	// PERF (2026-07-06): rozet HTML'ini de id-bazlı cache'le. Bir mesajın rozetleri
+	// değişmez; kanal rozet seti değişince cache temizlenir. Önceden her render'da
+	// her satır için buildBadgesHtml çağrılıyordu (map içinde) — yüksek hacimde maliyet.
+	const badgesHtmlCacheRef = useRef<Map<string, string>>(new Map());
+	useEffect(() => {
+		badgesHtmlCacheRef.current.clear();
+	}, [channelBadges]);
+	// PERF (2026-07-06): paused iken render'ı dondurmak için son canlı görünüm.
+	const frozenRowsRef = useRef<UserMessage[]>([]);
+	// PERF Faz 2b (2026-07-06): gelen mesajları ~80ms penceresinde topluca bas
+	// (batched). Saniyede 20-30 mesajda tek tek render+scroll "smear/blur" yapıp
+	// gözü yoruyordu; batch ile ~12fps düzenli kareler → okunur akış.
+	const pendingListRef = useRef<UserMessage[] | null>(null);
+	const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	// PERF Faz 2b: kendi gönderdiğimiz mesaj batch'i BEKLEMESİN — anında göster.
+	const forceFlushRef = useRef(false);
+	const getBadgesHtml = (id: string, badges: unknown): string => {
+		const cache = badgesHtmlCacheRef.current;
+		const cached = cache.get(id);
+		if (cached !== undefined) return cached;
+		const html = buildBadgesHtml(badges as never, channelBadges);
+		cache.set(id, html);
+		return html;
+	};
+
 	// ── Load username + sus/block lists ──
 	useEffect(() => {
 		const loadSettings = () => {
@@ -534,13 +601,56 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	}, []);
 
 	// ── Filter messages by channel ──
+	// PERF Faz 2b (2026-07-06): batched update — her mesajda değil, ~80ms'de bir
+	// topluca setMessageList. En güncel filtreli liste pendingListRef'te tutulur;
+	// zamanlayıcı yoksa kurulur, varsa yeni mesajlar sadece pending'i günceller
+	// (coalesce). Böylece mesaj seli olsa da render+scroll ~12fps düzenli olur.
 	useEffect(() => {
-		setMessageList(
-			messages.messageList.filter(
-				(msg) => !channelName || msg.channelSlug === channelName
-			)
+		const CHAT_BATCH_MS = 80;
+		const filtered = messages.messageList.filter(
+			(msg) => !channelName || msg.channelSlug === channelName
 		);
+		pendingListRef.current = filtered;
+		// Kendi mesajımız (optimistic) → batch'i atla, ANINDA bas (gecikme hissi olmasın).
+		if (forceFlushRef.current) {
+			forceFlushRef.current = false;
+			if (flushTimerRef.current) {
+				clearTimeout(flushTimerRef.current);
+				flushTimerRef.current = null;
+			}
+			setMessageList(filtered);
+			pendingListRef.current = null;
+			return;
+		}
+		if (flushTimerRef.current) return; // zaten flush planlı — sadece pending güncellendi
+		flushTimerRef.current = setTimeout(() => {
+			flushTimerRef.current = null;
+			if (pendingListRef.current) {
+				setMessageList(pendingListRef.current);
+				pendingListRef.current = null;
+			}
+		}, CHAT_BATCH_MS);
 	}, [messages.messageList, channelName]);
+
+	// PERF Faz 2b: unmount'ta bekleyen batch zamanlayıcısını temizle (yalnız unmount —
+	// effect deps her mesajda değiştiği için cleanup'ı buraya koymuyoruz, yoksa timer
+	// her mesajda sıfırlanıp hiç ateşlenmez).
+	useEffect(
+		() => () => {
+			if (flushTimerRef.current) {
+				clearTimeout(flushTimerRef.current);
+				flushTimerRef.current = null;
+			}
+		},
+		[]
+	);
+
+	// PERF (2026-07-06): kanal değişince freeze/paused sıfırla — yoksa paused iken
+	// kanal değiştirilirse eski kanalın dondurulmuş satırları görünür kalır.
+	useEffect(() => {
+		setPaused(false);
+		frozenRowsRef.current = [];
+	}, [channelName]);
 
 	// ── Auto-scroll ──
 	useLayoutEffect(() => {
@@ -890,6 +1000,29 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		);
 	};
 
+	// PERF (2026-07-06): satır handler'larının GÜNCEL implementasyonlarını ref'e yaz.
+	// stableRowHandlers bu ref üzerinden çağırır → ChatRow'a geçen kimlik değişmez
+	// ama davranış her zaman güncel (setReplyTarget/runModerationAction/openUserWindow).
+	rowHandlersRef.current = {
+		onReply: (m: UserMessage) => {
+			setReplyTarget(m);
+			composerRef.current?.focus();
+		},
+		onPin: (m: UserMessage) => {
+			toast(`Pin not yet implemented for ${m.sender.username}.`, {
+				type: "info",
+			});
+		},
+		onTimeout: (m: UserMessage) => runModerationAction("timeout", m),
+		onRemove: (m: UserMessage) => runModerationAction("delete", m),
+		onUsernameClick: (m: UserMessage) => {
+			if (m.sender) onSelectModUser?.(m.sender);
+		},
+		onUsernameDoubleClick: (m: UserMessage) => openUserWindow(m),
+		onContextMenu: (m: UserMessage, x: number, y: number) =>
+			setUserMenu({ message: m, x, y }),
+	};
+
 	// ── Composer send ──
 	const sendMessage = async () => {
 		const content = messageText.trim();
@@ -1083,6 +1216,19 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				}
 			}
 		}
+		// PERF: optimistic mesajı kendi GERÇEK renk/rozetlerinle üret ki echo gelince
+		// "pop" olmasın (chat'teki son kendi mesajından identity al; yoksa varsayılan).
+		let ownSender: UserMessage["sender"] | undefined;
+		if (username) {
+			const uLower = username.toLowerCase();
+			for (let i = messages.messageList.length - 1; i >= 0; i--) {
+				const m = messages.messageList[i];
+				if (m.sender?.username?.toLowerCase() === uLower) {
+					ownSender = m.sender;
+					break;
+				}
+			}
+		}
 		const optimistic: UserMessage = {
 			id: `local-${Date.now()}`,
 			channelSlug: ch,
@@ -1091,22 +1237,27 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 			type: "message",
 			created_at: new Date().toISOString(),
 			sender: {
-				id: 0,
+				id: ownSender?.id ?? 0,
 				username: username || "You",
-				slug: username || "you",
-				identity: { color: "#00d084", badges: [] },
+				slug: (username || "you").toLowerCase(),
+				identity: {
+					color: ownSender?.identity?.color || "#00d084",
+					badges: ownSender?.identity?.badges || [],
+				},
 			},
 		};
 		const replyToMessageId = replyTarget?.id;
 		dispatch(MessageActionsFunc.newMessage(optimistic));
+		// PERF Faz 2b: kendi mesajını batch bekletmeden anında göster + dibe in
+		// (paused olsan bile kendi mesajın görünsün — "geç gidiyor" hissini kaldırır).
+		forceFlushRef.current = true;
+		setPaused(false);
 		setMessageText("");
 		setReplyTarget(undefined);
 		if (composerRef.current) {
 			composerRef.current.textContent = "";
 			composerRef.current.focus();
 		}
-		setSendingMessage(true);
-
 		const send = (targetId: number) =>
 			window.electron.kick.sendChatMessage({
 				broadcaster_user_id: targetId,
@@ -1131,7 +1282,6 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				toast(err?.message || "Message could not be sent.", { type: "error" });
 			})
 			.finally(() => {
-				setSendingMessage(false);
 				composerRef.current?.focus();
 			});
 	};
@@ -1280,6 +1430,22 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 		setMessageText(text);
 	};
 
+	// PERF (2026-07-06): Twitch modeli — DOM'da yalnız son RENDER_CAP satır tutulur.
+	// paused (yukarı kaydırıldı) iken görünen set DONDURULUR: yeni mesajlar render'a
+	// girmez, kullanıcının okuduğu yer ZIPLAMAZ (pill ile dibe inince taze slice gelir).
+	// Redux buffer'a (chatViewMessageLimit) dokunulmaz — sadece render sınırlanır.
+	const RENDER_CAP = 200;
+	let visibleMessages: UserMessage[];
+	if (paused) {
+		visibleMessages = frozenRowsRef.current;
+	} else {
+		visibleMessages =
+			messageList.length > RENDER_CAP
+				? messageList.slice(-RENDER_CAP)
+				: messageList;
+		frozenRowsRef.current = visibleMessages;
+	}
+
 	return (
 		<div
 			className="chat-panel-modern"
@@ -1364,7 +1530,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						</div>
 					</div>
 				)}
-				{messageList.map((msg) => {
+				{visibleMessages.map((msg) => {
 					// Sprint 35: subscription + gift-sub banner rows — Pusher
 					// SubscriptionEvent / GiftedSubscriptionsEvent reducer
 					// tarafından bu synthetic mesajlara dönüştürülüyor.
@@ -1435,9 +1601,9 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							</RowErrorBoundary>
 						);
 					}
-					const badgesHtml = buildBadgesHtml(
-						msg.sender?.identity?.badges,
-						channelBadges
+					const badgesHtml = getBadgesHtml(
+						msg.id,
+						msg.sender?.identity?.badges
 					);
 					const contentHtml = renderMessageContent(msg.id, msg.content);
 					const originalReplyContent =
@@ -1460,26 +1626,13 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 							badgesHtml={badgesHtml}
 							contentHtml={contentHtml}
 							replyPreviewHtml={replyPreviewHtml}
-							onReply={(m) => {
-								setReplyTarget(m);
-								composerRef.current?.focus();
-							}}
-							onPin={(m) => {
-								toast(`Pin not yet implemented for ${m.sender.username}.`, {
-									type: "info",
-								});
-							}}
-							onTimeout={(m) => runModerationAction("timeout", m)}
-							onRemove={(m) => runModerationAction("delete", m)}
-							onUsernameClick={(m) => {
-								// Sprint 11 → 12: single click ONLY sets mod target.
-								// User detail window now opens on double-click below.
-								if (m.sender) {
-									onSelectModUser?.(m.sender);
-								}
-							}}
-							onUsernameDoubleClick={(m) => openUserWindow(m)}
-							onContextMenu={(m, x, y) => setUserMenu({ message: m, x, y })}
+							onReply={stableRowHandlers.onReply}
+							onPin={stableRowHandlers.onPin}
+							onTimeout={stableRowHandlers.onTimeout}
+							onRemove={stableRowHandlers.onRemove}
+							onUsernameClick={stableRowHandlers.onUsernameClick}
+							onUsernameDoubleClick={stableRowHandlers.onUsernameDoubleClick}
+							onContextMenu={stableRowHandlers.onContextMenu}
 							canModerate={canModerateChannel}
 						/>
 						</RowErrorBoundary>
@@ -1765,7 +1918,7 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 						<button
 							className="composer-send"
 							type="button"
-							disabled={!messageText.trim() || sendingMessage}
+							disabled={!messageText.trim()}
 							onClick={sendMessage}
 							aria-label={t("chat.send")}
 						>

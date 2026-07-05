@@ -53,6 +53,7 @@ export const dict: Dict = {
 	"topbar.refresh": { tr: "Yenile", en: "Refresh" },
 	"topbar.settings": { tr: "Ayarlar", en: "Settings" },
 	"topbar.edit-stream": { tr: "Yayını düzenle", en: "Edit stream" },
+	"topbar.more": { tr: "Daha fazla", en: "More" },
 
 	// Activity
 	"activity.title": { tr: "Aktivite", en: "Activity" },

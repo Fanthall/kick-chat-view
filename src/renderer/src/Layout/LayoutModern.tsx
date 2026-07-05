@@ -129,6 +129,11 @@ const LayoutModern: FunctionComponent = () => {
 	const [isNarrow, setIsNarrow] = useState<boolean>(() =>
 		typeof window !== "undefined" ? window.innerWidth < 1180 : false
 	);
+	// Faz B (2026-07-06): compact eşiği — bunun altında rol + aksiyon ikonları
+	// tek "⋯ menü"ye toplanır. Hep görünür kalan: avatar+ad+LIVE+izleyici+uptime.
+	const [isCompact, setIsCompact] = useState<boolean>(() =>
+		typeof window !== "undefined" ? window.innerWidth < 920 : false
+	);
 	const [drawerPanel, setDrawerPanel] = useState<"activity" | "moderation" | undefined>(
 		undefined
 	);
@@ -138,6 +143,7 @@ const LayoutModern: FunctionComponent = () => {
 			const narrow = window.innerWidth < 1180;
 			setIsNarrow(narrow);
 			if (!narrow) setDrawerPanel(undefined);
+			setIsCompact(window.innerWidth < 920);
 		};
 		window.addEventListener("resize", onResize);
 		return () => window.removeEventListener("resize", onResize);
@@ -154,6 +160,38 @@ const LayoutModern: FunctionComponent = () => {
 	// Fix 2: add-channel popover
 	const [addPopoverOpen, setAddPopoverOpen] = useState(false);
 	const addBtnRef = useRef<HTMLButtonElement>(null);
+
+	// Faz B (2026-07-06): kanal switcher — dar ekran veya çok kanalda sekmeler
+	// dropdown'a katlanır (kanal adı/LIVE/uptime/izleyici hep görünür kalsın).
+	const [switcherOpen, setSwitcherOpen] = useState(false);
+	const switcherRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!switcherOpen) return;
+		const onDown = (e: MouseEvent) => {
+			if (
+				switcherRef.current &&
+				!switcherRef.current.contains(e.target as Node)
+			) {
+				setSwitcherOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", onDown);
+		return () => document.removeEventListener("mousedown", onDown);
+	}, [switcherOpen]);
+
+	// Faz B (2026-07-06): compact modda rol + aksiyonları toplayan "⋯ menü".
+	const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+	const moreRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!moreMenuOpen) return;
+		const onDown = (e: MouseEvent) => {
+			if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+				setMoreMenuOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", onDown);
+		return () => document.removeEventListener("mousedown", onDown);
+	}, [moreMenuOpen]);
 
 	// Sprint 11: explicit moderation target — set via ChatModern username
 	// click/right-click. Replaces stale modAction[last] derivation that
@@ -475,6 +513,114 @@ const LayoutModern: FunctionComponent = () => {
 			? "mod"
 			: "viewer";
 
+	// Faz B: geniş + az kanalda inline sekmeler; dar ekran veya çok kanalda switcher.
+	const TAB_INLINE_MAX = 4;
+	const collapseTabs = isNarrow || tabChannels.length > TAB_INLINE_MAX;
+	// "+ ekle" kontrolü her iki modda ortak (tek addBtnRef; aynı anda tek mod render olur).
+	// Faz B: "+ ekle" chip (geniş/medium) — compact'ta gizlenir, yerine switcher
+	// menüsündeki "+ Kanal ekle" satırı kullanılır.
+	const addChannelButton = (
+		<div style={{ position: "relative" }}>
+			<button
+				ref={addBtnRef}
+				className="tb-add"
+				title={t("topbar.add-channel")}
+				aria-label={t("topbar.add-channel")}
+				type="button"
+				data-testid="tb-add-btn"
+				onClick={() => setAddPopoverOpen((v) => !v)}
+			>
+				<Icon name="plus" size={12} /> {t("topbar.add-channel-short")}
+			</button>
+		</div>
+	);
+	// AddChannelPopover anchor kullanmıyor (ortalanmış modal) → her yerden açılabilir.
+	const addChannelPopover = (
+		<AddChannelPopover
+			open={addPopoverOpen}
+			onClose={() => setAddPopoverOpen(false)}
+		/>
+	);
+
+	// Faz B: aksiyonlar tek kaynak — geniş modda ikon satırı, compact modda ⋯ menü satırı.
+	type TbIconName = React.ComponentProps<typeof Icon>["name"];
+	const actionItems: {
+		key: string;
+		icon: TbIconName;
+		label: string;
+		isOn?: boolean;
+		disabled?: boolean;
+		onClick: () => void;
+	}[] = [
+		{
+			key: "activity",
+			icon: "activity",
+			label: t("topbar.activity"),
+			isOn: isNarrow ? drawerPanel === "activity" : showActivity,
+			onClick: () =>
+				isNarrow
+					? setDrawerPanel((v) => (v === "activity" ? undefined : "activity"))
+					: setShowActivity((v) => !v),
+		},
+		{
+			key: "moderation",
+			icon: "shield",
+			label: t("topbar.moderation"),
+			isOn: isNarrow ? drawerPanel === "moderation" : showModeration,
+			onClick: () =>
+				isNarrow
+					? setDrawerPanel((v) =>
+							v === "moderation" ? undefined : "moderation"
+					  )
+					: setShowModeration((v) => !v),
+		},
+		{
+			key: "refresh",
+			icon: "refresh",
+			label: t("topbar.refresh"),
+			disabled: !activeSlug,
+			onClick: () => {
+				if (activeSlug) dispatch(chatListener(activeSlug));
+			},
+		},
+		...(canEditStream
+			? [
+					{
+						key: "edit",
+						icon: "edit" as TbIconName,
+						label: t("topbar.edit-stream"),
+						isOn: streamEditOpen,
+						onClick: () => setStreamEditOpen(true),
+					},
+			  ]
+			: []),
+		{
+			key: "settings",
+			icon: "settings",
+			label: t("topbar.settings"),
+			isOn: settingsOpen,
+			onClick: () => setSettingsOpen(true),
+		},
+	];
+
+	// Rol rozeti — geniş modda stats'ta, compact modda ⋯ menüde.
+	const roleBadge = (
+		<div
+			className={`tb-role ${
+				roleInfo.isOwner ? "owner" : roleInfo.isMod ? "mod" : "viewer"
+			}`}
+			data-testid="tb-role"
+		>
+			{roleInfo.isOwner ? (
+				<span>📡 {t("topbar.owner")}</span>
+			) : roleInfo.isMod ? (
+				<span>🛡 {t("topbar.moderator")}</span>
+			) : (
+				<span>👤 {t("topbar.viewer")}</span>
+			)}
+		</div>
+	);
+
 	return (
 		<div
 			data-app-shell={SHELL_ATTR}
@@ -482,7 +628,7 @@ const LayoutModern: FunctionComponent = () => {
 			style={{ display: "grid", gridTemplateRows: "auto 1fr", height: "100%", width: "100%" }}
 		>
 			{/* ── Topbar ── */}
-			<header className="topbar" role="banner" data-testid="topbar-modern">
+			<header className="topbar" role="banner" data-testid="topbar-modern" data-compact={isCompact ? "true" : undefined}>
 				{/* Left zone: .tb-channel */}
 				<div className="tb-channel">
 					{/* Fix 4: avatar with first letter; Sprint 15: profile_pic when available */}
@@ -545,7 +691,107 @@ const LayoutModern: FunctionComponent = () => {
 						)}
 					</div>
 					{/* Kanal tab'lari — tb-meta disina alindi (prototip: isim blogunun saginda) */}
-					<div className="tb-tabs" role="tablist" aria-label={t("topbar.channel-tabs")}>
+					{collapseTabs ? (
+						<div className="tb-tabs">
+							<div className="tb-switcher" ref={switcherRef}>
+								<button
+									type="button"
+									className="tb-switcher-btn"
+									aria-haspopup="listbox"
+									aria-expanded={switcherOpen}
+									title={activeSlug || t("topbar.channel-tabs")}
+									aria-label={activeSlug || t("topbar.channel-tabs")}
+									onClick={() => setSwitcherOpen((v) => !v)}
+								>
+									<span className={`dot ${isLive ? "live" : "off"}`} aria-hidden />
+									{!isCompact && (
+										<span className="tb-switcher-name">
+											{activeSlug || t("topbar.no-channel")}
+										</span>
+									)}
+									<span className="tb-switcher-count">{tabChannels.length}</span>
+									<span className="tb-switcher-caret" aria-hidden>▾</span>
+								</button>
+								{switcherOpen && (
+									<div
+										className="tb-switcher-menu"
+										role="listbox"
+										aria-label={t("topbar.channel-tabs")}
+									>
+										{tabChannels.map((ch) => {
+											const unread = unreadCounts[ch.slug] ?? 0;
+											const chIsLive =
+												!!messages.streamMetaByChannel?.[ch.slug]?.isLive;
+											return (
+												<div
+													key={ch.slug}
+													className={`tb-switcher-item ${
+														ch.slug === activeSlug ? "is-active" : ""
+													}`}
+													role="option"
+													aria-selected={ch.slug === activeSlug}
+												>
+													<button
+														type="button"
+														className="tb-switcher-item-body"
+														title={`${t("topbar.switch-to")} ${ch.slug}`}
+														onClick={() => {
+															onSelectChannel(ch.slug);
+															setSwitcherOpen(false);
+														}}
+													>
+														<span
+															className={`dot ${chIsLive ? "live" : "off"}`}
+															aria-hidden
+														/>
+														<span className="tb-switcher-item-name">
+															{ch.slug}
+														</span>
+														{unread > 0 && (
+															<span className="mono num tb-switcher-unread">
+																{unread}
+															</span>
+														)}
+													</button>
+													<button
+														type="button"
+														className="tb-switcher-item-close"
+														title={`${t("topbar.close-tab")} ${ch.slug}`}
+														aria-label={`${t("topbar.close-tab")} ${ch.slug}`}
+														onClick={(e) => {
+															e.stopPropagation();
+															onCloseChannel(ch.slug);
+														}}
+													>
+														<Icon name="x" size={10} />
+													</button>
+												</div>
+											);
+										})}
+										{isCompact && (
+											<>
+												<div className="tb-switcher-sep" />
+												<button
+													type="button"
+													className="tb-switcher-add"
+													onClick={() => {
+														setAddPopoverOpen(true);
+														setSwitcherOpen(false);
+													}}
+												>
+													<Icon name="plus" size={12} />
+													<span>{t("topbar.add-channel")}</span>
+												</button>
+											</>
+										)}
+									</div>
+								)}
+							</div>
+							{!isCompact && addChannelButton}
+							{addChannelPopover}
+						</div>
+					) : (
+						<div className="tb-tabs" role="tablist" aria-label={t("topbar.channel-tabs")}>
 							{tabChannels.map((ch) => {
 								const unread = unreadCounts[ch.slug] ?? 0;
 								// Faz 1: kanal-başı canlı/çevrimdışı noktası — seçili
@@ -614,6 +860,7 @@ const LayoutModern: FunctionComponent = () => {
 								/>
 							</div>
 						</div>
+					)}
 				</div>
 
 				{/* Middle zone: .tb-stats — Fix 6 */}
@@ -631,25 +878,55 @@ const LayoutModern: FunctionComponent = () => {
 					    burada duplicate oluyordu. */}
 					{/* Role — Fix 6 */}
 					{/* Faz B: rol rozeti HER rolde (viewer dahil) — prototip parite */}
-					<>
-						<div className="tb-stat-sep" />
-						<div
-							className={`tb-role ${roleInfo.isOwner ? "owner" : roleInfo.isMod ? "mod" : "viewer"}`}
-							data-testid="tb-role"
-						>
-							{roleInfo.isOwner ? (
-								<span>📡 {t("topbar.owner")}</span>
-							) : roleInfo.isMod ? (
-								<span>🛡 {t("topbar.moderator")}</span>
-							) : (
-								<span>👤 {t("topbar.viewer")}</span>
-							)}
-						</div>
-					</>
+					{!isCompact && (
+						<>
+							<div className="tb-stat-sep" />
+							{roleBadge}
+						</>
+					)}
 				</div>
 
 				{/* Right zone: .tb-actions — Fix 7 */}
 				<div className="tb-actions" data-testid="tb-actions">
+					{isCompact ? (
+						<div className="tb-more" ref={moreRef}>
+							<button
+								type="button"
+								className={`icon-btn ${moreMenuOpen ? "is-on" : ""}`}
+								title={t("topbar.more")}
+								aria-label={t("topbar.more")}
+								aria-haspopup="menu"
+								aria-expanded={moreMenuOpen}
+								data-testid="tb-btn-more"
+								onClick={() => setMoreMenuOpen((v) => !v)}
+							>
+								<span className="tb-more-dots" aria-hidden>⋯</span>
+							</button>
+							{moreMenuOpen && (
+								<div className="tb-more-menu" role="menu">
+									<div className="tb-more-role">{roleBadge}</div>
+									<div className="tb-more-sep" />
+									{actionItems.map((a) => (
+										<button
+											key={a.key}
+											type="button"
+											role="menuitem"
+											className={`tb-more-item ${a.isOn ? "is-on" : ""}`}
+											disabled={a.disabled}
+											onClick={() => {
+												a.onClick();
+												setMoreMenuOpen(false);
+											}}
+										>
+											<Icon name={a.icon} size={15} />
+											<span>{a.label}</span>
+										</button>
+									))}
+								</div>
+							)}
+						</div>
+					) : (
+						<>
 					<button
 						className={`icon-btn ${
 							isNarrow
@@ -740,6 +1017,8 @@ const LayoutModern: FunctionComponent = () => {
 					>
 						<Icon name="settings" size={15} />
 					</button>
+						</>
+					)}
 				</div>
 			</header>
 

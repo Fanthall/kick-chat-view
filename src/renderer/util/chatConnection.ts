@@ -32,6 +32,10 @@ import {
 	evaluateRewardEvent,
 	evaluateSubEvent,
 } from "./automationRulesEngine";
+// FIX-GIFT-DUP (2026-07-05): tek hediyenin çift event'le iki kez işlenmesini önler.
+import { isDuplicateGift } from "./giftDedup";
+// FIX-GIFT-LEADERBOARD (2026-07-06): GiftsLeaderboardUpdated'i gift sanmayı önler.
+import { looksLikeGiftEvent } from "./giftEventClassify";
 interface EventType {
 	channel: string;
 	data: string;
@@ -685,6 +689,21 @@ export const chatListener = (slug?: string) => {
 						channelSlug: channelName,
 						create_at: new Date().getTime(),
 					});
+					// FIX-GIFT-DUP: aynı gifter'dan pencere içinde ikinci hediye
+					// event'i (aşağıdaki fallback yakalaması dahil) duplike sayılır;
+					// hem aktivite dispatch'i hem otomasyon atlanır.
+					if (
+						isDuplicateGift(
+							channelName,
+							enrichedGiftSub.gifter_username
+						)
+					) {
+						console.log(
+							"[gift-dedup] duplike hediye atlandı (resmî event):",
+							enrichedGiftSub.gifter_username
+						);
+						break;
+					}
 					dispatch(MessageActionsFunc.gifSubMessage(enrichedGiftSub));
 					// Sprint 58 + 58b: gift_sub_event trigger + recipient cache
 					try {
@@ -991,13 +1010,9 @@ export const chatListener = (slug?: string) => {
 						// gift-benzeri her event'i (ad veya gifter/gifted alanları)
 						// yakalayıp resmi gift yoluna sokuyoruz; gerçek event adını
 						// da flag'tan BAĞIMSIZ logluyoruz (tek canlı gift ile teyit).
-						const looksLikeGift =
-							/gift/i.test(evtName) ||
-							p?.gifter_username != null ||
-							p?.gifter != null ||
-							Array.isArray(p?.gifted_usernames) ||
-							Array.isArray(p?.gifted_users) ||
-							p?.gifted_username != null;
+						// FIX-GIFT-LEADERBOARD: leaderboard/ranking event'leri (adında
+						// "gift" geçse bile) gift sayılmaz — bkz. giftEventClassify.ts.
+						const looksLikeGift = looksLikeGiftEvent(evtName, p);
 						if (looksLikeGift) {
 							console.log(
 								"[GiftLikeEvent] yakalandı — event adı:",
@@ -1015,6 +1030,24 @@ export const chatListener = (slug?: string) => {
 									channelSlug: channelName,
 									create_at: new Date().getTime(),
 								});
+							// FIX-GIFT-DUP: resmî GiftedSubscriptionsEvent bu hediyeyi
+							// zaten işlediyse (aynı gifter, pencere içinde) burada
+							// tekrar dispatch + otomasyon YAPMA. Resmî event'i
+							// göndermeyen kanallarda ilk gelen bu olur ve işlenir.
+							if (
+								isDuplicateGift(
+									channelName,
+									enrichedGiftLike.gifter_username
+								)
+							) {
+								console.log(
+									"[gift-dedup] duplike hediye atlandı (fallback):",
+									enrichedGiftLike.gifter_username,
+									"event:",
+									evtName
+								);
+								break;
+							}
 							dispatch(
 								MessageActionsFunc.gifSubMessage(enrichedGiftLike)
 							);
