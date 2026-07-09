@@ -201,6 +201,22 @@ class RowErrorBoundary extends React.Component<
 	}
 }
 
+// Mesaj içi link tıklaması: chatHtml `<a class="chat-link" target="_blank">`
+// üretiyor; main tarafında setWindowOpenHandler zaten dış tarayıcıya yönlendiriyor.
+// Bu delegated handler bir güvence katmanı: default (app penceresinde gezinme /
+// yeni pencere) engellenir, URL doğrudan varsayılan tarayıcıda açılır.
+// Modül seviyesinde sabit → ChatRow memo'sunu kırmaz (prop kimliği değişmez).
+const handleMessageLinkClick = (e: React.MouseEvent<HTMLSpanElement>) => {
+	const anchor = (e.target as HTMLElement | null)?.closest(
+		"a.chat-link"
+	) as HTMLAnchorElement | null;
+	if (!anchor) return;
+	const href = anchor.getAttribute("href");
+	if (!href) return;
+	e.preventDefault();
+	(window.electron as any).openExternal?.(href)?.catch?.(() => {});
+};
+
 const ChatRowBase: FunctionComponent<ChatRowProps> = ({
 	message,
 	username,
@@ -303,6 +319,7 @@ const ChatRowBase: FunctionComponent<ChatRowProps> = ({
 				<span className="chat-sep">:</span>
 				<span
 					className="chat-text"
+					onClick={handleMessageLinkClick}
 					dangerouslySetInnerHTML={{ __html: contentHtml }}
 				/>
 			</div>

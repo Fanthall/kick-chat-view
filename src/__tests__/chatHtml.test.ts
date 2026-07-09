@@ -110,6 +110,43 @@ describe("renderMessageHtml", () => {
 		expect(html).toContain("&lt;script&gt;");
 		expect(html).not.toContain('class="mention-tok"');
 	});
+
+	it("renders an https URL as a clickable external link", () => {
+		const html = renderMessageHtml(
+			"bak buna https://example.com/abc guzel",
+			EMPTY_EMOTE_INDEX
+		);
+		expect(html).toContain(
+			'<a class="chat-link" href="https://example.com/abc" target="_blank" rel="noopener noreferrer">'
+		);
+		expect(html).toContain("bak buna");
+		expect(html).toContain("guzel");
+	});
+
+	it("prefixes https:// for a www. link but keeps visible text as-is", () => {
+		const html = renderMessageHtml("git www.kick.com", EMPTY_EMOTE_INDEX);
+		expect(html).toContain('href="https://www.kick.com"');
+		expect(html).toContain(">www.kick.com</a>");
+	});
+
+	it("keeps trailing punctuation outside the link", () => {
+		const html = renderMessageHtml(
+			"su link https://example.com.",
+			EMPTY_EMOTE_INDEX
+		);
+		expect(html).toContain('href="https://example.com"');
+		expect(html).toContain("</a>.");
+		expect(html).not.toContain('href="https://example.com."');
+	});
+
+	it("does not linkify a non-http scheme (javascript:) — XSS guard", () => {
+		const html = renderMessageHtml(
+			"javascript:alert(1)",
+			EMPTY_EMOTE_INDEX
+		);
+		expect(html).not.toContain("<a ");
+		expect(html).toContain("javascript:alert(1)".replace("(", "(")); // stays plain text (escaped)
+	});
 });
 
 describe("renderMessageHtmlSnippet", () => {

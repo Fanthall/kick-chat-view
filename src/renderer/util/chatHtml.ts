@@ -105,12 +105,42 @@ const emoteImgHtml = (entry: EmoteEntry, options: { blocked: boolean }) => {
 // kalir (orn. "@john," → span sadece "@john").
 const MENTION_TOKEN_REGEX = /^(@[A-Za-z0-9_]+)([\s\S]*)$/;
 
+// Link token: tokenizeMessage kelimeleri whitespace'te ayirdigi icin bir URL
+// tek text token olur. `http(s)://...` veya `www...` ile baslayan kelimeyi
+// tiklanabilir <a> yap. Sondaki noktalama (`. , ! ? ; : ) ] } " '`) link
+// disinda birakilir (chat'te "...link." yaygin). www. → href'e https:// eklenir.
+// Guvenlik: gorunen metin escapeHtml, href safeUrl (yalniz http/https) ile
+// uretilir → CONSTRAINT-4 korunur; XSS yok.
+const LINK_TOKEN_REGEX = /^((?:https?:\/\/|www\.)[^\s]+)$/i;
+const LINK_TRAILING_REGEX = /[.,!?;:)\]}'"»]+$/;
+
+const renderLinkHtml = (word: string): string | undefined => {
+	const linkMatch = LINK_TOKEN_REGEX.exec(word);
+	if (!linkMatch) return undefined;
+	let url = linkMatch[1];
+	let trailing = "";
+	const tm = LINK_TRAILING_REGEX.exec(url);
+	if (tm) {
+		trailing = url.slice(tm.index);
+		url = url.slice(0, tm.index);
+	}
+	if (!url) return undefined;
+	const href = /^www\./i.test(url) ? `https://${url}` : url;
+	const safeHref = safeUrl(href);
+	if (!safeHref) return undefined;
+	return `<a class="chat-link" href="${safeHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>${escapeHtml(trailing)}`;
+};
+
 const renderTextTokenHtml = (value: string): string => {
 	const m = MENTION_TOKEN_REGEX.exec(value);
-	if (!m) return escapeHtml(value);
-	const mention = escapeHtml(m[1]);
-	const rest = m[2] ? escapeHtml(m[2]) : "";
-	return `<span class="mention-tok">${mention}</span>${rest}`;
+	if (m) {
+		const mention = escapeHtml(m[1]);
+		const rest = m[2] ? escapeHtml(m[2]) : "";
+		return `<span class="mention-tok">${mention}</span>${rest}`;
+	}
+	const link = renderLinkHtml(value);
+	if (link !== undefined) return link;
+	return escapeHtml(value);
 };
 
 const renderTokensToHtml = (

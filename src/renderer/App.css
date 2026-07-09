@@ -3022,6 +3022,37 @@ html.modern-shell-root[data-theme="light"] {
 [data-app-shell="modern"] .chat-text {
 	color: var(--ms-fg-1);
 }
+/* Emote boyutu (modern): global .chat-emote sabit 23×23 KARE + object-fit:contain
+   idi → geniş (non-square) emote'lar letterbox olup küçülüyor, "satır yüksekliğine
+   takılıyor" gibi görünüyordu. Burada doğal en-boy oranını koru: min taban satıra
+   otursun, max cap ile ÇOK BÜYÜMESİN (~28px). width:auto → geniş emote genişleyebilir. */
+[data-app-shell="modern"] .chat-text .chat-emote,
+[data-app-shell="modern"] .chat-reply .chat-emote {
+	width: auto;
+	height: auto;
+	min-height: 20px;
+	max-height: 28px;
+	max-width: 100%;
+	object-fit: contain;
+	vertical-align: middle;
+	margin: 0 1px;
+}
+/* Zero-width overlay stack tekrar sarmalayınca overlay emote de aynı cap'e uysun. */
+[data-app-shell="modern"] .chat-text .chat-emote-overlay .chat-emote {
+	margin: 0;
+}
+/* Tıklanabilir link (mesaj içi URL). Varsayılan tarayıcıda açılır
+   (target=_blank → main setWindowOpenHandler + ChatModern delegated onClick). */
+[data-app-shell="modern"] .chat-text .chat-link {
+	color: var(--ms-ac-mint, #2fd3a0);
+	text-decoration: none;
+	cursor: pointer;
+	word-break: break-all;
+}
+[data-app-shell="modern"] .chat-text .chat-link:hover {
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
 [data-app-shell="modern"] .chat-badges {
 	display: inline;
 	margin-right: 4px;
