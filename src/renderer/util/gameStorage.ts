@@ -59,11 +59,15 @@ export interface GameReplyConfig {
 }
 
 export interface GameConfig {
+	/**
+	 * Ayar şeması sürümü. Eski kayıtlara tek seferlik geçiş uygulamak için
+	 * kullanılır (bkz. mergeConfig). 2 = "test modu" kaldırıldı, cevap modu
+	 * `each`, minBet 1.
+	 */
+	schemaVersion: number;
 	enabled: boolean;
 	/** Boş = tüm kanallar; doluysa yalnız bu slug'lar (rutinlerdeki mantık). */
 	channelSlugs: string[];
-	/** true iken chate GERÇEK mesaj gitmez, yalnız konsola loglanır. */
-	dryRun: boolean;
 	/**
 	 * true (varsayılan): oyuncu {joinCommand} yazmadan puan almaz, bahis oynayamaz.
 	 * Sohbeti izleyen herkese otomatik hesap açılmasını önler.
@@ -93,7 +97,10 @@ const text = (key: string): string => {
  * İngilizce arayüzde "(bakiye: ...)" gibi karışık metinler çıkıyor.
  */
 export const defaultReply = (): GameReplyConfig => ({
-	mode: "batch",
+	// Varsayılan "each": her komut sahibine AYRI cevap gider; ancak böyle kişiyi
+	// etiketleyip mesajına reply atabiliriz. Toplu özet (batch) tek mesajda
+	// birleştirdiği için ne tag ne reply mümkün olur.
+	mode: "each",
 	batchSeconds: 8,
 	batchPrefix: "🎲",
 	winTemplate: text("game.default.win"),
@@ -109,10 +116,11 @@ export const defaultReply = (): GameReplyConfig => ({
 });
 
 export const defaultGameConfig = (): GameConfig => ({
-	enabled: false,
+	schemaVersion: 2,
+	// Oyun kutudan çıktığı gibi çalışır ve chate YAZAR. Ara "test modu" yoktur:
+	// susturmak isteyen ya oyunu kapatır ya cevap modunu «sessiz» yapar.
+	enabled: true,
 	channelSlugs: [],
-	// İlk kurulumda kimse kazara canlı yayında spam yapmasın diye AÇIK başlar.
-	dryRun: true,
 	requireJoin: true,
 	liveOnly: true,
 	sessionGraceMinutes: 30,
@@ -133,16 +141,40 @@ export const DEFAULT_GAME_CONFIG: GameConfig = defaultGameConfig();
 const mergeConfig = (raw: unknown): GameConfig => {
 	const base = defaultGameConfig();
 	if (!raw || typeof raw !== "object") return base;
-	const input = raw as Partial<GameConfig>;
+	// `dryRun` artık şemada yok; eski kayıtlardan gelen değer spread ile geri
+	// sızmasın diye burada ayıklanır.
+	const { dryRun: _removedDryRun, ...input } = raw as Partial<GameConfig> & {
+		dryRun?: boolean;
+	};
+
+	/**
+	 * v2 geçişi (tek seferlik). "Test modu" kaldırıldı; eski kayıtlarda
+	 * `dryRun: true` durduğu için güncelleme sonrası bot yine susardı. Ayrıca
+	 * kişiyi etiketleyip reply atabilmek `each` modunu, kullanıcı kararı da
+	 * `minBet: 1`i gerektiriyor. Bunlar bir kez uygulanır; sonrasında kullanıcı
+	 * ne seçerse o kalır (schemaVersion tekrar çalışmasını engeller).
+	 */
+	const needsV2Migration = (input.schemaVersion ?? 1) < 2;
+	const migratedReply = needsV2Migration
+		? { ...(input.reply || {}), mode: "each" as ReplyMode }
+		: input.reply || {};
+	const migratedEconomy = needsV2Migration
+		? { ...(input.economy || {}), minBet: 1 }
+		: input.economy || {};
+
 	return {
 		...base,
 		...input,
+		schemaVersion: 2,
 		channelSlugs: Array.isArray(input.channelSlugs)
 			? input.channelSlugs.filter((s) => typeof s === "string" && s.trim())
 			: [],
 		economy: {
 			...DEFAULT_ECONOMY,
-			...(input.economy || {}),
+			...migratedEconomy,
+			// Ödeme kademeleri artık ayarlanabilir değil — her zaman güncel
+			// varsayılan tablo kullanılır (eski kayıttaki payoutMultiplier yok sayılır).
+			payout: DEFAULT_ECONOMY.payout,
 			curve: {
 				...DEFAULT_ECONOMY.curve,
 				...((input.economy || {}).curve || {}),
@@ -156,7 +188,7 @@ const mergeConfig = (raw: unknown): GameConfig => {
 				...((input.commands || {}).commands || {}),
 			},
 		},
-		reply: { ...base.reply, ...(input.reply || {}) },
+		reply: { ...base.reply, ...migratedReply },
 	};
 };
 

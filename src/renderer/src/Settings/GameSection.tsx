@@ -359,23 +359,7 @@ const GameSection: FunctionComponent = () => {
 	const updateReply = (patch: Partial<GameConfig["reply"]>) =>
 		update({ reply: { ...config.reply, ...patch } });
 
-	// Kademe ağırlığı düzenleme. Çarpanlar sabit, oynanan yalnız İHTİMALDİR —
-	// kullanıcı "3 katı ne sıklıkta çıksın" sorusunu buradan ayarlar.
-	const updatePayoutWeight = (
-		side: "win" | "loss",
-		index: number,
-		weight: number
-	) =>
-		updateEconomy({
-			payout: {
-				...config.economy.payout,
-				[side]: config.economy.payout[side].map((tier, i) =>
-					i === index ? { ...tier, weight } : tier
-				),
-			},
-		});
-
-	const updateCommand = (kind: GameCommandKind, patch: { enabled?: boolean; names?: string[] }) =>
+	const updateCommand =(kind: GameCommandKind, patch: { enabled?: boolean; names?: string[] }) =>
 		update({
 			commands: {
 				...config.commands,
@@ -489,14 +473,6 @@ const GameSection: FunctionComponent = () => {
 					/>
 				</Row>
 
-				<Row title={t("game.dryrun")} sub={t("game.dryrun-sub")}>
-					<Toggle
-						on={config.dryRun}
-						label={t("game.dryrun")}
-						onChange={(v) => update({ dryRun: v })}
-					/>
-				</Row>
-
 				<Row title={t("game.require-join")} sub={t("game.require-join-sub")}>
 					<Toggle
 						on={config.requireJoin}
@@ -570,43 +546,34 @@ const GameSection: FunctionComponent = () => {
 						onChange={(v) => updateEconomy({ maxBet: v })}
 					/>
 				</Row>
+				{/*
+				  Kademeler bilinçli olarak SALT OKUNUR: ağırlıklar dengeli kurulmuş
+				  (ev avantajı korunuyor) ve kullanıcı bunları ayarlamak istemiyor.
+				  Burada yalnız ne olduğu gösterilir.
+				*/}
 				<Row title={t("game.payout")} sub={t("game.payout-sub")}>
-					<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+					<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
 						{(["win", "loss"] as const).map((side) => (
-							<div
-								key={side}
-								style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}
-							>
-								<span
-									className="set-hint"
-									style={{ width: 58, flexShrink: 0 }}
-								>
-									{t(`game.payout.${side}`)}
-								</span>
-								{config.economy.payout[side].map((tier, i) => (
-									<div
-										key={tier.returnMultiplier}
-										style={{ display: "flex", alignItems: "center", gap: 4 }}
-									>
-										<span style={{ fontSize: 12, opacity: 0.85, minWidth: 34 }}>
-											{tier.returnMultiplier}×
-										</span>
-										<NumberField
-											label={`${t(`game.payout.${side}`)} ${tier.returnMultiplier}x`}
-											value={tier.weight}
-											min={0}
-											max={100}
-											step={1}
-											width={56}
-											onChange={(v) => updatePayoutWeight(side, i, v)}
-										/>
-									</div>
-								))}
-							</div>
+							<span key={side} className="set-hint">
+								<b>{t(`game.payout.${side}`)}:</b>{" "}
+								{config.economy.payout[side]
+									.filter((tier) => tier.weight > 0)
+									.map(
+										(tier) =>
+											`${tier.returnMultiplier}× %${Math.round(
+												(tier.weight /
+													config.economy.payout[side].reduce(
+														(sum, t2) => sum + t2.weight,
+														0
+													)) *
+													100
+											)}`
+									)
+									.join(" · ")}
+							</span>
 						))}
 						<span className="set-hint">
-							{t("game.payout.edge")}: {(edge * 100).toFixed(1)}%{" "}
-							{edge >= 0 ? `⚠ ${t("game.payout.edge-warn")}` : "✓"}
+							{t("game.payout.edge")}: {(edge * 100).toFixed(1)}%
 						</span>
 					</div>
 				</Row>

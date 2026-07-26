@@ -49,7 +49,6 @@ const setupConfig = (overrides: Partial<GameConfig> = {}) => {
 	const config: GameConfig = {
 		...DEFAULT_GAME_CONFIG,
 		enabled: true,
-		dryRun: false,
 		requireJoin: false,
 		...overrides,
 	};
@@ -73,7 +72,7 @@ const sentTexts = () =>
 
 describe("kapsam kontrolü", () => {
 	test("oyun kapalıyken hiçbir şey olmaz", async () => {
-		saveGameConfig({ ...DEFAULT_GAME_CONFIG, enabled: false, dryRun: false });
+		saveGameConfig({ ...DEFAULT_GAME_CONFIG, enabled: false });
 		evaluateGameMessage(CHANNEL, "ali", "!bahis 500", nextId());
 		await __flushQueuesForTest(CHANNEL);
 		expect(sendChatMessageMock).not.toHaveBeenCalled();
@@ -207,11 +206,22 @@ describe("bahis akışı", () => {
 		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(0);
 	});
 
+	// Varsayılan minBet 1'dir; sınır davranışı için açıkça yükseltiyoruz.
 	test("min bahis altı reddedilir", async () => {
-		setupConfig();
+		setupConfig({
+			economy: { ...DEFAULT_GAME_CONFIG.economy, minBet: 100 },
+		});
 		evaluateGameMessage(CHANNEL, "ali", "!bahis 10", nextId());
 		await __flushQueuesForTest(CHANNEL);
 		expect(sentTexts().join(" ")).toContain("en az");
+	});
+
+	test("varsayılan minBet 1 — 1 puanlık bahis kabul edilir", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(sentTexts().join(" ")).not.toContain("en az");
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
 	});
 });
 
@@ -239,8 +249,9 @@ describe("dedup", () => {
 });
 
 describe("cevap modları", () => {
+	// Varsayılan artık "each" (tag + reply için); batch açıkça seçilir.
 	test("batch: birden çok sonuç TEK mesajda toplanır (rate-limit koruması)", async () => {
-		setupConfig();
+		setupConfig({ reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "batch" } });
 		["ali", "veli", "ayse", "mehmet"].forEach((user) => {
 			evaluateGameMessage(CHANNEL, user, "!bahis 500", nextId());
 		});
@@ -271,8 +282,11 @@ describe("cevap modları", () => {
 		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
 	});
 
-	test("DRY-RUN: bakiye işlenir ama chate mesaj GİTMEZ", async () => {
-		setupConfig({ dryRun: true });
+	// Susturmanın tek yolu artık cevap modu; ara bir "test modu" yok.
+	test("sessiz modda bakiye işlenir ama chate mesaj GİTMEZ", async () => {
+		setupConfig({
+			reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "silent" },
+		});
 		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
 		await __flushQueuesForTest(CHANNEL);
 

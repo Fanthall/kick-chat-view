@@ -1,3 +1,16 @@
+# 4.6.18 — 2026-07-26
+
+Test modu kaldırıldı: oyun kutudan çıktığı gibi chate yazar ve oyuncuyu etiketler.
+
+## [Bahis oyunu] — 2026-07-26
+
+- **Kaldırıldı — "test modu" (`dryRun`).** Ara bir sessiz mod artık yok; oyun varsayılan olarak **açık** gelir ve chate **yazar**. Susturmak isteyen oyunu kapatır ya da cevap modunu «sessiz» yapar.
+- **Geçiş (otomatik):** Eski kayıtlarda `dryRun: true` durduğu için güncelleme sonrası bot yine susardı. Ayar şemasına sürüm eklendi; eski kayıtlar bir kez **sürüm 2**'ye taşınıyor — `dryRun` ayıklanır, cevap modu `each` olur, `minBet` 1'e iner. Sonrasında ne seçersen o kalır.
+- **Oyuncu etiketleniyor:** Kişiye giden tüm cevaplarda ad `@` ile yazılır (`@ali 3 kat! +2.000`) ve mesaj komutun kendisine **reply** olarak gider. Varsayılan cevap modu bu yüzden `each` oldu — toplu özet tek mesaj olduğu için ne tag ne reply mümkün.
+- **En az bahis 1 puan** (önceden 100).
+- **Ödeme kademeleri artık ayarlanamaz.** Ağırlıklar dengeli kurulu (ev avantajı korunuyor) ve panelde yalnız **salt okunur** gösteriliyor: kazanç `1,2× / 1,5× / 2× / 3× / 5×`, kayıp `0× / %10 / %25 / %50 geri`, yüzdeleriyle birlikte.
+- i18n TR + EN tam (131 anahtar). Testler: 131 oyun testi — sürüm 2 geçişi, geçişin bir kez uygulanması ve `minBet: 1` davranışı dahil.
+
 # 4.6.17 — 2026-07-26
 
 Oyun botu: çarpanlı ödeme, cevabı reply olarak gönderme ve "bot neden yazmıyor" göstergesi.

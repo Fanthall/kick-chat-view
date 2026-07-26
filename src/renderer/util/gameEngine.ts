@@ -99,7 +99,6 @@ export const GAME_DIAGNOSTIC_CHANGED = "chat-view-game-diagnostic-changed";
 export type GameBlockReason =
 	| "ok"
 	| "disabled"
-	| "dry_run"
 	| "silent_mode"
 	| "not_live"
 	| "no_broadcaster_id"
@@ -263,14 +262,6 @@ const deliver = async (
 ) => {
 	const cfg = config();
 	if (!text.trim()) return;
-
-	if (cfg.dryRun) {
-		setDiagnostic(channelSlug, { reason: "dry_run", detail: text });
-		console.log(
-			`[game][DRYRUN] chate GÖNDERİLMEDİ (test modu) | kanal=${channelSlug}: ${text}`
-		);
-		return;
-	}
 
 	const info = await fetchChannelInfo(channelSlug);
 	if (!info.broadcasterId) {
@@ -456,7 +447,7 @@ const handleBet = (
 			// Hata cevapları toplu modda da KISALTILMAZ: oyuncunun bahsinin neden
 			// işlenmediğini bilmesi gerekir, "ali ❓" hiçbir şey anlatmaz.
 			text: fillGameTemplate(
-				"{username} geçersiz miktar. Örnek: {betCommand} 500 · {betCommand} %50 · {betCommand} hepsi",
+				"@{username} geçersiz miktar. Örnek: {betCommand} 500 · {betCommand} %50 · {betCommand} hepsi",
 				{ username: player.username, ...names }
 			),
 		});
@@ -478,7 +469,7 @@ const handleBet = (
 		enqueue({
 			channelSlug,
 			replyToMessageId,
-			text: `${player.username} ${reasonText[rejection.reason]}`,
+			text: `@${player.username} ${reasonText[rejection.reason]}`,
 		});
 		return session;
 	}

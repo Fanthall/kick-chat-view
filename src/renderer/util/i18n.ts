@@ -823,11 +823,6 @@ export const dict: Dict = {
 		tr: "Kapalıyken komutlar tamamen yok sayılır.",
 		en: "While off, commands are ignored entirely.",
 	},
-	"game.dryrun": { tr: "Test modu (chate yazma)", en: "Test mode (no chat messages)" },
-	"game.dryrun-sub": {
-		tr: "Açıkken bakiyeler işlenir ama chate mesaj gönderilmez; ne gönderileceği konsola yazılır.",
-		en: "Balances still update, but nothing is sent to chat — the would-be message is logged to the console.",
-	},
 	"game.require-join": { tr: "Katılım zorunlu", en: "Require joining" },
 	"game.require-join-sub": {
 		tr: "Oyuncu katılma komutunu yazmadan puan almaz. Kapatılırsa ilk bahiste otomatik hesap açılır.",
@@ -870,10 +865,6 @@ export const dict: Dict = {
 	},
 	"game.status.idle": { tr: "Henüz komut işlenmedi", en: "No command handled yet" },
 	"game.status.ok": { tr: "✓ Chate yazıyor", en: "✓ Posting to chat" },
-	"game.status.dry_run": {
-		tr: "⚠ Test modu açık — chate YAZILMIYOR",
-		en: "⚠ Test mode on — NOT posting to chat",
-	},
 	"game.status.silent_mode": {
 		tr: "⚠ Cevap modu «sessiz»",
 		en: "⚠ Reply mode is “silent”",
@@ -1085,30 +1076,32 @@ export const dict: Dict = {
 
 	// Varsayılan chat şablonları — bunlar izleyicinin chatte GÖRDÜĞÜ metinlerdir,
 	// dolayısıyla arayüz diliyle birlikte gelmeleri gerekir (sabit TR bırakılamaz).
+	// NOT: kişiye giden cevaplarda ad `@` ile etiketlenir — oyuncu akan chatte
+	// kendi sonucunu bildirimden yakalasın diye.
 	"game.default.win": {
-		tr: "{username} {multiplier} kat! +{amount} 🎉 (bakiye: {balance})",
-		en: "{username} {multiplier}x! +{amount} 🎉 (balance: {balance})",
+		tr: "@{username} {multiplier} kat! +{amount} 🎉 (bakiye: {balance})",
+		en: "@{username} {multiplier}x! +{amount} 🎉 (balance: {balance})",
 	},
 	"game.default.loss": {
-		tr: "{username} {multiplier} kat — {returned} geri, -{amount} 💀 (bakiye: {balance})",
-		en: "{username} {multiplier}x — {returned} back, -{amount} 💀 (balance: {balance})",
+		tr: "@{username} {multiplier} kat — {returned} geri, -{amount} 💀 (bakiye: {balance})",
+		en: "@{username} {multiplier}x — {returned} back, -{amount} 💀 (balance: {balance})",
 	},
 	"game.default.balance": {
-		tr: "{username} bakiyen: {balance} puan",
-		en: "{username} your balance: {balance} points",
+		tr: "@{username} bakiyen: {balance} puan",
+		en: "@{username} your balance: {balance} points",
 	},
 	"game.default.top": { tr: "🏆 {top}", en: "🏆 {top}" },
 	"game.default.join": {
-		tr: "{username} oyuna katıldın 🎮 {balance} puanla başlıyorsun. {betCommand} <miktar> ile oyna.",
-		en: "{username} you're in 🎮 starting with {balance} points. Play with {betCommand} <amount>.",
+		tr: "@{username} oyuna katıldın 🎮 {balance} puanla başlıyorsun. {betCommand} <miktar> ile oyna.",
+		en: "@{username} you're in 🎮 starting with {balance} points. Play with {betCommand} <amount>.",
 	},
 	"game.default.already-joined": {
-		tr: "{username} zaten oyundasın · bakiye: {balance}",
-		en: "{username} you're already in · balance: {balance}",
+		tr: "@{username} zaten oyundasın · bakiye: {balance}",
+		en: "@{username} you're already in · balance: {balance}",
 	},
 	"game.default.not-joined": {
-		tr: "{username} önce {joinCommand} yazıp oyuna katılman gerek.",
-		en: "{username} type {joinCommand} to join the game first.",
+		tr: "@{username} önce {joinCommand} yazıp oyuna katılman gerek.",
+		en: "@{username} type {joinCommand} to join the game first.",
 	},
 	"game.default.reset": {
 		tr: "🔄 Oyun sıfırlandı — herkes yeniden {balance} puanla başlıyor. {joinCommand} ile katıl.",

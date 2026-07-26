@@ -245,7 +245,7 @@ export const pickPayoutTier = (tiers: PayoutTier[], rng: Rng): PayoutTier => {
 
 export const DEFAULT_ECONOMY: GameEconomyConfig = {
 	startingBalance: 10000,
-	minBet: 100,
+	minBet: 1,
 	maxBet: 0,
 	payout: DEFAULT_PAYOUT,
 	cooldownSec: 30,

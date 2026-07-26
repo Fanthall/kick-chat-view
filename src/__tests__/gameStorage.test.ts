@@ -32,12 +32,50 @@ beforeEach(() => {
 describe("config I/O", () => {
 	test("kayıt yokken varsayılan döner", () => {
 		const config = loadGameConfig();
-		expect(config.enabled).toBe(false);
+		expect(config.enabled).toBe(true);
 		expect(config.economy.startingBalance).toBe(10000);
 	});
 
-	test("ilk kurulumda DRY-RUN açıktır (kazara canlı spam olmasın)", () => {
-		expect(DEFAULT_GAME_CONFIG.dryRun).toBe(true);
+	// Ara "test modu" yok: oyun kurulur kurulmaz chate yazar.
+	test("varsayılan kurulum doğrudan chate yazacak şekilde gelir", () => {
+		expect(DEFAULT_GAME_CONFIG.enabled).toBe(true);
+		expect(DEFAULT_GAME_CONFIG.reply.mode).toBe("each");
+		expect(DEFAULT_GAME_CONFIG.economy.minBet).toBe(1);
+		expect(DEFAULT_GAME_CONFIG).not.toHaveProperty("dryRun");
+	});
+
+	/**
+	 * REGRESYON: "test modu" kaldırıldığında eski kayıtlarda `dryRun: true`
+	 * duruyordu; sürüm 2 geçişi olmasaydı güncelleme sonrası bot yine susardı.
+	 * Ayrıca tag+reply için `each`, kullanıcı kararı için `minBet: 1` gerekiyor.
+	 */
+	test("eski kayıt (dryRun + batch + minBet 100) sürüm 2'ye taşınır", () => {
+		localStorage.setItem(
+			"chatViewGameConfig",
+			JSON.stringify({
+				enabled: true,
+				dryRun: true,
+				reply: { mode: "batch" },
+				economy: { minBet: 100 },
+			})
+		);
+		const loaded = loadGameConfig();
+		expect(loaded.schemaVersion).toBe(2);
+		expect(loaded.enabled).toBe(true);
+		expect(loaded.reply.mode).toBe("each");
+		expect(loaded.economy.minBet).toBe(1);
+		expect(loaded).not.toHaveProperty("dryRun");
+	});
+
+	test("geçiş bir kez uygulanır — sonrasında kullanıcı seçimi korunur", () => {
+		saveGameConfig({
+			...DEFAULT_GAME_CONFIG,
+			reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "batch" },
+			economy: { ...DEFAULT_GAME_CONFIG.economy, minBet: 50 },
+		});
+		const loaded = loadGameConfig();
+		expect(loaded.reply.mode).toBe("batch");
+		expect(loaded.economy.minBet).toBe(50);
 	});
 
 	test("kaydedilen ayar geri yüklenir", () => {
@@ -60,7 +98,7 @@ describe("config I/O", () => {
 		expect(loaded.economy.startingBalance).toBe(777);
 		// Yazılmamış alanlar varsayılandan gelir
 		expect(loaded.economy.curve.base).toBe(DEFAULT_GAME_CONFIG.economy.curve.base);
-		expect(loaded.reply.mode).toBe("batch");
+		expect(loaded.reply.mode).toBe("each");
 		expect(loaded.commands.prefix).toBe("!");
 	});
 
@@ -92,7 +130,7 @@ describe("config I/O", () => {
 
 	test("bozuk JSON varsayılana düşer, patlamaz", () => {
 		localStorage.setItem("chatViewGameConfig", "{bozuk");
-		expect(loadGameConfig().enabled).toBe(false);
+		expect(loadGameConfig().enabled).toBe(true); // varsayılana düştü
 	});
 
 	test("kaydetme değişiklik olayı yayar", () => {
@@ -106,7 +144,9 @@ describe("config I/O", () => {
 
 describe("gameAppliesToChannel", () => {
 	test("kapalıyken hiçbir kanalda çalışmaz", () => {
-		expect(gameAppliesToChannel(DEFAULT_GAME_CONFIG, "fanthal")).toBe(false);
+		expect(
+			gameAppliesToChannel({ ...DEFAULT_GAME_CONFIG, enabled: false }, "fanthal")
+		).toBe(false);
 	});
 
 	test("kanal listesi boşsa tüm kanallarda çalışır", () => {
