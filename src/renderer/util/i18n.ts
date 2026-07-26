@@ -889,6 +889,16 @@ export const dict: Dict = {
 		tr: "oyuncu lehine — ağırlıkları düşür",
 		en: "favours players — lower the weights",
 	},
+	"game.chat-reward": { tr: "Sohbet ödülü", en: "Chat reward" },
+	"game.chat-reward-sub": {
+		tr: "Oyuna katılmış izleyici chate her yazdığında sessizce puan kazanır — bot bunu duyurmaz. Bekleme veya uzunluk şartı yoktur; tek sınır oturum başına toplam tavandır.",
+		en: "Players who joined the game earn points silently for every chat message — the bot never announces it. There is no cooldown or length requirement; the only limit is the per-session cap.",
+	},
+	"game.chat-reward.per-message": {
+		tr: "Mesaj başına puan",
+		en: "Points per message",
+	},
+	"game.chat-reward.cap": { tr: "Oturum tavanı", en: "Session cap" },
 	"game.cooldown": { tr: "Bekleme (sn)", en: "Cooldown (s)" },
 	"game.cooldown-sub": {
 		tr: "Aynı oyuncunun iki bahsi arasındaki en az süre.",
@@ -1129,9 +1139,19 @@ export const dict: Dict = {
 		tr: "Şans döngüsü yenilendi, herkes sıfırdan",
 		en: "Luck cycle refreshed, everyone starts over",
 	},
+	// Yardım üç parçaya bölünür: tek mesajda hem uzunluk hem özel karakter
+	// sınırına takılıyor, ayrıca chatte tek blok metin okunmuyor.
 	"game.default.help": {
-		tr: "{betCommand} <miktar> oyna, {balanceCommand} bakiye, {topCommand} sıralama",
-		en: "{betCommand} <amount> to play, {balanceCommand} balance, {topCommand} leaderboard",
+		tr: "@{username} Katılmak için {joinCommand} yaz, {balance} puanla başlarsın. Oynamak için {betCommand} 500 ya da {betCommand} %50 veya {betCommand} hepsi. Bakiyen {balanceCommand}, sıralama {topCommand}",
+		en: "@{username} Type {joinCommand} to join and start with {balance} points. Play with {betCommand} 500 or {betCommand} %50 or {betCommand} all. Balance {balanceCommand}, leaderboard {topCommand}",
+	},
+	"game.default.help-dice": {
+		tr: "Her bahiste 0 ile 20 arası zar atılır. 20 attın mı 5 kat, 18-19 ise 3 kat, 15-17 ise 2 kat, 12-14 ise 1,5 kat, 10-11 ise 1,2 kat kazanırsın. 7-9 yarısını, 4-6 çeyreğini, 1-3 kıl payını geri verir, 0 ise hepsi gider",
+		en: "Every bet rolls a die from 0 to 20. Roll 20 for 5x, 18-19 for 3x, 15-17 for 2x, 12-14 for 1,5x, 10-11 for 1,2x. 7-9 returns half, 4-6 a quarter, 1-3 a sliver, and 0 loses it all",
+	},
+	"game.default.help-reward": {
+		tr: "Ayrıca chate yazdıkça sessizce puan kazanırsın, bunun için bir şey yapmana gerek yok. Ne kadar çok sohbet edersen o kadar çok puan, oturum başına {rewardCap} puana kadar",
+		en: "You also earn points silently just by chatting, no command needed. The more you talk the more you earn, up to {rewardCap} points per session",
 	},
 };
 

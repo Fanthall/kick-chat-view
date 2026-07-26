@@ -14,7 +14,12 @@
  * VARSAYILAN mod "batch": biriken sonuçlar tek mesajda özetlenir.
  */
 
-import { GamePlayer, settleBet, validateBet } from "./gameEconomy";
+import {
+	GamePlayer,
+	applyChatReward,
+	settleBet,
+	validateBet,
+} from "./gameEconomy";
 import {
 	PRIVILEGED_COMMANDS,
 	parseGameCommand,
@@ -546,6 +551,44 @@ const handleBet = (
 	};
 };
 
+// ─── Sohbet ödülü (pasif kazanç) ─────────────────────────────────────────────
+
+/**
+ * Chate yazan oyuncuya sessizce puan verir.
+ *
+ * Kurallar:
+ *   - YALNIZ oyuna katılmış oyuncular kazanır. Aksi halde sohbet eden herkese
+ *     hesap açılır, oturum şişer ve katılım kapısı anlamsızlaşır.
+ *   - Chate HİÇBİR ŞEY yazılmaz; oyuncu bakiyesini `{balanceCommand}` ile görür.
+ *   - Yayın kesin kapalıysa çalışmaz (bahis tarafıyla aynı kural).
+ *   - Ödül hak edilmediyse (tavan doldu) diske YAZILMAZ — chat hızlı akar.
+ */
+const grantChatReward = (
+	cfg: GameConfig,
+	channelSlug: string,
+	username: string
+): void => {
+	if (!cfg.economy.chatReward.enabled) return;
+
+	const cached = channelInfoCache.get(channelSlug.toLowerCase());
+	if (cfg.liveOnly && cached?.liveKnown && !cached.isLive) return;
+
+	const sessions = loadSessions();
+	const session = getSession(sessions, channelSlug);
+	if (!session || !hasJoined(session, username)) return;
+
+	const player = session.players[username.trim().toLowerCase()];
+	const rewarded = applyChatReward(player, cfg.economy.chatReward, Date.now());
+	if (!rewarded) return; // tavan doldu → yazma yok
+
+	saveSessions(
+		putSession(sessions, {
+			...putPlayer(session, rewarded),
+			lastActiveAt: Date.now(),
+		})
+	);
+};
+
 // ─── Genel giriş noktası ─────────────────────────────────────────────────────
 
 /**
@@ -566,8 +609,14 @@ export const evaluateGameMessage = (
 	if (!username || !content) return;
 
 	const parsed = parseGameCommand(content, cfg.commands);
-	if (!parsed) return;
 	if (alreadyProcessed(messageId)) return;
+
+	// Komut DEĞİLSE: sohbet ödülü yolu. Oyuncu yazdıkça sessizce puan kazanır;
+	// chate hiçbir şey yazılmaz (her mesaja bot cevabı = spam).
+	if (!parsed) {
+		grantChatReward(cfg, channelSlug, username);
+		return;
+	}
 
 	// Kanal bilgisi asenkron gelir; ilk mesajda kimlik boş olabilir — sorun değil,
 	// oturum zaman toleransıyla çözülür ve kimlik öğrenilince oturuma yazılır.
@@ -733,19 +782,34 @@ export const evaluateGameMessage = (
 			break;
 		}
 
-		case "help":
-			enqueue({
-				channelSlug,
-				replyToMessageId: messageId,
-				// Yardım herkese açık — hesabı olmayan da sorabilir, o yüzden
-				// bakiye yerine başlangıç puanı gösterilir.
-				text: fillGameTemplate(cfg.reply.helpTemplate, {
-					username,
-					balance: startingBalance,
-					...names,
-				}),
-			});
+		case "help": {
+			// Yardım herkese açık — hesabı olmayan da sorabilir, o yüzden
+			// bakiye yerine başlangıç puanı gösterilir.
+			//
+			// Üç parça: (1) nasıl katılınır/oynanır, (2) zar tablosu, (3) pasif
+			// sohbet kazancı. Tek mesajda hem uzunluk hem Kick'in özel karakter
+			// sınırına takılıyor, ayrıca chatte tek blok metin okunmuyor.
+			const helpValues = {
+				username,
+				balance: startingBalance,
+				rewardCap: formatNumber(cfg.economy.chatReward.maxPerSession),
+				...names,
+			};
+			const parts = [cfg.reply.helpTemplate, text("game.default.help-dice")];
+			if (cfg.economy.chatReward.enabled) {
+				parts.push(text("game.default.help-reward"));
+			}
+			for (const part of parts) {
+				if (!part.trim()) continue;
+				enqueue({
+					channelSlug,
+					// Yalnız ilk parça reply; üçü birden reply olursa chat şişer.
+					replyToMessageId: part === parts[0] ? messageId : undefined,
+					text: fillGameTemplate(part, helpValues),
+				});
+			}
 			break;
+		}
 
 		default:
 			break;

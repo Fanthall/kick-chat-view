@@ -577,6 +577,52 @@ const GameSection: FunctionComponent = () => {
 						</span>
 					</div>
 				</Row>
+				{/*
+				  Pasif kazanç: chate yazan oyuncu sessizce puan alır. Spam
+				  koruması bilinçli olarak YOK; tek sınır oturum tavanıdır.
+				*/}
+				<Row title={t("game.chat-reward")} sub={t("game.chat-reward-sub")}>
+					<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+						<Toggle
+							on={config.economy.chatReward.enabled}
+							label={t("game.chat-reward")}
+							onChange={(v) =>
+								updateEconomy({
+									chatReward: { ...config.economy.chatReward, enabled: v },
+								})
+							}
+						/>
+						<NumberField
+							label={t("game.chat-reward.per-message")}
+							value={config.economy.chatReward.perMessage}
+							min={0}
+							step={1}
+							width={64}
+							onChange={(v) =>
+								updateEconomy({
+									chatReward: { ...config.economy.chatReward, perMessage: v },
+								})
+							}
+						/>
+						<span className="set-hint">{t("game.chat-reward.cap")}</span>
+						<NumberField
+							label={t("game.chat-reward.cap")}
+							value={config.economy.chatReward.maxPerSession}
+							min={0}
+							step={500}
+							width={84}
+							onChange={(v) =>
+								updateEconomy({
+									chatReward: {
+										...config.economy.chatReward,
+										maxPerSession: v,
+									},
+								})
+							}
+						/>
+					</div>
+				</Row>
+
 				<Row title={t("game.cooldown")} sub={t("game.cooldown-sub")}>
 					<NumberField
 						label={t("game.cooldown")}

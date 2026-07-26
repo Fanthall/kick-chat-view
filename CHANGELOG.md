@@ -1,3 +1,17 @@
+# 4.6.22 — 2026-07-26
+
+Sohbet ederek pasif puan kazanma + detaylı `!oyun` anlatımı.
+
+## [Bahis oyunu] — 2026-07-26
+
+- **Yeni — sohbet ödülü (pasif kazanç).** Oyuna katılmış izleyici chate her yazdığında **sessizce** puan kazanır. Bot bunu **duyurmaz** (her mesaja cevap = spam); oyuncu bakiyesini `!puan` ile görür. Yayıncı tarafında amaç etkileşim: konuşan izleyici oyunda kalır.
+- **Spam koruması bilinçli olarak YOK** (kullanıcı kararı): bekleme süresi, en az uzunluk veya tekrar kontrolü aranmaz — her mesaj kazandırır. Aşırıya kaçmaması **oturum tavanıyla** sağlanır: mesaj başına **5 puan**, oyuncu başına oturumda en fazla **5.000 puan** (başlangıç bakiyesinin yarısı). Tavan dolduğunda sessizce durur; kimse susturulmaz.
+- Yalnız **katılmış** oyuncular kazanır — aksi halde sohbet eden herkese hesap açılır ve katılım kapısı anlamsızlaşır. Yayın kesin kapalıyken ödül işlemez.
+- Performans: ödül hak edilmediğinde diske **yazılmaz**; chat hızlı akarken gereksiz localStorage trafiği oluşmaz.
+- Panelden ayarlanabilir: aç/kapa, mesaj başına puan, oturum tavanı (Ayarlar → Oyun → Ekonomi).
+- **`!oyun` artık gerçekten anlatıyor.** Tek satırlık komut listesi yerine üç parça: (1) nasıl katılınır ve oynanır, (2) zar tablosunun tamamı — hangi atış kaç kat, (3) sohbetten pasif kazanç. Tek mesajda hem uzunluk hem Kick'in özel karakter sınırına takıldığı için bölündü; yalnız ilk parça reply olarak gider.
+- Testler: 173 oyun testi (yeni sohbet ödülü paketi dahil) — tavan davranışı, sessizlik ve katılmamışa hesap açılmaması testle kilitli.
+
 # 4.6.21 — 2026-07-26
 
 Emoji kayıtlı şablonlarda kalmıştı: hepsi yenilendi + aşamalı sadeleştirme.

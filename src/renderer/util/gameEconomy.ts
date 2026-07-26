@@ -88,9 +88,39 @@ export interface PayoutTable {
 	loss: PayoutTier[];
 }
 
+/**
+ * Sohbet ödülü — chate yazan oyuncu SESSİZCE puan kazanır.
+ *
+ * Amaç yayıncı tarafında etkileşim: izleyici konuştukça bakiyesi büyür, oyuna
+ * devam edebilir. Kazanç chate DUYURULMAZ (her mesaja bot cevabı = spam);
+ * oyuncu bakiyesini `{balanceCommand}` ile görür.
+ *
+ * Ölçek bahis ekonomisine bağlıdır: `perMessage`, başlangıç bakiyesinin
+ * binde biri civarında tutulur. 3 saatlik bir yayında sürekli yazan bir
+ * izleyici ~180 ödül alır (60 sn bekleme) — yani başlangıcın kabaca %18'i.
+ * Bu, ev avantajının (%3) erittiğini tamamen telafi etmez; oyunu bozmadan
+ * ayakta tutar.
+ */
+export interface ChatRewardConfig {
+	enabled: boolean;
+	/** HER mesaj için verilen puan. Bekleme, uzunluk veya tekrar şartı yoktur. */
+	perMessage: number;
+	/**
+	 * Bir oyuncunun oturum boyunca sohbetten kazanabileceği TAVAN.
+	 *
+	 * Kullanıcı kararı (2026-07-26): "spam koruması yapma, bol bol kazansın —
+	 * ama çok yüksek de kazanmasın." Kimseyi susturmak yerine yalnız toplamı
+	 * sınırlıyoruz: hızlı yazan da yavaş yazan da aynı tavana kadar kazanır,
+	 * sonrası puan getirmez. Böylece bakiye kontrolden çıkmaz. 0 = sınırsız.
+	 */
+	maxPerSession: number;
+}
+
 export interface GameEconomyConfig {
 	/** Her oyuncunun yayın başına aldığı puan. */
 	startingBalance: number;
+	/** Chat yazınca sessizce kazanılan puan. */
+	chatReward: ChatRewardConfig;
 	minBet: number;
 	/** 0 = sınırsız. */
 	maxBet: number;
@@ -132,6 +162,8 @@ export interface GamePlayer {
 	peakBalance: number;
 	/** Son bahis zamanı (epoch ms) — cooldown kontrolü. */
 	lastBetAt: number;
+	/** Bu oturumda sohbetten kazanılan toplam puan — tavan kontrolü + panel. */
+	chatEarned: number;
 }
 
 // ─── Preset'ler ──────────────────────────────────────────────────────────────
@@ -254,6 +286,13 @@ export const pickPayoutTier = (tiers: PayoutTier[], rng: Rng): PayoutTier => {
 
 export const DEFAULT_ECONOMY: GameEconomyConfig = {
 	startingBalance: 10000,
+	/*
+	 * Ölçek: her mesaj 5 puan, oturum tavanı 5.000 (başlangıcın yarısı).
+	 * Sohbet eden izleyici 1.000 mesajda tavana ulaşır; tipik bir yayında
+	 * 200-400 mesaj = 1.000-2.000 puan eder. Ev avantajının erittiğini
+	 * telafi etmeye yetmez ama oyuncuyu masada tutar.
+	 */
+	chatReward: { enabled: true, perMessage: 5, maxPerSession: 5000 },
 	minBet: 1,
 	maxBet: 0,
 	payout: DEFAULT_PAYOUT,
@@ -284,7 +323,41 @@ export const createPlayer = (
 	losses: 0,
 	peakBalance: Math.max(0, Math.floor(startingBalance)),
 	lastBetAt: 0,
+	chatEarned: 0,
 });
+
+/**
+ * Sohbet ödülünü uygular: oyuncu chate yazdıkça SESSİZCE puan kazanır.
+ *
+ * Bekleme, uzunluk veya tekrar şartı YOKTUR (kullanıcı kararı: "spam koruması
+ * yapma, bol bol kazansın"). Tek sınır oturum tavanıdır; tavan dolduğunda
+ * `undefined` döner ve çağıran hiçbir şey yazmaz — sessiz ve ucuz, çünkü chat
+ * hızlı akar ve her mesajda diske yazmak istemeyiz.
+ */
+export const applyChatReward = (
+	player: GamePlayer,
+	config: ChatRewardConfig,
+	now: number
+): GamePlayer | undefined => {
+	if (!config.enabled || config.perMessage <= 0) return undefined;
+
+	const cap = Math.max(0, config.maxPerSession);
+	if (cap > 0 && player.chatEarned >= cap) return undefined;
+
+	// Tavana taşmadan, kalan kadar ver.
+	const gain = cap > 0
+		? Math.min(Math.floor(config.perMessage), cap - player.chatEarned)
+		: Math.floor(config.perMessage);
+	if (gain <= 0) return undefined;
+
+	const balance = player.balance + gain;
+	return {
+		...player,
+		balance,
+		peakBalance: Math.max(player.peakBalance, balance),
+		chatEarned: player.chatEarned + gain,
+	};
+};
 
 // ─── Kazanma olasılığı ───────────────────────────────────────────────────────
 
