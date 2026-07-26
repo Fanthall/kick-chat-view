@@ -1,3 +1,17 @@
+# 4.6.17 — 2026-07-26
+
+Oyun botu: çarpanlı ödeme, cevabı reply olarak gönderme ve "bot neden yazmıyor" göstergesi.
+
+## [Bahis oyunu] — 2026-07-26
+
+- **Fix (kritik):** `liveOnly` açıkken oyun hiç konuşmayabiliyordu. Kick `/public/v1/channels` yanıtında `stream` alanı **opsiyoneldir** ve üst seviyede `is_live` yoktur; alan gelmediğinde `Boolean(undefined)` false olup "yayın kapalı" sanılıyor ve motor sessizce susuyordu. Artık canlılık **bilinmiyor** ile **kesin kapalı** ayrıştırılıyor — yalnız `is_live: false` geldiğinde susulur.
+- **Yeni:** Cevaplar komutu yazan kişinin mesajına **reply** olarak gidiyor (`each` modunda). Toplu (`batch`) modda tek mesajda birden fazla oyuncu olduğu için reply atılmaz, isimler metinde geçer.
+- **Yeni — çarpanlı ödeme:** Sonuç artık ikili (kazandı/kaybetti) değil. Şans eğrisi önce tarafı belirler, ardından o tarafın kademelerinden **ağırlıklı çekiliş** yapılır: kazançta 1,2× / 1,5× / 2× / 3× / 5×; kayıpta 0× / %10 / %25 / %50 geri dönüş. Çarpanlar sabit kural değil, ihtimale bağlıdır ve ağırlıkları Ayarlar → Oyun'dan düzenlenebilir.
+- **Yeni:** Panelde canlı **ev avantajı** göstergesi. Ağırlıklar oyuncu lehine döndüğünde uyarır (varsayılan tabloda birim bahiste ≈ −%3).
+- **Yeni — bot durumu göstergesi:** Motor sessizce durabildiği her noktada nedeni kaydeder ve Ayarlar → Oyun → Oturum altında gösterir: test modu, sessiz mod, yayın kapalı, kanal kimliği çözülemedi, Kick mesajı reddetti veya "✓ chate yazıyor" (son gönderim saatiyle). DevTools açmaya gerek kalmaz.
+- Cevap şablonlarına `{multiplier}`, `{returned}` ve `{bet}` yer tutucuları eklendi; varsayılan kazanç/kayıp metinleri çekilen kademeyi gösterir.
+- i18n TR + EN tam (134 anahtar). Testler: 128 oyun testi (11 yeni; kademe çekilişi, ev avantajı regresyonu, reply davranışı ve `liveOnly` fail-closed regresyonu dahil).
+
 # 4.6.16 — 2026-07-26
 
 Chat bahis oyunu (Ayarlar → Oyun): komut sistemi, ekonomi eğrisi ve yayın bazlı oturum.

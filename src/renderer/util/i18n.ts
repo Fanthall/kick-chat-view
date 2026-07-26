@@ -858,10 +858,45 @@ export const dict: Dict = {
 	"game.min-bet": { tr: "En az bahis", en: "Minimum bet" },
 	"game.max-bet": { tr: "En çok bahis", en: "Maximum bet" },
 	"game.max-bet-sub": { tr: "0 = sınırsız", en: "0 = unlimited" },
-	"game.payout": { tr: "Ödeme çarpanı", en: "Payout multiplier" },
+	"game.payout": { tr: "Ödeme kademeleri", en: "Payout tiers" },
 	"game.payout-sub": {
-		tr: "Kazanınca bahsin kaç katı kazanılır (1 = eşit).",
-		en: "How many times the stake a win pays (1 = even money).",
+		tr: "Sonuç sabit değil: önce kazanç/kayıp belirlenir, sonra kademe ağırlıklı çekilişle seçilir. Sayılar o kademenin ihtimal ağırlığıdır — çarpanın kendisi değil.",
+		en: "Outcomes are not fixed: the win/loss side is decided first, then a tier is drawn by weight. The numbers are each tier's probability weight, not the multiplier.",
+	},
+	"game.status": { tr: "Bot durumu", en: "Bot status" },
+	"game.status-sub": {
+		tr: "Cevap chate gitmiyorsa nedeni burada yazar.",
+		en: "If replies are not reaching chat, the reason shows here.",
+	},
+	"game.status.idle": { tr: "Henüz komut işlenmedi", en: "No command handled yet" },
+	"game.status.ok": { tr: "✓ Chate yazıyor", en: "✓ Posting to chat" },
+	"game.status.dry_run": {
+		tr: "⚠ Test modu açık — chate YAZILMIYOR",
+		en: "⚠ Test mode on — NOT posting to chat",
+	},
+	"game.status.silent_mode": {
+		tr: "⚠ Cevap modu «sessiz»",
+		en: "⚠ Reply mode is “silent”",
+	},
+	"game.status.not_live": {
+		tr: "⚠ Yayın kapalı (yalnız yayında çalışır)",
+		en: "⚠ Stream offline (runs only while live)",
+	},
+	"game.status.no_broadcaster_id": {
+		tr: "⚠ Kanal kimliği çözülemedi — Kick bağlantısını kontrol et",
+		en: "⚠ Could not resolve channel — check the Kick connection",
+	},
+	"game.status.send_failed": {
+		tr: "⚠ Kick mesajı reddetti",
+		en: "⚠ Kick rejected the message",
+	},
+	"game.status.disabled": { tr: "Oyun kapalı", en: "Game disabled" },
+	"game.payout.win": { tr: "Kazanç", en: "Win" },
+	"game.payout.loss": { tr: "Kayıp", en: "Loss" },
+	"game.payout.edge": { tr: "Ev avantajı", en: "House edge" },
+	"game.payout.edge-warn": {
+		tr: "oyuncu lehine — ağırlıkları düşür",
+		en: "favours players — lower the weights",
 	},
 	"game.cooldown": { tr: "Bekleme (sn)", en: "Cooldown (s)" },
 	"game.cooldown-sub": {
@@ -1051,12 +1086,12 @@ export const dict: Dict = {
 	// Varsayılan chat şablonları — bunlar izleyicinin chatte GÖRDÜĞÜ metinlerdir,
 	// dolayısıyla arayüz diliyle birlikte gelmeleri gerekir (sabit TR bırakılamaz).
 	"game.default.win": {
-		tr: "{username} +{amount} 🎉 (bakiye: {balance})",
-		en: "{username} +{amount} 🎉 (balance: {balance})",
+		tr: "{username} {multiplier} kat! +{amount} 🎉 (bakiye: {balance})",
+		en: "{username} {multiplier}x! +{amount} 🎉 (balance: {balance})",
 	},
 	"game.default.loss": {
-		tr: "{username} -{amount} 💀 (bakiye: {balance})",
-		en: "{username} -{amount} 💀 (balance: {balance})",
+		tr: "{username} {multiplier} kat — {returned} geri, -{amount} 💀 (bakiye: {balance})",
+		en: "{username} {multiplier}x — {returned} back, -{amount} 💀 (balance: {balance})",
 	},
 	"game.default.balance": {
 		tr: "{username} bakiyen: {balance} puan",

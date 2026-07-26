@@ -104,9 +104,78 @@ describe("bahis akışı", () => {
 		const session = peekSession(CHANNEL);
 		expect(session?.players.ali).toBeDefined();
 		expect(session?.players.ali.betCount).toBe(1);
-		expect([9000, 11000]).toContain(session?.players.ali.balance);
+		// Sonuç ödeme kademesinden çekilir; tek bir bakiye beklenemez. Varsayılan
+		// tabloda kayıp en fazla bahsin tamamı (9000), kazanç en fazla 5 katı
+		// (10000 − 1000 + 5000 = 14000) eder.
+		const balance = session?.players.ali.balance ?? -1;
+		expect(balance).toBeGreaterThanOrEqual(9000);
+		expect(balance).toBeLessThanOrEqual(14000);
+		expect(balance).not.toBe(10000); // bahis mutlaka bir sonuç doğurdu
 		expect(session?.totalBets).toBe(1);
 		expect(sendChatMessageMock).toHaveBeenCalledTimes(1);
+	});
+
+	/**
+	 * REGRESYON (2026-07-26): Kick `/public/v1/channels` yanıtında `stream`
+	 * alanı opsiyoneldir ve üst seviyede `is_live` yoktur. Alan gelmediğinde
+	 * `Boolean(undefined)` false olur; kod bunu "yayın kapalı" sanıp `liveOnly`
+	 * açıkken oyunu TAMAMEN susturuyordu (automation çalışırken oyun botu
+	 * yazmıyordu). "Bilinmiyor" artık susma sebebi değildir.
+	 */
+	test("canlılık BİLİNMİYORSA liveOnly oyunu susturmaz", async () => {
+		setupConfig({ liveOnly: true });
+		// `stream` alanı hiç gelmemiş durum: isLive false ama liveKnown false.
+		__seedChannelInfoForTest(CHANNEL, {
+			broadcasterId: 42,
+			isLive: false,
+			liveKnown: false,
+		});
+
+		evaluateGameMessage(CHANNEL, "ali", "!puan", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).toHaveBeenCalled();
+	});
+
+	test("yayın KESİN kapalıysa (is_live=false) oyun susar", async () => {
+		setupConfig({ liveOnly: true });
+		__seedChannelInfoForTest(CHANNEL, {
+			broadcasterId: 42,
+			isLive: false,
+			liveKnown: true,
+		});
+
+		evaluateGameMessage(CHANNEL, "ali", "!puan", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).not.toHaveBeenCalled();
+	});
+
+	// Cevap, komutu yazan kişinin mesajına REPLY olarak gitmeli — akan chatte
+	// oyuncu kendi sonucunu bulabilsin diye.
+	test("each modunda cevap tetikleyen mesaja reply olarak gider", async () => {
+		setupConfig({ reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "each" } });
+		const triggerId = nextId();
+		evaluateGameMessage(CHANNEL, "ali", "!puan", triggerId);
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(1);
+		expect(sendChatMessageMock.mock.calls[0][0].reply_to_message_id).toBe(
+			triggerId
+		);
+	});
+
+	// Toplu özette birden fazla oyuncu olabilir; kime reply atılacağı belirsiz.
+	test("batch modunda özet mesajı reply olarak gitmez", async () => {
+		setupConfig({ reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "batch" } });
+		evaluateGameMessage(CHANNEL, "ali", "!puan", nextId());
+		evaluateGameMessage(CHANNEL, "veli", "!puan", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).toHaveBeenCalled();
+		for (const call of sendChatMessageMock.mock.calls) {
+			expect(call[0].reply_to_message_id).toBeUndefined();
+		}
 	});
 
 	test("bakiyeden fazla bahis reddedilir, bakiye korunur", async () => {

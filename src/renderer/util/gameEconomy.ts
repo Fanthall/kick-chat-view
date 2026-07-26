@@ -54,14 +54,45 @@ export interface GameCurveConfig {
 	ceil: number;
 }
 
+/**
+ * Tek bir ödeme kademesi.
+ *
+ * `returnMultiplier` = bahsin KAÇ KATININ GERİ DÖNDÜĞÜ (oyuncunun eline geçen),
+ * kâr değil. Böylece kazanç ve kayıp aynı ölçekte ifade edilir:
+ *   0    → hepsi gitti          (delta = −bahis)
+ *   0.1  → %10'u geri geldi     (delta = −bahsin %90'ı)
+ *   1    → başabaş              (delta = 0)
+ *   2    → 2 katı               (delta = +bahis)
+ *   5    → 5 katı               (delta = +4 × bahis)
+ */
+export interface PayoutTier {
+	returnMultiplier: number;
+	/** Kendi tarafındaki (kazanç/kayıp) diğer kademelere göre ağırlık. */
+	weight: number;
+}
+
+/**
+ * Sonuç ikili değildir: önce şans eğrisi kazanç/kayıp tarafını belirler,
+ * sonra o tarafın kademelerinden AĞIRLIKLI çekiliş yapılır. Yani "3 katı" veya
+ * "%10'u geri" sabit kural değil, ihtimale bağlı sonuçlardır.
+ */
+export interface PayoutTable {
+	win: PayoutTier[];
+	loss: PayoutTier[];
+}
+
 export interface GameEconomyConfig {
 	/** Her oyuncunun yayın başına aldığı puan. */
 	startingBalance: number;
 	minBet: number;
 	/** 0 = sınırsız. */
 	maxBet: number;
-	/** Kazanınca bahis × bu çarpan kadar kazanç (1 = 1:1). */
-	payoutMultiplier: number;
+	/**
+	 * Ödeme kademeleri. Ağırlıklı çekilişle seçilir.
+	 * Ev avantajı buradan gelir: kazanç tarafının ağırlıklı ortalaması ile
+	 * kayıp tarafınınki toplandığında 2'nin ALTINDA kalmalıdır (bkz. payoutEdge).
+	 */
+	payout: PayoutTable;
 	/** Aynı oyuncunun iki bahsi arasındaki en az süre. */
 	cooldownSec: number;
 	/** Oturum başına oyuncu bahis limiti. 0 = sınırsız. */
@@ -154,11 +185,69 @@ export const CURVE_PRESETS: Record<CurvePresetId, GameCurveConfig> = {
 	},
 };
 
+/**
+ * Varsayılan kademeler.
+ *
+ * Kayıp tarafı ağırlıklı ortalama ≈ 0,125 · kazanç tarafı ≈ 1,82.
+ * Toplam 1,945 < 2 olduğu için %50 şansta bile ev hafif avantajlıdır
+ * (birim bahiste EV ≈ −0,03); ısrar edip şans düştükçe kayıp hızlanır.
+ * Bu, eğrinin "başta kazandır, ısrar edeni erit" tasarımıyla uyumludur.
+ */
+export const DEFAULT_PAYOUT: PayoutTable = {
+	win: [
+		{ returnMultiplier: 1.2, weight: 30 }, // ucu ucuna kâr
+		{ returnMultiplier: 1.5, weight: 30 },
+		{ returnMultiplier: 2, weight: 25 }, // 2 katı
+		{ returnMultiplier: 3, weight: 12 }, // 3 katı
+		{ returnMultiplier: 5, weight: 3 }, // nadir büyük vuruş
+	],
+	loss: [
+		{ returnMultiplier: 0, weight: 45 }, // hepsi gitti
+		{ returnMultiplier: 0.1, weight: 25 }, // %10'u geri
+		{ returnMultiplier: 0.25, weight: 20 }, // çeyreği geri
+		{ returnMultiplier: 0.5, weight: 10 }, // yarısı geri
+	],
+};
+
+/**
+ * Bir kademe tablosunun ağırlıklı ortalama getirisi. Panelin ev avantajını
+ * göstermesi ve testlerin regresyon yakalaması için.
+ */
+export const averageReturn = (tiers: PayoutTier[]): number => {
+	const usable = tiers.filter((t) => t.weight > 0);
+	const total = usable.reduce((sum, t) => sum + t.weight, 0);
+	if (!total) return 0;
+	return (
+		usable.reduce((sum, t) => sum + t.returnMultiplier * t.weight, 0) / total
+	);
+};
+
+/**
+ * %50 şans varsayımıyla birim bahis başına beklenen değer.
+ * Negatif = ev avantajlı (olması gereken). Panelde uyarı için kullanılır.
+ */
+export const payoutEdge = (table: PayoutTable): number =>
+	(averageReturn(table.win) + averageReturn(table.loss)) / 2 - 1;
+
+/** Ağırlıklı çekiliş. Ağırlığı 0 olan kademeler devre dışıdır. */
+export const pickPayoutTier = (tiers: PayoutTier[], rng: Rng): PayoutTier => {
+	const usable = tiers.filter((t) => t.weight > 0);
+	// Tablo boşaltıldıysa başabaş dön — bakiye sessizce erimesin.
+	if (!usable.length) return { returnMultiplier: 1, weight: 1 };
+	const total = usable.reduce((sum, t) => sum + t.weight, 0);
+	let roll = rng() * total;
+	for (const tier of usable) {
+		roll -= tier.weight;
+		if (roll < 0) return tier;
+	}
+	return usable[usable.length - 1];
+};
+
 export const DEFAULT_ECONOMY: GameEconomyConfig = {
 	startingBalance: 10000,
 	minBet: 100,
 	maxBet: 0,
-	payoutMultiplier: 1,
+	payout: DEFAULT_PAYOUT,
 	cooldownSec: 30,
 	maxBetsPerSession: 0,
 	luckCycleMinutes: 30,
@@ -281,8 +370,12 @@ export interface BetResult {
 	won: boolean;
 	/** Uygulanan bahis (kıstırma sonrası). */
 	bet: number;
-	/** Bakiye değişimi: kazançta +bet×çarpan, kayıpta −bet. */
+	/** Bakiye değişimi (kâr/zarar): `returned − bet`. */
 	delta: number;
+	/** Oyuncunun eline geçen toplam (bahis dahil). */
+	returned: number;
+	/** Çekilen kademenin çarpanı — cevap metninde "3 katı" / "%10" için. */
+	returnMultiplier: number;
 	balanceBefore: number;
 	balanceAfter: number;
 	chance: number;
@@ -348,7 +441,13 @@ export const settleBet = (
 ): BetResult => {
 	const chance = winChance(player, bet, economy.curve, economy.startingBalance);
 	const won = rng() < chance;
-	const delta = won ? Math.round(bet * economy.payoutMultiplier) : -bet;
+
+	// Taraf belirlendikten SONRA kademe çekilir: "3 katı" veya "%10'u geri"
+	// sabit değil, kendi tarafının ağırlıklı ihtimaline bağlıdır.
+	const table = economy.payout || DEFAULT_PAYOUT;
+	const tier = pickPayoutTier(won ? table.win : table.loss, rng);
+	const returned = Math.round(bet * tier.returnMultiplier);
+	const delta = returned - bet;
 	const balanceAfter = Math.max(0, player.balance + delta);
 
 	const next: GamePlayer = {
@@ -367,6 +466,8 @@ export const settleBet = (
 		won,
 		bet,
 		delta,
+		returned,
+		returnMultiplier: tier.returnMultiplier,
 		balanceBefore: player.balance,
 		balanceAfter,
 		chance,

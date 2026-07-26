@@ -23,6 +23,7 @@ import {
 	CurvePresetId,
 	DEFAULT_SIMULATION,
 	GameCurveConfig,
+	payoutEdge,
 	simulate,
 } from "../../util/gameEconomy";
 import { GameCommandKind } from "../../util/gameCommands";
@@ -37,6 +38,7 @@ import {
 	saveGameConfig,
 	saveSessions,
 } from "../../util/gameStorage";
+import { GAME_DIAGNOSTIC_CHANGED, peekDiagnostic } from "../../util/gameEngine";
 import { getChannelList } from "../../util/channelSettings";
 import { useTranslation } from "../../util/i18n";
 
@@ -357,6 +359,22 @@ const GameSection: FunctionComponent = () => {
 	const updateReply = (patch: Partial<GameConfig["reply"]>) =>
 		update({ reply: { ...config.reply, ...patch } });
 
+	// Kademe ağırlığı düzenleme. Çarpanlar sabit, oynanan yalnız İHTİMALDİR —
+	// kullanıcı "3 katı ne sıklıkta çıksın" sorusunu buradan ayarlar.
+	const updatePayoutWeight = (
+		side: "win" | "loss",
+		index: number,
+		weight: number
+	) =>
+		updateEconomy({
+			payout: {
+				...config.economy.payout,
+				[side]: config.economy.payout[side].map((tier, i) =>
+					i === index ? { ...tier, weight } : tier
+				),
+			},
+		});
+
 	const updateCommand = (kind: GameCommandKind, patch: { enabled?: boolean; names?: string[] }) =>
 		update({
 			commands: {
@@ -367,6 +385,13 @@ const GameSection: FunctionComponent = () => {
 				},
 			},
 		});
+
+	// Ev avantajı: %50 şans varsayımıyla birim bahis EV'si. Negatif olmalı;
+	// pozitife dönerse oyuncular uzun vadede kasayı yer.
+	const edge = useMemo(
+		() => payoutEdge(config.economy.payout),
+		[config.economy.payout]
+	);
 
 	// Simülasyon: ekonomi değiştikçe otomatik yeniden hesaplanır (≈10 ms).
 	const sim = useMemo(
@@ -402,6 +427,20 @@ const GameSection: FunctionComponent = () => {
 		window.addEventListener("chat-view-game-session-changed", refresh);
 		return () =>
 			window.removeEventListener("chat-view-game-session-changed", refresh);
+	}, []);
+
+	// Motorun son gönderim durumu. `sessionTick` kasıtlı tetik: peekDiagnostic
+	// modül içi Map'ten okur, React state'i değil.
+	const diagnostic = useMemo(
+		() => (activeSlug ? peekDiagnostic(activeSlug) : undefined),
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[activeSlug, sessionTick]
+	);
+
+	useEffect(() => {
+		const refresh = () => setSessionTick((n) => n + 1);
+		window.addEventListener(GAME_DIAGNOSTIC_CHANGED, refresh);
+		return () => window.removeEventListener(GAME_DIAGNOSTIC_CHANGED, refresh);
 	}, []);
 
 	const handleResetSession = () => {
@@ -532,15 +571,44 @@ const GameSection: FunctionComponent = () => {
 					/>
 				</Row>
 				<Row title={t("game.payout")} sub={t("game.payout-sub")}>
-					<NumberField
-						label={t("game.payout")}
-						value={config.economy.payoutMultiplier}
-						min={0.1}
-						max={5}
-						step={0.1}
-						width={80}
-						onChange={(v) => updateEconomy({ payoutMultiplier: v })}
-					/>
+					<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+						{(["win", "loss"] as const).map((side) => (
+							<div
+								key={side}
+								style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}
+							>
+								<span
+									className="set-hint"
+									style={{ width: 58, flexShrink: 0 }}
+								>
+									{t(`game.payout.${side}`)}
+								</span>
+								{config.economy.payout[side].map((tier, i) => (
+									<div
+										key={tier.returnMultiplier}
+										style={{ display: "flex", alignItems: "center", gap: 4 }}
+									>
+										<span style={{ fontSize: 12, opacity: 0.85, minWidth: 34 }}>
+											{tier.returnMultiplier}×
+										</span>
+										<NumberField
+											label={`${t(`game.payout.${side}`)} ${tier.returnMultiplier}x`}
+											value={tier.weight}
+											min={0}
+											max={100}
+											step={1}
+											width={56}
+											onChange={(v) => updatePayoutWeight(side, i, v)}
+										/>
+									</div>
+								))}
+							</div>
+						))}
+						<span className="set-hint">
+							{t("game.payout.edge")}: {(edge * 100).toFixed(1)}%{" "}
+							{edge >= 0 ? `⚠ ${t("game.payout.edge-warn")}` : "✓"}
+						</span>
+					</div>
 				</Row>
 				<Row title={t("game.cooldown")} sub={t("game.cooldown-sub")}>
 					<NumberField
@@ -916,6 +984,27 @@ const GameSection: FunctionComponent = () => {
 			{/* ── Oturum ── */}
 			<div className="set-block">
 				<div className="set-block-section-label">{t("game.session")}</div>
+
+				{/*
+				  Bot neden yazmıyor? Motor sessizce durabildiği her yerde nedenini
+				  kaydeder; kullanıcı DevTools açmadan görebilsin diye burada.
+				*/}
+				<Row title={t("game.status")} sub={t("game.status-sub")}>
+					<span
+						className="set-topic-mono"
+						style={{ color: diagnostic?.reason === "ok" ? undefined : "#f0a" }}
+					>
+						{diagnostic
+							? t(`game.status.${diagnostic.reason}`)
+							: t("game.status.idle")}
+						{diagnostic?.reason === "ok" && diagnostic.lastSentAt
+							? ` — ${new Date(diagnostic.lastSentAt).toLocaleTimeString("tr-TR")}`
+							: ""}
+						{diagnostic?.reason === "send_failed" && diagnostic.detail
+							? ` — ${diagnostic.detail}`
+							: ""}
+					</span>
+				</Row>
 
 				{!session && <div className="set-block-empty">{t("game.session.none")}</div>}
 

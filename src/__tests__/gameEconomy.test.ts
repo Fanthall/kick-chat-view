@@ -9,9 +9,13 @@
 import {
 	CURVE_PRESETS,
 	DEFAULT_ECONOMY,
+	DEFAULT_PAYOUT,
 	DEFAULT_SIMULATION,
 	GameEconomyConfig,
+	averageReturn,
 	createPlayer,
+	payoutEdge,
+	pickPayoutTier,
 	settleBet,
 	simulate,
 	validateBet,
@@ -126,23 +130,56 @@ describe("winChance — kazanma eğrisi", () => {
 });
 
 describe("settleBet", () => {
-	test("kazanınca bakiye bahis × çarpan kadar artar", () => {
+	// Kademeler tek seçenekli tutulur ki sonuç deterministik olsun; buradaki
+	// amaç çekiliş değil, kademenin bakiyeye DOĞRU uygulanması.
+	const fixedPayout = (win: number, loss: number): GameEconomyConfig => ({
+		...economy,
+		payout: {
+			win: [{ returnMultiplier: win, weight: 1 }],
+			loss: [{ returnMultiplier: loss, weight: 1 }],
+		},
+	});
+
+	test("kazanınca bakiye çekilen kademe kadar artar", () => {
 		const player = playerAt(0);
-		const result = settleBet(player, 1000, economy, () => 0, Date.now());
+		const result = settleBet(player, 1000, fixedPayout(2, 0), () => 0, Date.now());
 		expect(result.won).toBe(true);
-		expect(result.delta).toBe(1000);
+		expect(result.returned).toBe(2000);
+		expect(result.delta).toBe(1000); // 2 katı = bahis + bahis kadar kâr
 		expect(result.balanceAfter).toBe(START + 1000);
 		expect(result.player.wins).toBe(1);
 		expect(result.player.betCount).toBe(1);
 	});
 
-	test("kaybedince bakiye bahis kadar azalır", () => {
+	test("tam kayıp kademesinde bahsin tamamı gider", () => {
 		const player = playerAt(0);
-		const result = settleBet(player, 1000, economy, () => 0.999, Date.now());
+		const result = settleBet(
+			player,
+			1000,
+			fixedPayout(2, 0),
+			() => 0.999,
+			Date.now()
+		);
 		expect(result.won).toBe(false);
+		expect(result.returned).toBe(0);
 		expect(result.delta).toBe(-1000);
 		expect(result.balanceAfter).toBe(START - 1000);
 		expect(result.player.losses).toBe(1);
+	});
+
+	test("kısmi kayıp kademesinde bahsin bir kısmı geri döner", () => {
+		const player = playerAt(0);
+		const result = settleBet(
+			player,
+			1000,
+			fixedPayout(2, 0.25),
+			() => 0.999,
+			Date.now()
+		);
+		expect(result.won).toBe(false);
+		expect(result.returned).toBe(250);
+		expect(result.delta).toBe(-750);
+		expect(result.balanceAfter).toBe(START - 750);
 	});
 
 	test("girdi oyuncusu mutasyona uğramaz", () => {
@@ -154,7 +191,14 @@ describe("settleBet", () => {
 
 	test("bakiye asla negatife düşmez", () => {
 		const player = playerAt(0, 500);
-		const result = settleBet(player, 500, economy, () => 0.999, Date.now());
+		// Tam kayıp kademesi: bakiyenin tamamı bahisteyken bile dip 0'dır.
+		const result = settleBet(
+			player,
+			500,
+			fixedPayout(2, 0),
+			() => 0.999,
+			Date.now()
+		);
 		expect(result.balanceAfter).toBe(0);
 	});
 
@@ -179,10 +223,76 @@ describe("settleBet", () => {
 		expect(winChance(veteran, 1000, curve, START)).toBeCloseTo(curve.base, 5);
 	});
 
-	test("payoutMultiplier ödemeyi ölçekler", () => {
-		const cfg: GameEconomyConfig = { ...economy, payoutMultiplier: 0.5 };
+	// Ödeme artık ikili değil: taraf belirlendikten sonra kademe ÇEKİLİR.
+	test("kazançta çekilen kademe ödemeyi belirler", () => {
+		const cfg: GameEconomyConfig = {
+			...economy,
+			payout: {
+				win: [{ returnMultiplier: 3, weight: 1 }],
+				loss: [{ returnMultiplier: 0, weight: 1 }],
+			},
+		};
+		// rng()=0 → hem kazanç tarafı hem tek kademe.
 		const result = settleBet(playerAt(0), 1000, cfg, () => 0, Date.now());
-		expect(result.delta).toBe(500);
+		expect(result.won).toBe(true);
+		expect(result.returnMultiplier).toBe(3);
+		expect(result.returned).toBe(3000);
+		expect(result.delta).toBe(2000); // eline 3 kat geçti, kârı 2 kat
+	});
+
+	test("kayıpta kısmi geri dönüş bakiyeye yansır", () => {
+		const cfg: GameEconomyConfig = {
+			...economy,
+			payout: {
+				win: [{ returnMultiplier: 2, weight: 1 }],
+				loss: [{ returnMultiplier: 0.1, weight: 1 }],
+			},
+		};
+		// rng()=0.999 → şans eşiğinin üstünde kalır → kayıp tarafı.
+		const result = settleBet(playerAt(0), 1000, cfg, () => 0.999, Date.now());
+		expect(result.won).toBe(false);
+		expect(result.returned).toBe(100); // %10'u geri
+		expect(result.delta).toBe(-900);
+	});
+});
+
+describe("ödeme kademeleri", () => {
+	test("pickPayoutTier ağırlığa göre seçer", () => {
+		const tiers = [
+			{ returnMultiplier: 1.5, weight: 70 },
+			{ returnMultiplier: 5, weight: 30 },
+		];
+		expect(pickPayoutTier(tiers, () => 0).returnMultiplier).toBe(1.5);
+		expect(pickPayoutTier(tiers, () => 0.5).returnMultiplier).toBe(1.5);
+		expect(pickPayoutTier(tiers, () => 0.8).returnMultiplier).toBe(5);
+	});
+
+	test("ağırlığı 0 olan kademe hiç çıkmaz", () => {
+		const tiers = [
+			{ returnMultiplier: 1.5, weight: 0 },
+			{ returnMultiplier: 5, weight: 10 },
+		];
+		for (const r of [0, 0.25, 0.5, 0.75, 0.99]) {
+			expect(pickPayoutTier(tiers, () => r).returnMultiplier).toBe(5);
+		}
+	});
+
+	test("tablo tamamen boşaltılırsa başabaş döner (bakiye sessizce erimez)", () => {
+		expect(pickPayoutTier([], () => 0.5).returnMultiplier).toBe(1);
+	});
+
+	test("averageReturn ağırlıklı ortalamayı verir", () => {
+		expect(
+			averageReturn([
+				{ returnMultiplier: 1, weight: 1 },
+				{ returnMultiplier: 3, weight: 1 },
+			])
+		).toBeCloseTo(2, 5);
+	});
+
+	// Regresyon: varsayılan tablo oyuncu lehine dönerse kasa uzun vadede erir.
+	test("varsayılan tabloda ev avantajı korunur (edge < 0)", () => {
+		expect(payoutEdge(DEFAULT_PAYOUT)).toBeLessThan(0);
 	});
 });
 

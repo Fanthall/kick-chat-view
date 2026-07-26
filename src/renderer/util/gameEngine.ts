@@ -88,6 +88,68 @@ const alreadyProcessed = (messageId: string | undefined): boolean => {
 	return false;
 };
 
+// ─── Teşhis ──────────────────────────────────────────────────────────────────
+//
+// Motor sessizce durabildiği yerlerde (test modu, yayın kapalı, id çözülemedi,
+// API reddetti) NEDENİ kaydeder. Panel bunu gösterir; kullanıcı "bot neden
+// yazmıyor" sorusunu DevTools açmadan cevaplayabilsin diye.
+
+export const GAME_DIAGNOSTIC_CHANGED = "chat-view-game-diagnostic-changed";
+
+export type GameBlockReason =
+	| "ok"
+	| "disabled"
+	| "dry_run"
+	| "silent_mode"
+	| "not_live"
+	| "no_broadcaster_id"
+	| "send_failed";
+
+export interface GameDiagnostic {
+	channelSlug: string;
+	reason: GameBlockReason;
+	/** Serbest metin ayrıntı (API hata mesajı vb.). */
+	detail?: string;
+	broadcasterId?: number;
+	isLive?: boolean;
+	liveKnown?: boolean;
+	/** Chate en son gercekten gonderilen mesaj (varsa). */
+	lastSentText?: string;
+	lastSentAt?: number;
+	at: number;
+}
+
+const diagnostics = new Map<string, GameDiagnostic>();
+
+const setDiagnostic = (
+	channelSlug: string,
+	patch: Partial<Omit<GameDiagnostic, "channelSlug" | "at">>
+) => {
+	const key = channelSlug.toLowerCase();
+	const prev = diagnostics.get(key);
+	diagnostics.set(key, {
+		channelSlug,
+		reason: patch.reason ?? prev?.reason ?? "ok",
+		detail: patch.detail ?? prev?.detail,
+		broadcasterId: patch.broadcasterId ?? prev?.broadcasterId,
+		isLive: patch.isLive ?? prev?.isLive,
+		liveKnown: patch.liveKnown ?? prev?.liveKnown,
+		lastSentText: patch.lastSentText ?? prev?.lastSentText,
+		lastSentAt: patch.lastSentAt ?? prev?.lastSentAt,
+		at: Date.now(),
+	});
+	try {
+		window.dispatchEvent(new CustomEvent(GAME_DIAGNOSTIC_CHANGED));
+	} catch {
+		/* ignore */
+	}
+};
+
+/** Panelin "bot neden yazmıyor" gostergesi icin. */
+export const peekDiagnostic = (
+	channelSlug: string
+): GameDiagnostic | undefined => diagnostics.get(channelSlug.toLowerCase());
+
 // ─── Kick kanal bilgisi (broadcaster id + livestream id) ─────────────────────
 
 interface ChannelInfo {
@@ -95,6 +157,16 @@ interface ChannelInfo {
 	streamId: string;
 	/** Yayın şu an açık mı — `liveOnly` sıfırlaması buna bakar. */
 	isLive: boolean;
+	/**
+	 * Canlılık bilgisi GERÇEKTEN öğrenildi mi.
+	 *
+	 * Kick `/public/v1/channels` yanıtında `stream` alanı OPSİYONELDİR ve üst
+	 * seviyede `is_live` YOKTUR. Alan hiç gelmediğinde `Boolean(undefined)`
+	 * false olur; bu "yayın kapalı" DEĞİL, "bilmiyoruz" demektir. Ayrımı
+	 * yapmazsak `liveOnly` açıkken oyun sessizce hiç çalışmaz (bkz. 2026-07-26
+	 * hatası: automation çalışıyor, oyun botu susuyordu).
+	 */
+	liveKnown: boolean;
 	fetchedAt: number;
 }
 
@@ -106,21 +178,35 @@ const fetchChannelInfo = async (channelSlug: string): Promise<ChannelInfo> => {
 	const cached = channelInfoCache.get(key);
 	if (cached && Date.now() - cached.fetchedAt < CHANNEL_TTL_MS) return cached;
 
-	let info: ChannelInfo = { streamId: "", isLive: false, fetchedAt: Date.now() };
+	let info: ChannelInfo = {
+		streamId: "",
+		isLive: false,
+		liveKnown: false,
+		fetchedAt: Date.now(),
+	};
 	try {
 		const w = window as any;
 		const res = await w.electron.kick.getChannelBySlug(channelSlug);
 		const ch = res?.data?.[0];
 		const stream = ch?.stream || ch?.livestream;
+		// Canlılık YALNIZ alan gercekten geldiyse bilinir sayılır.
+		const liveFlag = stream?.is_live ?? ch?.is_live;
 		info = {
 			broadcasterId: ch?.broadcaster_user_id,
 			streamId: stream?.id ? String(stream.id) : "",
-			isLive: Boolean(stream?.is_live ?? ch?.is_live),
+			isLive: Boolean(liveFlag),
+			liveKnown: typeof liveFlag === "boolean",
 			fetchedAt: Date.now(),
 		};
+		setDiagnostic(channelSlug, {
+			broadcasterId: info.broadcasterId,
+			isLive: info.isLive,
+			liveKnown: info.liveKnown,
+		});
 		// Yayın kapandıysa oturum burada da temizlenir: chate hiç komut gelmese
 		// bile (yayın bitti, sohbet sustu) puanlar bir sonraki yayına sarkmasın.
-		if (!info.isLive) clearSessionIfOffline(channelSlug);
+		// "Bilmiyoruz" durumunda oturuma DOKUNULMAZ.
+		if (info.liveKnown && !info.isLive) clearSessionIfOffline(channelSlug);
 	} catch {
 		// Kanal bilgisi alınamadıysa oyun yine çalışır; oturum kimliği boş kalır
 		// ve zaman toleransı devreye girer.
@@ -137,6 +223,13 @@ interface PendingReply {
 	text: string;
 	/** Toplu özette kısa biçim; yoksa `text` kullanılır. */
 	compact?: string;
+	/**
+	 * Komutu yazan mesajın id'si. `each` modunda cevap bu mesaja REPLY olarak
+	 * gider (Kick `reply_to_message_id`), böylece oyuncu kendi sonucunu akan
+	 * chatte kaçırmaz. Toplu modda tek mesajda birden fazla oyuncu olduğu için
+	 * reply anlamsızdır; orada isim metnin içinde geçer.
+	 */
+	replyToMessageId?: string;
 }
 
 const queues = new Map<string, PendingReply[]>();
@@ -163,11 +256,16 @@ export const formatBatch = (
 	return messages;
 };
 
-const deliver = async (channelSlug: string, text: string) => {
+const deliver = async (
+	channelSlug: string,
+	text: string,
+	replyToMessageId?: string
+) => {
 	const cfg = config();
 	if (!text.trim()) return;
 
 	if (cfg.dryRun) {
+		setDiagnostic(channelSlug, { reason: "dry_run", detail: text });
 		console.log(
 			`[game][DRYRUN] chate GÖNDERİLMEDİ (test modu) | kanal=${channelSlug}: ${text}`
 		);
@@ -176,6 +274,7 @@ const deliver = async (channelSlug: string, text: string) => {
 
 	const info = await fetchChannelInfo(channelSlug);
 	if (!info.broadcasterId) {
+		setDiagnostic(channelSlug, { reason: "no_broadcaster_id" });
 		console.log("[game] broadcaster id çözülemedi", channelSlug);
 		return;
 	}
@@ -185,8 +284,19 @@ const deliver = async (channelSlug: string, text: string) => {
 			broadcaster_user_id: info.broadcasterId,
 			content: text,
 			type: "user",
+			// Yalnız tek kişilik cevapta reply; toplu özette alıcı belirsiz.
+			...(replyToMessageId
+				? { reply_to_message_id: replyToMessageId }
+				: {}),
+		});
+		setDiagnostic(channelSlug, {
+			reason: "ok",
+			lastSentText: text,
+			lastSentAt: Date.now(),
 		});
 	} catch (err) {
+		const detail = String((err as any)?.message || err);
+		setDiagnostic(channelSlug, { reason: "send_failed", detail });
 		console.log("[game] sendChatMessage başarısız", err);
 	}
 };
@@ -208,10 +318,13 @@ const flushQueue = async (channelSlug: string) => {
 
 const enqueue = (reply: PendingReply) => {
 	const cfg = config();
-	if (cfg.reply.mode === "silent") return;
+	if (cfg.reply.mode === "silent") {
+		setDiagnostic(reply.channelSlug, { reason: "silent_mode" });
+		return;
+	}
 
 	if (cfg.reply.mode === "each") {
-		deliver(reply.channelSlug, reply.text);
+		deliver(reply.channelSlug, reply.text, reply.replyToMessageId);
 		return;
 	}
 
@@ -234,6 +347,13 @@ const enqueue = (reply: PendingReply) => {
 
 const formatNumber = (value: number): string =>
 	Math.round(value).toLocaleString("tr-TR");
+
+/**
+ * Kademe çarpanını okunur biçime çevirir: 3 → "3", 1.5 → "1,5", 0.1 → "0,1".
+ * Tam sayıda ondalık gösterilmez ("3,0 kat" garip durur).
+ */
+const formatMultiplier = (value: number): string =>
+	Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, "").replace(".", ",");
 
 export const fillGameTemplate = (
 	template: string,
@@ -324,13 +444,15 @@ const handleBet = (
 	session: GameSession,
 	player: GamePlayer,
 	amountSpec: NonNullable<ReturnType<typeof parseGameCommand>>["amount"],
-	channelSlug: string
+	channelSlug: string,
+	replyToMessageId?: string
 ): GameSession => {
 	const names = commandNames(cfg);
 
 	if (!amountSpec || amountSpec.kind === "invalid") {
 		enqueue({
 			channelSlug,
+			replyToMessageId,
 			// Hata cevapları toplu modda da KISALTILMAZ: oyuncunun bahsinin neden
 			// işlenmediğini bilmesi gerekir, "ali ❓" hiçbir şey anlatmaz.
 			text: fillGameTemplate(
@@ -355,6 +477,7 @@ const handleBet = (
 		// Ret sebebi bilgi taşır — toplu modda da tam metin gönderilir.
 		enqueue({
 			channelSlug,
+			replyToMessageId,
 			text: `${player.username} ${reasonText[rejection.reason]}`,
 		});
 		return session;
@@ -365,18 +488,25 @@ const handleBet = (
 		username: player.username,
 		amount: formatNumber(Math.abs(result.delta)),
 		balance: formatNumber(result.balanceAfter),
+		bet: formatNumber(result.bet),
+		// Çekilen kademe: "3 kat" / "%10" gibi okunur ifade + ham çarpan.
+		multiplier: formatMultiplier(result.returnMultiplier),
+		returned: formatNumber(result.returned),
 		...commandNames(cfg),
 	};
 
 	enqueue({
 		channelSlug,
+		replyToMessageId,
 		text: fillGameTemplate(
 			result.won ? cfg.reply.winTemplate : cfg.reply.lossTemplate,
 			values
 		),
 		compact: `${player.username} ${result.won ? "+" : "-"}${formatNumber(
 			Math.abs(result.delta)
-		)} (${formatNumber(result.balanceAfter)})`,
+		)} ×${formatMultiplier(result.returnMultiplier)} (${formatNumber(
+			result.balanceAfter
+		)})`,
 	});
 
 	return {
@@ -418,7 +548,12 @@ export const evaluateGameMessage = (
 
 	// Yayın kapalıyken oyun çalışmaz ve oturum düşer. Chate cevap da yazılmaz —
 	// yayın dışında bot konuşmasın.
-	if (cfg.liveOnly && cached && !cached.isLive) {
+	//
+	// KRITIK: yalnız canlılık GERÇEKTEN bilindiğinde susulur. Kick yanıtında
+	// `stream` alanı gelmediğinde `isLive` false görünür; bu "kapalı" değil
+	// "bilinmiyor" demektir. Ayrım yapılmazsa oyun hiç konuşmaz.
+	if (cfg.liveOnly && cached?.liveKnown && !cached.isLive) {
+		setDiagnostic(channelSlug, { reason: "not_live" });
 		clearSessionIfOffline(channelSlug);
 		return;
 	}
@@ -447,6 +582,7 @@ export const evaluateGameMessage = (
 		saveSessions(putSession(loadSessions(), fresh));
 		enqueue({
 			channelSlug,
+			replyToMessageId: messageId,
 			text: fillGameTemplate(cfg.reply.resetTemplate, {
 				username,
 				balance: startingBalance,
@@ -464,6 +600,7 @@ export const evaluateGameMessage = (
 			const existing = session.players[username.trim().toLowerCase()];
 			enqueue({
 				channelSlug,
+				replyToMessageId: messageId,
 				// Bakiye bilgisi taşıdığı için toplu modda da KISALTILMAZ.
 				text: fillGameTemplate(cfg.reply.alreadyJoinedTemplate, {
 					username: existing.username,
@@ -480,6 +617,7 @@ export const evaluateGameMessage = (
 			session = created.session;
 			enqueue({
 				channelSlug,
+				replyToMessageId: messageId,
 				text: fillGameTemplate(cfg.reply.joinTemplate, {
 					username: created.player.username,
 					balance: formatNumber(created.player.balance),
@@ -497,6 +635,7 @@ export const evaluateGameMessage = (
 	if (needsAccount && cfg.requireJoin && !joined) {
 		enqueue({
 			channelSlug,
+			replyToMessageId: messageId,
 			text: fillGameTemplate(cfg.reply.notJoinedTemplate, {
 				username,
 				...names,
@@ -522,7 +661,14 @@ export const evaluateGameMessage = (
 	switch (parsed.kind) {
 		case "bet":
 			if (player) {
-				session = handleBet(cfg, session, player, parsed.amount, channelSlug);
+				session = handleBet(
+					cfg,
+					session,
+					player,
+					parsed.amount,
+					channelSlug,
+					messageId
+				);
 			}
 			break;
 
@@ -530,6 +676,7 @@ export const evaluateGameMessage = (
 			if (player) {
 				enqueue({
 					channelSlug,
+					replyToMessageId: messageId,
 					text: fillGameTemplate(cfg.reply.balanceTemplate, {
 						username: player.username,
 						balance: formatNumber(player.balance),
@@ -549,6 +696,7 @@ export const evaluateGameMessage = (
 				: "henüz kimse oynamadı";
 			enqueue({
 				channelSlug,
+				replyToMessageId: messageId,
 				text: fillGameTemplate(cfg.reply.topTemplate, { top: list, ...names }),
 			});
 			break;
@@ -557,6 +705,7 @@ export const evaluateGameMessage = (
 		case "help":
 			enqueue({
 				channelSlug,
+				replyToMessageId: messageId,
 				// Yardım herkese açık — hesabı olmayan da sorabilir, o yüzden
 				// bakiye yerine başlangıç puanı gösterilir.
 				text: fillGameTemplate(cfg.reply.helpTemplate, {
@@ -600,12 +749,19 @@ export const __flushQueuesForTest = async (channelSlug: string) => {
 
 export const __seedChannelInfoForTest = (
 	channelSlug: string,
-	info: { broadcasterId?: number; streamId?: string; isLive?: boolean }
+	info: {
+		broadcasterId?: number;
+		streamId?: string;
+		isLive?: boolean;
+		/** Varsayılan true — testlerin çoğu canlılığı BİLİNEN kabul eder. */
+		liveKnown?: boolean;
+	}
 ) => {
 	channelInfoCache.set(channelSlug.toLowerCase(), {
 		broadcasterId: info.broadcasterId,
 		streamId: info.streamId || "",
 		isLive: info.isLive !== false,
+		liveKnown: info.liveKnown !== false,
 		fetchedAt: Date.now(),
 	});
 };
