@@ -1,0 +1,27 @@
+# gitleaks yapilandirmasi — chat-view
+#
+# Varsayilan kural setini oldugu gibi kullanir; asagidaki allowlist YALNIZ
+# bilinen tek bir tarihsel bulguyu susturur (tek commit + tek kural).
+# Yeni eklenen her secret taranmaya devam eder.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = """
+Tarihsel bulgu — FALSE POSITIVE DEGIL, gercek bir GitHub PAT idi.
+
+  commit : 913d590 (2025-03-27, "Guncelleme.")
+  dosya  : src/renderer/services/githubAccessHandle.ts:24
+  durum  : HEAD'de YOK (dosya cbbc64b'de silindi), yalniz git gecmisinde duruyor.
+
+Repo public oldugu icin deger gecmisten okunabilir; tek gercek koruma token'in
+GitHub uzerinden IPTAL/ROTATE edilmesidir (github.com/settings/tokens).
+History rewrite (filter-repo + force push) bilincli olarak yapilmadi: main
+protected ve token zaten uzun suredir disarida.
+
+Bu istisna olmadan her push'ta ayni 2025 commit'i tekrar isaretlenip pre-push
+hook'u kilitliyordu. Kapsam tek commit + tek kural ile sinirli tutuldu.
+"""
+targetRules = ["github-pat"]
+commits = ["913d59017096de2b140065eae5a61612599d857a"]
