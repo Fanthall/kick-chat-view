@@ -107,24 +107,42 @@ function renderSettings(storeOverrides: Partial<typeof baseMessages> = {}) {
 	);
 }
 
-// ─── Test 1: Side-nav renders 7 items ────────────────────────────────────────
-// (Channel, Account, Permissions, Moderation, Emotes, Routines/automation, Advanced)
+// ─── Test 1: Side-nav renders 8 items ────────────────────────────────────────
+// (Channel, Account, Permissions, Moderation, Emotes, Routines/automation,
+//  Game [Sprint 61], Advanced)
 
 describe("SettingsModern — side nav", () => {
-	it("renders exactly 7 nav items", () => {
+	it("renders exactly 8 nav items", () => {
 		renderSettings();
 		const nav = screen.getByRole("navigation", { name: /settings sections/i });
 		const items = nav.querySelectorAll(".set-nav-item");
-		expect(items).toHaveLength(7);
+		expect(items).toHaveLength(8);
 	});
 
 	it("each nav item label is present", () => {
 		renderSettings();
-		["Channel", "Account", "Permissions", "Moderation", "Emotes", "Automation", "Advanced"].forEach(
-			(label) => {
-				expect(screen.getByRole("button", { name: new RegExp(label, "i") })).toBeInTheDocument();
-			}
+		[
+			"Channel",
+			"Account",
+			"Permissions",
+			"Moderation",
+			"Emotes",
+			"Automation",
+			"Game",
+			"Advanced",
+		].forEach((label) => {
+			expect(screen.getByRole("button", { name: new RegExp(label, "i") })).toBeInTheDocument();
+		});
+	});
+
+	// Sprint 61: Oyun sekmesi rutinlerin hemen ALTINDA olmalı (kullanıcı isteği).
+	it("Game tab sits directly below Automation", () => {
+		renderSettings();
+		const nav = screen.getByRole("navigation", { name: /settings sections/i });
+		const labels = Array.from(nav.querySelectorAll(".set-nav-item")).map(
+			(el) => el.textContent
 		);
+		expect(labels.indexOf("Game")).toBe(labels.indexOf("Automation") + 1);
 	});
 });
 

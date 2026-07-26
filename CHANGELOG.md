@@ -1,3 +1,18 @@
+# 4.6.16 — 2026-07-26
+
+Chat bahis oyunu (Ayarlar → Oyun): komut sistemi, ekonomi eğrisi ve yayın bazlı oturum.
+
+## [Bahis oyunu] — 2026-07-26
+
+- **Yeni:** Chatten çalışan puan/bahis oyunu. Varsayılan komutlar: `!joingame` (katıl), `!bahis 500` (bahis), `!puan` (bakiye), `!top` (sıralama), `!oyun` (yardım), `!reset` (yalnız yayıncı/mod). Komut adları ve prefix ayarlardan değiştirilebilir; eşleştirme Türkçe diakritiğe duyarsızdır (`SIRALAMA` = `sıralama` = `siralama`).
+- **Yeni:** Bahis miktarı esnek biçimleri: `500` · `1k` · `2.5k` · `1.000` · `%50` · `yarısı` · `hepsi`.
+- **Yeni:** Kazanma olasılığı sabit değil — oyuncunun davranışına göre hesaplanır (derinlik/ısrar, açgözlülük, bahis boyutu cezaları + dibe vuranlara merhamet bonusu). Ekonomi çekirdeği saf fonksiyonlardan oluşur; ayar panelindeki Monte Carlo önizlemesi chatte çalışan **aynı kodu** kullanır.
+- **Yeni:** Yayın bazlı oturum. Yeni yayın = sıfırdan başlar; kısa kopmalarda oturum korunur (`sessionGraceMinutes`). `liveOnly` açıkken oyun yalnız yayın açıkken çalışır ve yayın kapanınca oturum düşer — chat sussa bile 2 dakikalık canlılık yoklaması bunu yakalar.
+- **Yeni:** Cevap modu — `batch` (varsayılan, 8 sn'lik pencerede tek özet mesaj; Kick rate-limit koruması), `each` (her sonuca ayrı mesaj) veya `silent`. Hata/ret cevapları toplu modda da kısaltılmaz, çünkü oyuncunun bahsinin neden işlenmediğini bilmesi gerekir.
+- **Yeni:** Katılım kapısı (`requireJoin`) — hesap yalnız `!joingame` ile açılır; `!top` yazan herkese hesap açılmaz.
+- **Not:** İlk kurulumda oyun **kapalı** ve **test modu (`dryRun`) açık** gelir — kazara canlı yayında spam olmasın diye. Test modunda komutlar tam işlenir (bakiye güncellenir) ama chate mesaj gitmez, yalnız DevTools konsoluna `[game][DRYRUN]` satırı düşer. Gerçekten chate yazması için Ayarlar → Oyun'dan **"Oyunu aç"** açılmalı ve **"Test modu (chate yazma)"** kapatılmalıdır.
+- Arayüz metinleri TR + EN tam (120 anahtar).
+
 # 4.6.12 — 2026-06-03
 
 Render-crash kaynaklı mesaj kaybı + gift event yakalama düzeltmeleri.

@@ -137,6 +137,7 @@ export const dict: Dict = {
 	"settings.nav.moderation": { tr: "Moderasyon", en: "Moderation" },
 	"settings.nav.emotes": { tr: "Emote", en: "Emotes" },
 	"settings.nav.automation": { tr: "Otomasyon", en: "Automation" },
+	"settings.nav.game": { tr: "Oyun", en: "Game" },
 	"settings.nav.advanced": { tr: "Gelişmiş", en: "Advanced" },
 	"settings.nav.aria-label": { tr: "Ayarlar bölümleri", en: "Settings sections" },
 	"settings.nav.action-needed": { tr: "İşlem gerekiyor", en: "Action needed" },
@@ -808,6 +809,284 @@ export const dict: Dict = {
 	"activity.leaderboard.scope-required-1": { tr: "KICKs sıralaması", en: "KICKs leaderboard requires" },
 	"activity.leaderboard.scope-required-perm": { tr: "yetkisi gerektirir.", en: "permission." },
 	"activity.leaderboard.scope-hint": { tr: "Ayarlar → Yetkiler bölümünden KICKs yetkisiyle bağlan.", en: "Connect with KICKs permission in Settings → Permissions." },
+
+	// ─── Sprint 61: Bahis oyunu ───────────────────────────────────────────────
+	"game.title": { tr: "Bahis Oyunu", en: "Betting Game" },
+	"game.desc": {
+		tr: "İzleyiciler chatten bahis oynar. Her yayın herkes aynı puanla başlar; puanların nakit karşılığı yoktur.",
+		en: "Viewers bet from chat. Everyone starts each stream with the same points; points have no cash value.",
+	},
+
+	"game.general": { tr: "Genel", en: "General" },
+	"game.enabled": { tr: "Oyunu aç", en: "Enable game" },
+	"game.enabled-sub": {
+		tr: "Kapalıyken komutlar tamamen yok sayılır.",
+		en: "While off, commands are ignored entirely.",
+	},
+	"game.dryrun": { tr: "Test modu (chate yazma)", en: "Test mode (no chat messages)" },
+	"game.dryrun-sub": {
+		tr: "Açıkken bakiyeler işlenir ama chate mesaj gönderilmez; ne gönderileceği konsola yazılır.",
+		en: "Balances still update, but nothing is sent to chat — the would-be message is logged to the console.",
+	},
+	"game.require-join": { tr: "Katılım zorunlu", en: "Require joining" },
+	"game.require-join-sub": {
+		tr: "Oyuncu katılma komutunu yazmadan puan almaz. Kapatılırsa ilk bahiste otomatik hesap açılır.",
+		en: "Players get no points until they type the join command. Turn off to open an account on the first bet.",
+	},
+	"game.live-only": { tr: "Yalnız yayın açıkken", en: "Only while live" },
+	"game.live-only-sub": {
+		tr: "Yayın kapanınca puanlar sıfırlanır ve yeni yayın sıfırdan başlar.",
+		en: "Points reset when the stream ends, and the next stream starts fresh.",
+	},
+	"game.channels": { tr: "Kanallar", en: "Channels" },
+	"game.channels-sub": {
+		tr: "Oyunun çalışacağı kanalları seç.",
+		en: "Pick the channels where the game runs.",
+	},
+	"game.channels-all": {
+		tr: "Hiçbiri seçili değil — oyun tüm kanallarda çalışır.",
+		en: "None selected — the game runs on every channel.",
+	},
+	"game.channels-none": { tr: "Kayıtlı kanal yok", en: "No saved channels" },
+
+	"game.economy": { tr: "Ekonomi", en: "Economy" },
+	"game.starting": { tr: "Başlangıç puanı", en: "Starting points" },
+	"game.starting-sub": {
+		tr: "Her oyuncunun yayın başına aldığı puan.",
+		en: "Points each player receives per stream.",
+	},
+	"game.min-bet": { tr: "En az bahis", en: "Minimum bet" },
+	"game.max-bet": { tr: "En çok bahis", en: "Maximum bet" },
+	"game.max-bet-sub": { tr: "0 = sınırsız", en: "0 = unlimited" },
+	"game.payout": { tr: "Ödeme çarpanı", en: "Payout multiplier" },
+	"game.payout-sub": {
+		tr: "Kazanınca bahsin kaç katı kazanılır (1 = eşit).",
+		en: "How many times the stake a win pays (1 = even money).",
+	},
+	"game.cooldown": { tr: "Bekleme (sn)", en: "Cooldown (s)" },
+	"game.cooldown-sub": {
+		tr: "Aynı oyuncunun iki bahsi arasındaki en az süre.",
+		en: "Minimum time between one player's bets.",
+	},
+	"game.session-limit": { tr: "Yayın başına bahis hakkı", en: "Bets per stream" },
+	"game.session-limit-sub": { tr: "0 = sınırsız", en: "0 = unlimited" },
+
+	"game.curve": { tr: "Kazanma eğrisi", en: "Win curve" },
+	"game.curve-desc": {
+		tr: "Kazanma şansı sabit değildir: ilk bahisler yüksek şansla başlar, oyuncu devam ettikçe ve bakiyesi büyüdükçe düşer.",
+		en: "Win chance is not fixed: the first bets start high, then fall as a player keeps going and their balance grows.",
+	},
+	"game.preset": { tr: "Hazır ayar", en: "Preset" },
+	"game.preset-sub": {
+		tr: "Aşağıdaki önizleme seçime göre anında güncellenir.",
+		en: "The preview below updates instantly with your choice.",
+	},
+	"game.preset.generous": { tr: "Cömert", en: "Generous" },
+	"game.preset.balanced": { tr: "Dengeli", en: "Balanced" },
+	"game.preset.casino": { tr: "Kumarhane", en: "Casino" },
+
+	"game.sim.title": { tr: "Bu ayarla ne olur?", en: "What happens with these settings?" },
+	"game.sim.hint": {
+		tr: "1.000 sanal oyuncu · 20 bahis",
+		en: "1,000 simulated players · 20 bets",
+	},
+	"game.sim.aria": {
+		tr: "Bahis sırasına göre ortalama bakiye eğrisi",
+		en: "Average balance by bet number",
+	},
+	"game.sim.start-line": { tr: "başlangıç", en: "start" },
+	// Sıra sayısı dillerde farklı kurulur ("3. bahis" ≠ "bet 3") — yer tutuculu tek anahtar.
+	"game.sim.bet-n": { tr: "{n}. bahis", en: "bet {n}" },
+	"game.sim.peak-mark": { tr: "zirve", en: "peak" },
+	"game.sim.peak": { tr: "Ortalama zirve", en: "Average peak" },
+	"game.sim.final": { tr: "20 bahis sonunda", en: "After 20 bets" },
+	"game.sim.profitable": { tr: "Kârda bitiren", en: "Finish in profit" },
+
+	"game.cycle": { tr: "Şans döngüsü (dk)", en: "Luck cycle (min)" },
+	"game.cycle-sub": {
+		tr: "Bu sürenin sonunda herkesin kazanma şansı yeniden başa döner; puanlar korunur. Uzun oynayan sonsuza kadar kaybetmez. 0 = kapalı.",
+		en: "At the end of this period everyone's win chance starts over; points are kept. Long-running players don't lose forever. 0 = off.",
+	},
+	"game.advanced": { tr: "Gelişmiş ayarlar", en: "Advanced settings" },
+	"game.advanced-sub": {
+		tr: "Eğriyi elle ayarla. Hazır ayarlar çoğu yayın için yeterlidir.",
+		en: "Tune the curve by hand. The presets cover most streams.",
+	},
+	"game.curve.base": { tr: "Başlangıç şansı", en: "Base chance" },
+	"game.curve.base-sub": {
+		tr: "İlk bahislerin kazanma olasılığı.",
+		en: "Win probability on the first bets.",
+	},
+	"game.curve.hotbets": { tr: "Cezasız bahis sayısı", en: "Penalty-free bets" },
+	"game.curve.hotbets-sub": {
+		tr: "İlk kaç bahis tam şansla oynanır.",
+		en: "How many opening bets keep the full chance.",
+	},
+	"game.curve.depthstep": { tr: "Bahis başına düşüş", en: "Drop per bet" },
+	"game.curve.depthstep-sub": {
+		tr: "Cezasız bahisler bittikten sonra her bahiste düşen olasılık.",
+		en: "Probability lost on each bet once the penalty-free ones are used up.",
+	},
+	"game.curve.depthcap": { tr: "En çok düşüş", en: "Maximum drop" },
+	"game.curve.depthcap-sub": {
+		tr: "Israrın toplam bedeli. Yükseltmek ısrar edeni daha sert erozyona uğratır.",
+		en: "Total cost of persistence. Raising it erodes persistent players faster.",
+	},
+	"game.curve.greedfactor": { tr: "Zenginlik cezası", en: "Wealth penalty" },
+	"game.curve.greedfactor-sub": {
+		tr: "Bakiye başlangıcın iki katına çıktığında düşen olasılık.",
+		en: "Probability lost when a balance reaches twice the starting points.",
+	},
+	"game.curve.floor": { tr: "En düşük şans", en: "Chance floor" },
+	"game.curve.floor-sub": {
+		tr: "Kazanma şansı bunun altına inmez.",
+		en: "Win chance never drops below this.",
+	},
+	"game.curve.mercy": { tr: "Merhamet bonusu", en: "Mercy bonus" },
+	"game.curve.mercy-sub": {
+		tr: "Bakiyesi dibe vuran oyuncuya eklenen şans — oyuncu tamamen kopmasın.",
+		en: "Extra chance for a player who has bottomed out, so they stay in the game.",
+	},
+
+	"game.commands": { tr: "Komutlar", en: "Commands" },
+	"game.prefix": { tr: "Komut ön eki", en: "Command prefix" },
+	"game.prefix-sub": {
+		tr: "Komutların başındaki işaret.",
+		en: "The character commands start with.",
+	},
+	"game.cmd.join": { tr: "Oyuna katıl", en: "Join game" },
+	"game.cmd.join-sub": {
+		tr: "Oyuncu bunu yazmadan puan almaz.",
+		en: "Players get no points until they type this.",
+	},
+	"game.cmd.reset": { tr: "Sıfırla (yetkili)", en: "Reset (privileged)" },
+	"game.cmd.reset-sub": {
+		tr: "Yalnız sen ve moderatörler çalıştırabilir; başkası yazarsa yok sayılır.",
+		en: "Only you and your moderators can run it; anyone else is ignored.",
+	},
+	"game.cmd.bet": { tr: "Bahis", en: "Bet" },
+	"game.cmd.bet-sub": {
+		tr: "Örnek: 500 · %50 · yarısı · hepsi",
+		en: "Examples: 500 · 50% · half · all",
+	},
+	"game.cmd.balance": { tr: "Bakiye sorgu", en: "Check balance" },
+	"game.cmd.balance-sub": {
+		tr: "Oyuncu kendi puanını sorar.",
+		en: "A player asks for their own points.",
+	},
+	"game.cmd.top": { tr: "Sıralama", en: "Leaderboard" },
+	"game.cmd.top-sub": { tr: "İlk 5 oyuncu.", en: "Top 5 players." },
+	"game.cmd.help": { tr: "Yardım", en: "Help" },
+	"game.cmd.help-sub": {
+		tr: "Kuralları kısaca anlatır.",
+		en: "Explains the rules briefly.",
+	},
+	"game.cmd.names": { tr: "Komut adları", en: "Command names" },
+	"game.cmd.names-ph": {
+		tr: "virgülle ayır",
+		en: "comma separated",
+	},
+
+	"game.reply": { tr: "Chat cevapları", en: "Chat replies" },
+	"game.reply.mode": { tr: "Cevap biçimi", en: "Reply style" },
+	"game.reply.mode-sub": {
+		tr: "Kalabalık yayında toplu özet önerilir — Kick mesaj sınırına takılmamak için.",
+		en: "On a busy stream prefer the batched summary, so you stay under Kick's message limits.",
+	},
+	"game.reply.batch": { tr: "Toplu özet (önerilen)", en: "Batched summary (recommended)" },
+	"game.reply.each": { tr: "Her bahse ayrı cevap", en: "One reply per bet" },
+	"game.reply.silent": { tr: "Sessiz (chate yazma)", en: "Silent (no chat messages)" },
+	"game.reply.batch-sec": { tr: "Toplama aralığı (sn)", en: "Batch window (s)" },
+	"game.reply.batch-sec-sub": {
+		tr: "Bu süre boyunca biriken sonuçlar tek mesajda gönderilir.",
+		en: "Results collected during this window go out in a single message.",
+	},
+	"game.reply.prefix": { tr: "Özet ön eki", en: "Summary prefix" },
+	"game.reply.win": { tr: "Kazanma metni", en: "Win message" },
+	"game.reply.loss": { tr: "Kaybetme metni", en: "Loss message" },
+	"game.reply.join": { tr: "Katılım metni", en: "Join message" },
+	"game.reply.cycle": { tr: "Şans döngüsü metni", en: "Luck cycle message" },
+	"game.reply.cycle-sub": {
+		tr: "Döngü yenilenince chate yazılır. Boş bırakılırsa duyurulmaz.",
+		en: "Posted to chat when the cycle refreshes. Leave empty to stay quiet.",
+	},
+	"game.reply.help": { tr: "Yardım metni", en: "Help message" },
+	"game.reply.help-sub": {
+		tr: "Puanların eğlence amaçlı olduğunu belirtmek iyi olur.",
+		en: "Worth stating that the points are just for fun.",
+	},
+	"game.reply.restore": { tr: "Metinleri sıfırla", en: "Reset messages" },
+	"game.reply.restore-sub": {
+		tr: "Şablonları arayüz dilinin varsayılanlarına döndürür.",
+		en: "Restores the templates to the interface language's defaults.",
+	},
+	"game.reply.restore-btn": { tr: "Varsayılana dön", en: "Restore defaults" },
+	"game.reply.restore-done": { tr: "Metinler sıfırlandı.", en: "Messages restored." },
+	"game.reply.placeholders": {
+		tr: "Kullanılabilir alanlar: {username} {amount} {balance} {top} · komutlar: {joinCommand} {betCommand} {balanceCommand} {topCommand} {resetCommand}",
+		en: "Available fields: {username} {amount} {balance} {top} · commands: {joinCommand} {betCommand} {balanceCommand} {topCommand} {resetCommand}",
+	},
+
+	"game.session": { tr: "Bu yayın", en: "This stream" },
+	"game.session.none": {
+		tr: "Henüz oyun oturumu yok. İlk komut geldiğinde başlar.",
+		en: "No game session yet. It starts with the first command.",
+	},
+	"game.session.channel": { tr: "Kanal", en: "Channel" },
+	"game.session.players": { tr: "Oyuncu", en: "Players" },
+	"game.session.bets": { tr: "Toplam bahis", en: "Total bets" },
+	"game.session.leaderboard": { tr: "Sıralama", en: "Leaderboard" },
+	"game.session.reset": { tr: "Oturumu sıfırla", en: "Reset session" },
+	"game.session.reset-sub": {
+		tr: "Herkesin puanı başlangıç değerine döner. Yeni yayında bu zaten kendiliğinden olur.",
+		en: "Everyone's points return to the starting value. This already happens on its own each new stream.",
+	},
+	"game.session.reset-btn": { tr: "Sıfırla", en: "Reset" },
+	"game.session.reset-confirm": {
+		tr: "Bu yayındaki tüm puanlar sıfırlanacak. Onaylıyor musun?",
+		en: "All points for this stream will be reset. Are you sure?",
+	},
+	"game.session.reset-done": { tr: "Oturum sıfırlandı.", en: "Session reset." },
+
+	// Varsayılan chat şablonları — bunlar izleyicinin chatte GÖRDÜĞÜ metinlerdir,
+	// dolayısıyla arayüz diliyle birlikte gelmeleri gerekir (sabit TR bırakılamaz).
+	"game.default.win": {
+		tr: "{username} +{amount} 🎉 (bakiye: {balance})",
+		en: "{username} +{amount} 🎉 (balance: {balance})",
+	},
+	"game.default.loss": {
+		tr: "{username} -{amount} 💀 (bakiye: {balance})",
+		en: "{username} -{amount} 💀 (balance: {balance})",
+	},
+	"game.default.balance": {
+		tr: "{username} bakiyen: {balance} puan",
+		en: "{username} your balance: {balance} points",
+	},
+	"game.default.top": { tr: "🏆 {top}", en: "🏆 {top}" },
+	"game.default.join": {
+		tr: "{username} oyuna katıldın 🎮 {balance} puanla başlıyorsun. {betCommand} <miktar> ile oyna.",
+		en: "{username} you're in 🎮 starting with {balance} points. Play with {betCommand} <amount>.",
+	},
+	"game.default.already-joined": {
+		tr: "{username} zaten oyundasın · bakiye: {balance}",
+		en: "{username} you're already in · balance: {balance}",
+	},
+	"game.default.not-joined": {
+		tr: "{username} önce {joinCommand} yazıp oyuna katılman gerek.",
+		en: "{username} type {joinCommand} to join the game first.",
+	},
+	"game.default.reset": {
+		tr: "🔄 Oyun sıfırlandı — herkes yeniden {balance} puanla başlıyor. {joinCommand} ile katıl.",
+		en: "🔄 Game reset — everyone starts over with {balance} points. Join with {joinCommand}.",
+	},
+	"game.default.cycle": {
+		tr: "🍀 Şans döngüsü yenilendi — herkesin kazanma şansı sıfırdan başlıyor.",
+		en: "🍀 Luck cycle refreshed — everyone's win chance starts over.",
+	},
+	"game.default.help": {
+		tr: "{betCommand} <miktar> ile oyna · {balanceCommand} bakiye · {topCommand} sıralama. Puanlar eğlence amaçlıdır, her yayın sıfırlanır.",
+		en: "Play with {betCommand} <amount> · {balanceCommand} for balance · {topCommand} for the leaderboard. Points are just for fun and reset every stream.",
+	},
 };
 
 // ─── Hook ────────────────────────────────────────────────────────────────────

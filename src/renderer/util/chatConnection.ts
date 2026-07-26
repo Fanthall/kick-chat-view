@@ -32,6 +32,8 @@ import {
 	evaluateRewardEvent,
 	evaluateSubEvent,
 } from "./automationRulesEngine";
+// Sprint 61: bahis oyunu motoru — chat komutlarını işler.
+import { evaluateGameMessage } from "./gameEngine";
 // FIX-GIFT-DUP (2026-07-05): tek hediyenin çift event'le iki kez işlenmesini önler.
 import { isDuplicateGift } from "./giftDedup";
 // FIX-GIFT-LEADERBOARD (2026-07-06): GiftsLeaderboardUpdated'i gift sanmayı önler.
@@ -600,6 +602,32 @@ export const chatListener = (slug?: string) => {
 							);
 						} catch (autoErr) {
 							console.log("automation chat eval failed", autoErr);
+						}
+						// Sprint 61: bahis oyunu komutları (!joingame / !bahis / !puan / !top).
+						// Oyun kapalıysa veya mesaj komut değilse ucuz no-op.
+						try {
+							// Yetkili = yayıncı veya moderatör (rozetten) ya da kanalın
+							// sahibi. `!reset` gibi komutlar yalnız bunlara açıktır.
+							const senderBadges =
+								parsedMessage?.sender?.identity?.badges || [];
+							const senderName = parsedMessage?.sender?.username || "";
+							const isPrivileged =
+								senderBadges.some((b: any) => {
+									const type = String(b?.type).toLowerCase();
+									return type === "broadcaster" || type === "moderator";
+								}) ||
+								senderName.trim().toLowerCase() ===
+									channelName.trim().toLowerCase();
+
+							evaluateGameMessage(
+								channelName,
+								senderName,
+								parsedMessage?.content || "",
+								parsedMessage?.id,
+								isPrivileged
+							);
+						} catch (gameErr) {
+							console.log("game chat eval failed", gameErr);
 						}
 						// FIX-2: celebration (re-sub) chat mesaji = sub event de.
 						// Reducer banner+activity uretir; otomasyon tetigini burada

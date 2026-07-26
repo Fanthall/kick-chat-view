@@ -1,0 +1,43 @@
+# Lefthook — git hook yoneticisi (tek binary, Node/PHP/Flutter fark etmez)
+#
+# Kurulum (proje kokunde, bir kez):
+#   lefthook install
+#
+# NEDEN: Claude Code'un `guard-secret-scan` hook'u yalniz AI komut calistirinca devreye girer.
+# Bu dosya, KULLANICI elle `git commit` yaptiginda da ayni korumayi saglar.
+# Iki katman birbirinin yedegidir.
+
+pre-commit:
+  parallel: true
+  commands:
+    # --- Hard-rule 28-31: credential commit'e giremez ---
+    secret-scan:
+      run: gitleaks git --staged --no-banner --redact
+      fail_text: |
+        Secret taramasi bulgu verdi. Commit durduruldu.
+        Degeri .env'e tasi, .env.example'a placeholder ekle.
+        False positive ise .gitleaks.toml allowlist'ine ekle.
+
+    # --- Yalnizca degisen dosyalarda lint (hizli) ---
+    lint:
+      glob: "*.{js,jsx,ts,tsx}"
+      run: npx eslint {staged_files} --max-warnings=0
+      skip:
+        - merge
+        - rebase
+
+pre-push:
+  commands:
+    # --- Push edilecek commit araligini tara ---
+    secret-scan-range:
+      run: gitleaks git --no-banner --redact
+      fail_text: "Push edilecek commit'lerde secret bulundu. Duzeltilmeden push edilmez."
+
+    typecheck:
+      run: npm run typecheck --if-present
+      skip:
+        - merge
+
+# Acil durumda atlamak icin: LEFTHOOK=0 git commit ...
+# DIKKAT: --no-verify hard-rules 9 geregi YASAK. LEFTHOOK=0 da ayni kapsamda degerlendirilir;
+# yalniz gercek bir acil durumda ve kullanici bilgisiyle kullanilir.

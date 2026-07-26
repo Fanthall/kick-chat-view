@@ -50,6 +50,7 @@ import {
 } from "../../util/localModerationStorage";
 import { getFavoriteEmotes } from "../../util/emoteFavorites";
 import AutomationSection from "./AutomationSection";
+import GameSection from "./GameSection";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ interface NavItem {
 	icon: IconName;
 }
 
-type SectionId = "channel" | "account" | "permissions" | "moderation" | "emotes" | "automation" | "advanced";
+type SectionId = "channel" | "account" | "permissions" | "moderation" | "emotes" | "automation" | "game" | "advanced";
 
 const SETTINGS_NAV: NavItem[] = [
 	{ id: "channel",     label: "settings.nav.channel",     icon: "code" },
@@ -96,6 +97,7 @@ const SETTINGS_NAV: NavItem[] = [
 	{ id: "moderation",  label: "settings.nav.moderation",  icon: "ban" },
 	{ id: "emotes",      label: "settings.nav.emotes",      icon: "smile" },
 	{ id: "automation",  label: "settings.nav.automation",  icon: "settings" },
+	{ id: "game",        label: "settings.nav.game",        icon: "coin" },
 	{ id: "advanced",    label: "settings.nav.advanced",    icon: "settings" },
 ];
 
@@ -1342,6 +1344,7 @@ const SettingsModern: FunctionComponent = () => {
 					{activeSection === "moderation" && <ModerationSection />}
 					{activeSection === "emotes" && <EmotesSection />}
 					{activeSection === "automation" && <AutomationSection />}
+					{activeSection === "game" && <GameSection />}
 					{activeSection === "advanced" && <AdvancedSection />}
 				</div>
 			</div>

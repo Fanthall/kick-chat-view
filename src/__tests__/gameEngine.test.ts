@@ -1,0 +1,403 @@
+/**
+ * Sprint 61 — Bahis oyunu motoru testleri.
+ *
+ * Strateji: window.electron.kick mock'lanır → evaluateGameMessage çağrılır →
+ * kuyruk flush edilip sendChatMessage çağrıları kontrol edilir.
+ *
+ * Kritik davranışlar: dedup, DRY-RUN, toplu cevap, sessiz mod, kapalı oyun.
+ */
+
+import {
+	__flushQueuesForTest,
+	__resetGameEngineForTest,
+	__seedChannelInfoForTest,
+	evaluateGameMessage,
+	fillGameTemplate,
+	formatBatch,
+	peekSession,
+} from "../renderer/util/gameEngine";
+import {
+	DEFAULT_GAME_CONFIG,
+	GameConfig,
+	saveGameConfig,
+} from "../renderer/util/gameStorage";
+
+const sendChatMessageMock = jest.fn((_req: any) => Promise.resolve());
+const getChannelBySlugMock = jest.fn((_slug: string) =>
+	Promise.resolve({
+		data: [{ broadcaster_user_id: 42, stream: { id: 900, is_live: true } }],
+	})
+);
+
+beforeAll(() => {
+	(window as any).electron = {
+		kick: {
+			getChannelBySlug: getChannelBySlugMock,
+			sendChatMessage: sendChatMessageMock,
+		},
+	};
+});
+
+const CHANNEL = "fanthal";
+
+/**
+ * Oyunu açık + canlı gönderim modunda kurar.
+ * `requireJoin` varsayılan olarak KAPATILIR ki bahis/cevap testleri katılım
+ * kapısına takılmasın; kapının kendi testleri ayrı describe'da.
+ */
+const setupConfig = (overrides: Partial<GameConfig> = {}) => {
+	const config: GameConfig = {
+		...DEFAULT_GAME_CONFIG,
+		enabled: true,
+		dryRun: false,
+		requireJoin: false,
+		...overrides,
+	};
+	saveGameConfig(config);
+	return config;
+};
+
+let messageCounter = 0;
+const nextId = () => `msg-${++messageCounter}`;
+
+beforeEach(() => {
+	localStorage.clear();
+	sendChatMessageMock.mockClear();
+	getChannelBySlugMock.mockClear();
+	__resetGameEngineForTest();
+	__seedChannelInfoForTest(CHANNEL, { broadcasterId: 42, streamId: "900" });
+});
+
+const sentTexts = () =>
+	sendChatMessageMock.mock.calls.map((call) => call[0].content as string);
+
+describe("kapsam kontrolü", () => {
+	test("oyun kapalıyken hiçbir şey olmaz", async () => {
+		saveGameConfig({ ...DEFAULT_GAME_CONFIG, enabled: false, dryRun: false });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 500", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(sendChatMessageMock).not.toHaveBeenCalled();
+	});
+
+	test("komut olmayan mesaj yok sayılır", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "merhaba nasılsınız", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(sendChatMessageMock).not.toHaveBeenCalled();
+		expect(peekSession(CHANNEL)).toBeUndefined();
+	});
+
+	test("yapılandırılmamış kanalda çalışmaz", async () => {
+		setupConfig({ channelSlugs: ["baskakanal"] });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 500", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(sendChatMessageMock).not.toHaveBeenCalled();
+	});
+});
+
+describe("bahis akışı", () => {
+	test("geçerli bahis oyuncu oluşturur ve bakiyeyi değiştirir", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "Ali", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		const session = peekSession(CHANNEL);
+		expect(session?.players.ali).toBeDefined();
+		expect(session?.players.ali.betCount).toBe(1);
+		expect([9000, 11000]).toContain(session?.players.ali.balance);
+		expect(session?.totalBets).toBe(1);
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(1);
+	});
+
+	test("bakiyeden fazla bahis reddedilir, bakiye korunur", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 999999", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		const session = peekSession(CHANNEL);
+		expect(session?.players.ali.balance).toBe(10000);
+		expect(session?.players.ali.betCount).toBe(0);
+		expect(sentTexts().join(" ")).toContain("bakiyen yetmiyor");
+	});
+
+	test("cooldown dolmadan ikinci bahis reddedilir", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 500", nextId());
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 500", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
+		expect(sentTexts().join(" ")).toMatch(/sn bekle/);
+	});
+
+	test("geçersiz miktar kullanım örneğiyle cevaplanır", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!bahis abc", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(sentTexts().join(" ")).toContain("geçersiz miktar");
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(0);
+	});
+
+	test("min bahis altı reddedilir", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 10", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(sentTexts().join(" ")).toContain("en az");
+	});
+});
+
+describe("dedup", () => {
+	test("aynı mesaj id iki kez işlenmez (reconnect koruması)", async () => {
+		setupConfig();
+		const id = nextId();
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", id);
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", id);
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
+	});
+
+	test("farklı kullanıcılar birbirini engellemez", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		evaluateGameMessage(CHANNEL, "veli", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		const session = peekSession(CHANNEL);
+		expect(session?.players.ali.betCount).toBe(1);
+		expect(session?.players.veli.betCount).toBe(1);
+	});
+});
+
+describe("cevap modları", () => {
+	test("batch: birden çok sonuç TEK mesajda toplanır (rate-limit koruması)", async () => {
+		setupConfig();
+		["ali", "veli", "ayse", "mehmet"].forEach((user) => {
+			evaluateGameMessage(CHANNEL, user, "!bahis 500", nextId());
+		});
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(1);
+		const text = sentTexts()[0];
+		["ali", "veli", "ayse", "mehmet"].forEach((user) => {
+			expect(text).toContain(user);
+		});
+	});
+
+	test("each: her bahse ayrı mesaj gider", async () => {
+		setupConfig({ reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "each" } });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 500", nextId());
+		evaluateGameMessage(CHANNEL, "veli", "!bahis 500", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(2);
+	});
+
+	test("silent: chate hiç mesaj gitmez ama bakiye işlenir", async () => {
+		setupConfig({ reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "silent" } });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).not.toHaveBeenCalled();
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
+	});
+
+	test("DRY-RUN: bakiye işlenir ama chate mesaj GİTMEZ", async () => {
+		setupConfig({ dryRun: true });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).not.toHaveBeenCalled();
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
+	});
+});
+
+describe("bilgi komutları", () => {
+	test("!puan bakiyeyi bildirir, bahis saymaz", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!puan", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sentTexts().join(" ")).toContain("10.000");
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(0);
+	});
+
+	test("!top kimse oynamadıysa bunu söyler", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!top", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(sentTexts().join(" ")).toContain("henüz kimse oynamadı");
+	});
+
+	test("!oyun yardım metni komut adlarını doldurur", async () => {
+		setupConfig();
+		evaluateGameMessage(CHANNEL, "ali", "!oyun", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		const text = sentTexts().join(" ");
+		expect(text).toContain("!bahis");
+		expect(text).toContain("eğlence amaçlıdır");
+	});
+});
+
+describe("katılım kapısı (requireJoin)", () => {
+	test("katılmadan bahis oynanamaz ve hesap AÇILMAZ", async () => {
+		setupConfig({ requireJoin: true });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 500", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players.ali).toBeUndefined();
+		expect(sentTexts().join(" ")).toContain("!joingame");
+	});
+
+	test("katılmadan bakiye sorulamaz", async () => {
+		setupConfig({ requireJoin: true });
+		evaluateGameMessage(CHANNEL, "ali", "!puan", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(peekSession(CHANNEL)?.players.ali).toBeUndefined();
+	});
+
+	test("!joingame hesabı başlangıç puanıyla açar", async () => {
+		setupConfig({ requireJoin: true });
+		evaluateGameMessage(CHANNEL, "Ali", "!joingame", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		const player = peekSession(CHANNEL)?.players.ali;
+		expect(player?.balance).toBe(10000);
+		expect(player?.betCount).toBe(0);
+		expect(sentTexts().join(" ")).toContain("10.000");
+	});
+
+	test("katıldıktan sonra bahis oynanabilir", async () => {
+		setupConfig({ requireJoin: true });
+		evaluateGameMessage(CHANNEL, "ali", "!joingame", nextId());
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
+	});
+
+	test("ikinci kez katılmak bakiyeyi SIFIRLAMAZ", async () => {
+		setupConfig({ requireJoin: true });
+		evaluateGameMessage(CHANNEL, "ali", "!joingame", nextId());
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		const balanceAfterBet = peekSession(CHANNEL)!.players.ali.balance;
+
+		evaluateGameMessage(CHANNEL, "ali", "!joingame", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players.ali.balance).toBe(balanceAfterBet);
+		expect(sentTexts().join(" ")).toContain("zaten oyundasın");
+	});
+
+	test("sıralama ve yardım katılım istemez", async () => {
+		setupConfig({ requireJoin: true });
+		evaluateGameMessage(CHANNEL, "ali", "!top", nextId());
+		evaluateGameMessage(CHANNEL, "ali", "!oyun", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players.ali).toBeUndefined();
+		expect(sendChatMessageMock).toHaveBeenCalled();
+	});
+
+	test("requireJoin kapalıyken eski davranış sürer (otomatik hesap)", async () => {
+		setupConfig({ requireJoin: false });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
+	});
+});
+
+describe("!reset — yalnız yayıncı/moderatör", () => {
+	/** Bir oyuncu yaratır ve kuyruğu boşaltır — bekleyen mesaj sonraki
+	 *  assertion'a sızmasın (mockClear tek başına yetmiyor). */
+	const seedPlayer = async () => {
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(peekSession(CHANNEL)?.players.ali).toBeDefined();
+	};
+
+	test("yetkili reset oyuncuları temizler ve duyurur", async () => {
+		setupConfig();
+		await seedPlayer();
+		evaluateGameMessage(CHANNEL, "fanthal", "!reset", nextId(), true);
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players).toEqual({});
+		expect(peekSession(CHANNEL)?.totalBets).toBe(0);
+		expect(sentTexts().join(" ")).toContain("sıfırlandı");
+	});
+
+	test("yetkisiz reset SESSİZCE yok sayılır (bot tetiklenmez)", async () => {
+		setupConfig();
+		await seedPlayer();
+		sendChatMessageMock.mockClear();
+		evaluateGameMessage(CHANNEL, "troll", "!reset", nextId(), false);
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players.ali).toBeDefined();
+		expect(sendChatMessageMock).not.toHaveBeenCalled();
+	});
+
+	test("yetki bayrağı hiç verilmezse reset çalışmaz", async () => {
+		setupConfig();
+		await seedPlayer();
+		evaluateGameMessage(CHANNEL, "ali", "!reset", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(peekSession(CHANNEL)?.players.ali).toBeDefined();
+	});
+});
+
+describe("yayın kapalıyken (liveOnly)", () => {
+	test("komut işlenmez ve oturum sıfırlanır", async () => {
+		setupConfig({ liveOnly: true });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(peekSession(CHANNEL)?.players.ali).toBeDefined();
+
+		// Yayın kapandı
+		__seedChannelInfoForTest(CHANNEL, { broadcasterId: 42, isLive: false });
+		sendChatMessageMock.mockClear();
+		evaluateGameMessage(CHANNEL, "veli", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(peekSession(CHANNEL)?.players).toEqual({});
+		// Yayın dışında bot chate konuşmaz.
+		expect(sendChatMessageMock).not.toHaveBeenCalled();
+	});
+
+	test("liveOnly kapalıyken yayın kapalı olsa da oynanır", async () => {
+		setupConfig({ liveOnly: false });
+		__seedChannelInfoForTest(CHANNEL, { broadcasterId: 42, isLive: false });
+		evaluateGameMessage(CHANNEL, "ali", "!bahis 1000", nextId());
+		await __flushQueuesForTest(CHANNEL);
+		expect(peekSession(CHANNEL)?.players.ali.betCount).toBe(1);
+	});
+});
+
+describe("formatBatch", () => {
+	test("kısa liste tek mesajda kalır", () => {
+		expect(formatBatch("🎲", ["a +1", "b -2"])).toEqual(["🎲 a +1 · b -2"]);
+	});
+
+	test("uzun liste birden çok mesaja bölünür", () => {
+		const items = Array.from({ length: 40 }, (_, i) => `oyuncu${i} +1000 (11.000)`);
+		const messages = formatBatch("🎲", items);
+		expect(messages.length).toBeGreaterThan(1);
+		messages.forEach((m) => expect(m.length).toBeLessThanOrEqual(500));
+	});
+
+	test("boş liste boş dizi döner", () => {
+		expect(formatBatch("🎲", [])).toEqual([]);
+	});
+});
+
+describe("fillGameTemplate", () => {
+	test("bilinen placeholder değişir, bilinmeyen olduğu gibi kalır", () => {
+		expect(
+			fillGameTemplate("{username} → {balance} · {yok}", {
+				username: "ali",
+				balance: "9.500",
+			})
+		).toBe("ali → 9.500 · {yok}");
+	});
+});
