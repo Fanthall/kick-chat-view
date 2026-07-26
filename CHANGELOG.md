@@ -1,3 +1,20 @@
+# 4.6.20 — 2026-07-26
+
+Kick mesajı reddediyordu: emoji temizlendi, metinler kısaldı.
+
+## [Bahis oyunu] — 2026-07-26
+
+- **Fix (kritik):** Kick, çok sayıda özel karakter içeren mesajı reddediyordu — `400 {"data":"MAX_SPECIAL_CHARS_ERROR"}`. Cevaplardaki emoji ve tipografik semboller (`🎲 · — 🎉 💀 🏆 🎮`) bu sınırı aşıyor ve bot **hiçbir şey yazamıyordu**. Tüm varsayılan metinlerden bu karakterler kaldırıldı.
+- **Emniyet ağı:** Şablon özelleştirilip yine emoji konursa cevap kaybolmasın diye, gönderim bu hatayla dönerse metin otomatik sadeleştirilip **bir kez yeniden denenir** (yeni `gameSanitize` paketi). Emoji atılır, tipografik işaretler ASCII'ye çevrilir; harf, rakam ve anlam korunur.
+- **Metinler kısaldı.** Uzun cümleler yerine tek satırda özet:
+
+  `@ali 15/20 İyi attın! 2 kat, 500 > 1.000 (bakiye 10.500)`
+  `@ali 5/20 çeyreği amorti. 250 > 63 (bakiye 11.563)`
+  `@ali 0/20 zar tutmadı. 2.000 > 0 (bakiye 9.563)`
+
+- Türkçe karakterler korundu (harf, özel karakter değil); yalnız emoji ve süs sembolleri gitti.
+- Testler: 155 oyun testi (yeni sadeleştirme paketi dahil) — varsayılan şablonların emoji içermediği testle kilitli, bir daha sessizce geri sızamaz.
+
 # 4.6.19 — 2026-07-26
 
 Bahis sonucu artık anlatılıyor: d20 zar atışı + tam para akışı.

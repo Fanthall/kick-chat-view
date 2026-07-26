@@ -318,7 +318,7 @@ describe("bilgi komutları", () => {
 		await __flushQueuesForTest(CHANNEL);
 		const text = sentTexts().join(" ");
 		expect(text).toContain("!bahis");
-		expect(text).toContain("eğlence amaçlıdır");
+		expect(text).toContain("sıralama");
 	});
 });
 
@@ -459,12 +459,12 @@ describe("yayın kapalıyken (liveOnly)", () => {
 
 describe("formatBatch", () => {
 	test("kısa liste tek mesajda kalır", () => {
-		expect(formatBatch("🎲", ["a +1", "b -2"])).toEqual(["🎲 a +1 · b -2"]);
+		expect(formatBatch("Zar:", ["a +1", "b -2"])).toEqual(["Zar: a +1 | b -2"]);
 	});
 
 	test("uzun liste birden çok mesaja bölünür", () => {
 		const items = Array.from({ length: 40 }, (_, i) => `oyuncu${i} +1000 (11.000)`);
-		const messages = formatBatch("🎲", items);
+		const messages = formatBatch("Zar:", items);
 		expect(messages.length).toBeGreaterThan(1);
 		messages.forEach((m) => expect(m.length).toBeLessThanOrEqual(500));
 	});

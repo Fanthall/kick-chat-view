@@ -41,6 +41,7 @@ import {
 	text,
 } from "./gameStorage";
 import { MAX_ROLL, rollFor } from "./gameOutcome";
+import { isSpecialCharsError, sanitizeForKick } from "./gameSanitize";
 
 // ─── Ayar cache ──────────────────────────────────────────────────────────────
 
@@ -244,7 +245,7 @@ export const formatBatch = (
 	const messages: string[] = [];
 	let current = "";
 	for (const item of items) {
-		const candidate = current ? `${current} · ${item}` : item;
+		const candidate = current ? `${current} | ${item}` : item;
 		const withPrefix = prefix ? `${prefix} ${candidate}` : candidate;
 		if (withPrefix.length > maxLength && current) {
 			messages.push(prefix ? `${prefix} ${current}` : current);
@@ -271,23 +272,49 @@ const deliver = async (
 		console.log("[game] broadcaster id çözülemedi", channelSlug);
 		return;
 	}
-	try {
+	const send = (content: string) => {
 		const w = window as any;
-		await w.electron.kick.sendChatMessage({
+		return w.electron.kick.sendChatMessage({
 			broadcaster_user_id: info.broadcasterId,
-			content: text,
+			content,
 			type: "user",
 			// Yalnız tek kişilik cevapta reply; toplu özette alıcı belirsiz.
-			...(replyToMessageId
-				? { reply_to_message_id: replyToMessageId }
-				: {}),
+			...(replyToMessageId ? { reply_to_message_id: replyToMessageId } : {}),
 		});
+	};
+
+	try {
+		await send(text);
 		setDiagnostic(channelSlug, {
 			reason: "ok",
 			lastSentText: text,
 			lastSentAt: Date.now(),
 		});
 	} catch (err) {
+		// Kick "çok fazla özel karakter" diyorsa metni sadeleştirip BİR KEZ
+		// daha dene — kullanıcı şablonuna emoji koyduğu için cevap tamamen
+		// kaybolmasın (varsayılan şablonlar zaten sade).
+		const sanitized = sanitizeForKick(text);
+		if (isSpecialCharsError(err) && sanitized && sanitized !== text) {
+			try {
+				await send(sanitized);
+				setDiagnostic(channelSlug, {
+					reason: "ok",
+					lastSentText: sanitized,
+					lastSentAt: Date.now(),
+				});
+				console.log("[game] mesaj sadeleştirilip gönderildi", sanitized);
+				return;
+			} catch (retryErr) {
+				const retryDetail = String((retryErr as any)?.message || retryErr);
+				setDiagnostic(channelSlug, {
+					reason: "send_failed",
+					detail: retryDetail,
+				});
+				console.log("[game] sadeleştirilmiş mesaj da reddedildi", retryErr);
+				return;
+			}
+		}
 		const detail = String((err as any)?.message || err);
 		setDiagnostic(channelSlug, { reason: "send_failed", detail });
 		console.log("[game] sendChatMessage başarısız", err);
@@ -449,7 +476,7 @@ const handleBet = (
 			// Hata cevapları toplu modda da KISALTILMAZ: oyuncunun bahsinin neden
 			// işlenmediğini bilmesi gerekir, "ali ❓" hiçbir şey anlatmaz.
 			text: fillGameTemplate(
-				"@{username} geçersiz miktar. Örnek: {betCommand} 500 · {betCommand} %50 · {betCommand} hepsi",
+				"@{username} geçersiz miktar. Örnek: {betCommand} 500, {betCommand} %50, {betCommand} hepsi",
 				{ username: player.username, ...names }
 			),
 		});
@@ -502,7 +529,7 @@ const handleBet = (
 		),
 		compact: `${player.username} ${result.won ? "+" : "-"}${formatNumber(
 			Math.abs(result.delta)
-		)} ×${formatMultiplier(result.returnMultiplier)} (${formatNumber(
+		)} x${formatMultiplier(result.returnMultiplier)} (${formatNumber(
 			result.balanceAfter
 		)})`,
 	});
@@ -690,7 +717,7 @@ export const evaluateGameMessage = (
 			const list = top.length
 				? top
 						.map((p, i) => `${i + 1}. ${p.username} ${formatNumber(p.balance)}`)
-						.join(" · ")
+						.join(", ")
 				: "henüz kimse oynamadı";
 			enqueue({
 				channelSlug,

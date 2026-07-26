@@ -110,13 +110,13 @@ describe("config I/O", () => {
 	test("varsayılan chat şablonları arayüz dilini takip eder", () => {
 		localStorage.setItem("chatViewLanguage", "en");
 		const en = loadGameConfig();
-		expect(en.reply.winTemplate).toContain("balance:");
-		expect(en.reply.helpTemplate).toContain("just for fun");
+		expect(en.reply.winTemplate).toContain("balance");
+		expect(en.reply.helpTemplate).toContain("leaderboard");
 
 		localStorage.setItem("chatViewLanguage", "tr");
 		const tr = loadGameConfig();
-		expect(tr.reply.winTemplate).toContain("bakiye:");
-		expect(tr.reply.helpTemplate).toContain("eğlence amaçlıdır");
+		expect(tr.reply.winTemplate).toContain("bakiye");
+		expect(tr.reply.helpTemplate).toContain("sıralama");
 	});
 
 	test("şablonlarda dile bakılmaksızın yer tutucular korunur", () => {
@@ -130,7 +130,9 @@ describe("config I/O", () => {
 					expect(cfg.reply.winTemplate).toContain(ph);
 				}
 			);
-			expect(cfg.reply.lossTemplate).toContain("{amount}");
+			// Kayıp metni kısa tutuldu: kaybedilen tutar {bet} > {returned}
+			// farkından zaten okunuyor.
+			expect(cfg.reply.lossTemplate).toContain("{returned}");
 			expect(cfg.reply.topTemplate).toContain("{top}");
 			expect(cfg.reply.helpTemplate).toContain("{betCommand}");
 		});

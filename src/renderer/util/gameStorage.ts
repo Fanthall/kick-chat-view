@@ -102,7 +102,8 @@ export const defaultReply = (): GameReplyConfig => ({
 	// birleştirdiği için ne tag ne reply mümkün olur.
 	mode: "each",
 	batchSeconds: 8,
-	batchPrefix: "🎲",
+	// Emoji YOK: Kick çok özel karakterli mesajı reddediyor (bkz. gameSanitize).
+	batchPrefix: "Zar:",
 	winTemplate: text("game.default.win"),
 	lossTemplate: text("game.default.loss"),
 	balanceTemplate: text("game.default.balance"),

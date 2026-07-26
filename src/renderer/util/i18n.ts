@@ -1091,42 +1091,47 @@ export const dict: Dict = {
 	// NOT: kişiye giden cevaplarda ad `@` ile etiketlenir — oyuncu akan chatte
 	// kendi sonucunu bildirimden yakalasın diye. Metin "ne oldu da ne kazandım"
 	// zincirini eksiksiz kurar: atış · sonuç · çarpan · yatırılan → geri gelen.
+	// DİKKAT: Kick, çok sayıda özel karakter içeren mesajı 400
+	// MAX_SPECIAL_CHARS_ERROR ile reddediyor. Bu yüzden varsayılan metinlerde
+	// emoji ve tipografik sembol (· — 🎲 🎉 💀) KULLANILMAZ; sade noktalama
+	// yeterli. Şablonu özelleştirirken bunu akılda tut (motor yine de
+	// sadeleştirip yeniden dener, bkz. gameSanitize).
 	"game.default.win": {
-		tr: "@{username} 🎲 {roll}/{maxRoll} · {outcome}! {multiplier} kat — {bet} yatırdın, {returned} aldın 🎉 (bakiye: {balance})",
-		en: "@{username} 🎲 {roll}/{maxRoll} · {outcome}! {multiplier}x — staked {bet}, took {returned} 🎉 (balance: {balance})",
+		tr: "@{username} {roll}/{maxRoll} {outcome}! {multiplier} kat, {bet} > {returned} (bakiye {balance})",
+		en: "@{username} {roll}/{maxRoll} {outcome}! {multiplier}x, {bet} > {returned} (balance {balance})",
 	},
 	"game.default.loss": {
-		tr: "@{username} 🎲 {roll}/{maxRoll} · {outcome} — {bet} yatırdın, {returned} geri geldi, -{amount} 💀 (bakiye: {balance})",
-		en: "@{username} 🎲 {roll}/{maxRoll} · {outcome} — staked {bet}, got {returned} back, -{amount} 💀 (balance: {balance})",
+		tr: "@{username} {roll}/{maxRoll} {outcome}. {bet} > {returned} (bakiye {balance})",
+		en: "@{username} {roll}/{maxRoll} {outcome}. {bet} > {returned} (balance {balance})",
 	},
 	"game.default.balance": {
-		tr: "@{username} bakiyen: {balance} puan",
-		en: "@{username} your balance: {balance} points",
+		tr: "@{username} bakiyen {balance}",
+		en: "@{username} your balance {balance}",
 	},
-	"game.default.top": { tr: "🏆 {top}", en: "🏆 {top}" },
+	"game.default.top": { tr: "Sıralama: {top}", en: "Leaderboard: {top}" },
 	"game.default.join": {
-		tr: "@{username} oyuna katıldın 🎮 {balance} puanla başlıyorsun. {betCommand} <miktar> ile oyna.",
-		en: "@{username} you're in 🎮 starting with {balance} points. Play with {betCommand} <amount>.",
+		tr: "@{username} katıldın! {balance} puan. {betCommand} <miktar> ile oyna",
+		en: "@{username} you're in! {balance} points. Play with {betCommand} <amount>",
 	},
 	"game.default.already-joined": {
-		tr: "@{username} zaten oyundasın · bakiye: {balance}",
-		en: "@{username} you're already in · balance: {balance}",
+		tr: "@{username} zaten oyundasın, bakiye {balance}",
+		en: "@{username} you're already in, balance {balance}",
 	},
 	"game.default.not-joined": {
-		tr: "@{username} önce {joinCommand} yazıp oyuna katılman gerek.",
-		en: "@{username} type {joinCommand} to join the game first.",
+		tr: "@{username} önce {joinCommand} yaz",
+		en: "@{username} type {joinCommand} first",
 	},
 	"game.default.reset": {
-		tr: "🔄 Oyun sıfırlandı — herkes yeniden {balance} puanla başlıyor. {joinCommand} ile katıl.",
-		en: "🔄 Game reset — everyone starts over with {balance} points. Join with {joinCommand}.",
+		tr: "Oyun sıfırlandı, herkes {balance} puanla başlıyor",
+		en: "Game reset, everyone starts with {balance} points",
 	},
 	"game.default.cycle": {
-		tr: "🍀 Şans döngüsü yenilendi — herkesin kazanma şansı sıfırdan başlıyor.",
-		en: "🍀 Luck cycle refreshed — everyone's win chance starts over.",
+		tr: "Şans döngüsü yenilendi, herkes sıfırdan",
+		en: "Luck cycle refreshed, everyone starts over",
 	},
 	"game.default.help": {
-		tr: "{betCommand} <miktar> ile oyna · {balanceCommand} bakiye · {topCommand} sıralama. Puanlar eğlence amaçlıdır, her yayın sıfırlanır.",
-		en: "Play with {betCommand} <amount> · {balanceCommand} for balance · {topCommand} for the leaderboard. Points are just for fun and reset every stream.",
+		tr: "{betCommand} <miktar> oyna, {balanceCommand} bakiye, {topCommand} sıralama",
+		en: "{betCommand} <amount> to play, {balanceCommand} balance, {topCommand} leaderboard",
 	},
 };
 
