@@ -70,6 +70,32 @@ describe("config I/O", () => {
 		expect(loaded.reply.winTemplate).toContain("{outcome}");
 	});
 
+	/**
+	 * REGRESYON: v3 yalnız kazanç/kayıp metnini yenilemişti; `!puan`, `!top`,
+	 * `!oyun` ve katılma metinleri eski kayıtta emoji'li kaldığı için Kick
+	 * onları reddetmeye devam etti ve o komutlar hiç cevap üretmedi.
+	 */
+	test("eski emoji'li şablonların HEPSİ varsayılana taşınır", () => {
+		localStorage.setItem(
+			"chatViewGameConfig",
+			JSON.stringify({
+				enabled: true,
+				reply: {
+					topTemplate: "🏆 {top}",
+					joinTemplate: "{username} katıldın 🎮 {balance}",
+					helpTemplate: "{betCommand} · {balanceCommand}",
+					balanceTemplate: "{username} bakiyen: {balance} 💰",
+				},
+			})
+		);
+		const loaded = loadGameConfig();
+		for (const [key, value] of Object.entries(loaded.reply)) {
+			if (typeof value !== "string" || key === "mode") continue;
+			expect(value).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+			expect(value).not.toMatch(/[·—]/);
+		}
+	});
+
 	test("geçiş bir kez uygulanır — sonrasında kullanıcı seçimi korunur", () => {
 		saveGameConfig({
 			...DEFAULT_GAME_CONFIG,

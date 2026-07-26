@@ -61,8 +61,8 @@ export interface GameReplyConfig {
 export interface GameConfig {
 	/**
 	 * Ayar şeması sürümü. Eski kayıtlara tek seferlik geçiş uygulamak için
-	 * kullanılır (bkz. mergeConfig). 2 = "test modu" kaldırıldı, cevap modu
-	 * `each`, minBet 1.
+	 * kullanılır (bkz. mergeConfig). 2 = "test modu" kaldırıldı + each + minBet 1,
+	 * 4 = tüm cevap şablonları sadeleştirilmiş varsayılana alındı.
 	 */
 	schemaVersion: number;
 	enabled: boolean;
@@ -117,7 +117,7 @@ export const defaultReply = (): GameReplyConfig => ({
 });
 
 export const defaultGameConfig = (): GameConfig => ({
-	schemaVersion: 3,
+	schemaVersion: 4,
 	// Oyun kutudan çıktığı gibi çalışır ve chate YAZAR. Ara "test modu" yoktur:
 	// susturmak isteyen ya oyunu kapatır ya cevap modunu «sessiz» yapar.
 	enabled: true,
@@ -157,34 +157,36 @@ const mergeConfig = (raw: unknown): GameConfig => {
 	 */
 	const version = input.schemaVersion ?? 1;
 	const needsV2Migration = version < 2;
-	const needsV3Migration = version < 3;
+	const needsV4Migration = version < 4;
 
 	const migratedEconomy = needsV2Migration
 		? { ...(input.economy || {}), minBet: 1 }
 		: input.economy || {};
 
 	/**
-	 * v3: kazanç/kayıp metinleri artık eli ve para akışını anlatıyor
-	 * (`{cards}` · `{hand}` · `{bet}` → `{returned}`). Eski kayıttaki şablonlar
-	 * bu yer tutucuları içermediği için sonuç yine "neden kazandım" sorusunu
-	 * cevapsız bırakırdı; bir kez varsayılana alınır. Kullanıcının ELLE
-	 * özelleştirdiği diğer şablonlara (join, top, help…) dokunulmaz.
+	 * v4: TÜM cevap şablonları varsayılana alınır.
+	 *
+	 * v3'te yalnız kazanç/kayıp metinleri yenilenmişti; `!puan`, `!top`, `!oyun`,
+	 * katılma ve sıfırlama metinleri eski kayıtta emoji'li (🏆 🎮 🔄 🍀 ·) kaldığı
+	 * için Kick onları MAX_SPECIAL_CHARS_ERROR ile REDDETMEYE devam etti — yani
+	 * o komutlar hâlâ hiç cevap üretmiyordu. Emoji'li şablonlar artık çalışmayan
+	 * şablonlardır; hepsi bir kez sadeleştirilmiş varsayılana döner.
+	 *
+	 * Bu adımdan sonra kullanıcı dilediği gibi özelleştirebilir (schemaVersion
+	 * tekrar çalışmasını engeller); motor da reddedilen metni aşama aşama
+	 * sadeleştirip yeniden dener (bkz. gameSanitize).
 	 */
-	const migratedReply = {
-		...(input.reply || {}),
-		...(needsV2Migration ? { mode: "each" as ReplyMode } : {}),
-		...(needsV3Migration
-			? {
-					winTemplate: text("game.default.win"),
-					lossTemplate: text("game.default.loss"),
-				}
-			: {}),
-	};
+	const migratedReply = needsV4Migration
+		? defaultReply()
+		: {
+				...(input.reply || {}),
+				...(needsV2Migration ? { mode: "each" as ReplyMode } : {}),
+			};
 
 	return {
 		...base,
 		...input,
-		schemaVersion: 3,
+		schemaVersion: 4,
 		channelSlugs: Array.isArray(input.channelSlugs)
 			? input.channelSlugs.filter((s) => typeof s === "string" && s.trim())
 			: [],

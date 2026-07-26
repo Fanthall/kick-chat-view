@@ -1,3 +1,16 @@
+# 4.6.21 — 2026-07-26
+
+Emoji kayıtlı şablonlarda kalmıştı: hepsi yenilendi + aşamalı sadeleştirme.
+
+## [Bahis oyunu] — 2026-07-26
+
+- **Fix (kritik, 4.6.20'nin eksiği):** 4.6.20'de yalnız **varsayılan** metinlerden emoji kaldırılmıştı; kullanıcının **kayıtlı** şablonları eski hâlde duruyordu. `!puan`, `!top`, `!oyun`, katılma ve sıfırlama metinleri hâlâ emoji'li (`🏆 🎮 🔄 🍀 ·`) olduğu için Kick onları `MAX_SPECIAL_CHARS_ERROR` ile reddetmeye devam etti — o komutlar hiç cevap üretmiyordu. Ayar şeması **sürüm 4**'e taşınırken artık **tüm** cevap şablonları sadeleştirilmiş varsayılana alınıyor.
+- **Aşamalı sadeleştirme.** Kick'in özel karakter eşiği belgelenmiyor ve yalnız emoji temizlemek yetmedi. Mesaj reddedilirse motor bir kademe daha sadeleştirip yeniden deniyor:
+  1. dokunma → 2. emoji + tipografik → 3. `( ) < > / | : ;` ve binlik ayırıcı → 4. Türkçe harfler ASCII'ye, yalnız harf/rakam/boşluk/virgül
+- **Kabul edilen seviye hatırlanıyor:** Kick bir kez hangi seviyeyi kabul ettiyse o kanalın sonraki mesajları doğrudan oradan gidiyor; her mesajda deneme yanılma yapılmıyor.
+- Özel karakter dışındaki hatalarda (401 vb.) boşuna yeniden denenmiyor.
+- Testler: 162 oyun testi. Yeniden deneme davranışı, seviyelerin gerçekten sadeleştiği ve **hiçbir varsayılan şablonda emoji kalmadığı** testle kilitli.
+
 # 4.6.20 — 2026-07-26
 
 Kick mesajı reddediyordu: emoji temizlendi, metinler kısaldı.

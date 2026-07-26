@@ -177,6 +177,46 @@ describe("bahis akışı", () => {
 		}
 	});
 
+	/**
+	 * REGRESYON (2026-07-26): Kick özel karakter yoğun mesajı reddediyor ve bot
+	 * hiç yazamıyordu. Reddedilen metin aşama aşama sadeleştirilip yeniden
+	 * denenmeli; ilk kabul eden seviye kanal için hatırlanmalı.
+	 */
+	test("Kick özel karakter derse metin sadeleştirilip yeniden gönderilir", async () => {
+		setupConfig({
+			reply: {
+				...DEFAULT_GAME_CONFIG.reply,
+				mode: "each",
+				balanceTemplate: "@{username} 🎲 bakiyen (({balance}))",
+			},
+		});
+		const specialErr = new Error(
+			'Kick API request failed: 400 {"data":"MAX_SPECIAL_CHARS_ERROR"}'
+		);
+		// İlk deneme reddedilir, sadeleştirilmiş ikinci deneme kabul edilir.
+		sendChatMessageMock.mockRejectedValueOnce(specialErr as any);
+
+		evaluateGameMessage(CHANNEL, "ali", "!puan", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(2);
+		const secondTry = sendChatMessageMock.mock.calls[1][0].content as string;
+		expect(secondTry).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+		expect(secondTry).toContain("ali");
+	});
+
+	test("özel karakter dışındaki hatada boşuna yeniden denenmez", async () => {
+		setupConfig({ reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "each" } });
+		sendChatMessageMock.mockRejectedValueOnce(
+			new Error("401 Unauthorized") as any
+		);
+
+		evaluateGameMessage(CHANNEL, "ali", "!puan", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		expect(sendChatMessageMock).toHaveBeenCalledTimes(1);
+	});
+
 	test("bakiyeden fazla bahis reddedilir, bakiye korunur", async () => {
 		setupConfig();
 		evaluateGameMessage(CHANNEL, "ali", "!bahis 999999", nextId());

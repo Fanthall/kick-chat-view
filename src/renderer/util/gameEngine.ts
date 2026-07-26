@@ -41,7 +41,17 @@ import {
 	text,
 } from "./gameStorage";
 import { MAX_ROLL, rollFor } from "./gameOutcome";
-import { isSpecialCharsError, sanitizeForKick } from "./gameSanitize";
+import {
+	MAX_SANITIZE_LEVEL,
+	isSpecialCharsError,
+	sanitizeForKick,
+} from "./gameSanitize";
+
+/**
+ * Kanal başına kabul edilmiş sadelik seviyesi. Kick bir kez hangi seviyeyi
+ * kabul ettiyse sonraki mesajlar doğrudan oradan başlar.
+ */
+const sanitizeLevels = new Map<string, number>();
 
 // ─── Ayar cache ──────────────────────────────────────────────────────────────
 
@@ -283,42 +293,38 @@ const deliver = async (
 		});
 	};
 
-	try {
-		await send(text);
-		setDiagnostic(channelSlug, {
-			reason: "ok",
-			lastSentText: text,
-			lastSentAt: Date.now(),
-		});
-	} catch (err) {
-		// Kick "çok fazla özel karakter" diyorsa metni sadeleştirip BİR KEZ
-		// daha dene — kullanıcı şablonuna emoji koyduğu için cevap tamamen
-		// kaybolmasın (varsayılan şablonlar zaten sade).
-		const sanitized = sanitizeForKick(text);
-		if (isSpecialCharsError(err) && sanitized && sanitized !== text) {
-			try {
-				await send(sanitized);
-				setDiagnostic(channelSlug, {
-					reason: "ok",
-					lastSentText: sanitized,
-					lastSentAt: Date.now(),
-				});
-				console.log("[game] mesaj sadeleştirilip gönderildi", sanitized);
-				return;
-			} catch (retryErr) {
-				const retryDetail = String((retryErr as any)?.message || retryErr);
-				setDiagnostic(channelSlug, {
-					reason: "send_failed",
-					detail: retryDetail,
-				});
-				console.log("[game] sadeleştirilmiş mesaj da reddedildi", retryErr);
-				return;
+	// Kick'in özel karakter eşiği belgelenmemiş. Bilinen en sade seviyeden
+	// başlanır; reddedilirse bir kademe daha sadeleştirip yeniden denenir ve
+	// KABUL EDİLEN seviye kanal için hatırlanır (sonraki mesajlar tek istekte
+	// gider, her seferinde deneme yanılma yapılmaz).
+	let level = sanitizeLevels.get(channelSlug.toLowerCase()) ?? 0;
+	let lastError: unknown;
+
+	while (level <= MAX_SANITIZE_LEVEL) {
+		const content = sanitizeForKick(text, level);
+		try {
+			// eslint-disable-next-line no-await-in-loop
+			await send(content);
+			sanitizeLevels.set(channelSlug.toLowerCase(), level);
+			setDiagnostic(channelSlug, {
+				reason: "ok",
+				lastSentText: content,
+				lastSentAt: Date.now(),
+			});
+			if (level > 0) {
+				console.log(`[game] mesaj sadelik seviyesi ${level} ile gönderildi`);
 			}
+			return;
+		} catch (err) {
+			lastError = err;
+			if (!isSpecialCharsError(err)) break; // başka hata: sadeleştirmek çözmez
+			level += 1;
 		}
-		const detail = String((err as any)?.message || err);
-		setDiagnostic(channelSlug, { reason: "send_failed", detail });
-		console.log("[game] sendChatMessage başarısız", err);
 	}
+
+	const detail = String((lastError as any)?.message || lastError);
+	setDiagnostic(channelSlug, { reason: "send_failed", detail });
+	console.log("[game] sendChatMessage başarısız", lastError);
 };
 
 const flushQueue = async (channelSlug: string) => {
