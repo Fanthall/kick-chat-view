@@ -106,12 +106,12 @@ export interface ChatRewardConfig {
 	/** HER mesaj için verilen puan. Bekleme, uzunluk veya tekrar şartı yoktur. */
 	perMessage: number;
 	/**
-	 * Bir oyuncunun oturum boyunca sohbetten kazanabileceği TAVAN.
+	 * Oturum boyunca sohbetten kazanılabilecek tavan. **Varsayılan 0 = SINIRSIZ.**
 	 *
-	 * Kullanıcı kararı (2026-07-26): "spam koruması yapma, bol bol kazansın —
-	 * ama çok yüksek de kazanmasın." Kimseyi susturmak yerine yalnız toplamı
-	 * sınırlıyoruz: hızlı yazan da yavaş yazan da aynı tavana kadar kazanır,
-	 * sonrası puan getirmez. Böylece bakiye kontrolden çıkmaz. 0 = sınırsız.
+	 * Kullanıcı kararı (2026-07-26): "max kazanma limiti yok, devamlı
+	 * kazanabilir — pasif kazanım bu." Denge mesaj başına düşük puanla
+	 * kurulur, tavanla değil. Alan yine de duruyor: yayıncı isterse panelden
+	 * bir sınır koyabilir.
 	 */
 	maxPerSession: number;
 }
@@ -287,12 +287,12 @@ export const pickPayoutTier = (tiers: PayoutTier[], rng: Rng): PayoutTier => {
 export const DEFAULT_ECONOMY: GameEconomyConfig = {
 	startingBalance: 10000,
 	/*
-	 * Ölçek: her mesaj 5 puan, oturum tavanı 5.000 (başlangıcın yarısı).
-	 * Sohbet eden izleyici 1.000 mesajda tavana ulaşır; tipik bir yayında
-	 * 200-400 mesaj = 1.000-2.000 puan eder. Ev avantajının erittiğini
-	 * telafi etmeye yetmez ama oyuncuyu masada tutar.
+	 * Ölçek: her mesaj 5 puan, tavan YOK — sohbet eden sürekli kazanır.
+	 * Denge mesaj başına düşük puanla kurulur: tipik bir yayında 200-400
+	 * mesaj = 1.000-2.000 puan (başlangıcın %10-20'si). Ev avantajının
+	 * erittiğini telafi etmeye yetmez ama oyuncuyu masada tutar.
 	 */
-	chatReward: { enabled: true, perMessage: 5, maxPerSession: 5000 },
+	chatReward: { enabled: true, perMessage: 5, maxPerSession: 0 },
 	minBet: 1,
 	maxBet: 0,
 	payout: DEFAULT_PAYOUT,

@@ -117,7 +117,7 @@ export const defaultReply = (): GameReplyConfig => ({
 });
 
 export const defaultGameConfig = (): GameConfig => ({
-	schemaVersion: 4,
+	schemaVersion: 5,
 	// Oyun kutudan çıktığı gibi çalışır ve chate YAZAR. Ara "test modu" yoktur:
 	// susturmak isteyen ya oyunu kapatır ya cevap modunu «sessiz» yapar.
 	enabled: true,
@@ -157,7 +157,10 @@ const mergeConfig = (raw: unknown): GameConfig => {
 	 */
 	const version = input.schemaVersion ?? 1;
 	const needsV2Migration = version < 2;
-	const needsV4Migration = version < 4;
+	// v5: yardım metni tek satırlık komut listesinden ayrıntılı anlatıma geçti.
+	// v4'te zaten geçmiş kayıtlar yeni metni almıyordu (sürüm eşitti), o yüzden
+	// şablon yenileme adımı bir üst sürüme taşındı.
+	const needsTemplateRefresh = version < 5;
 
 	const migratedEconomy = needsV2Migration
 		? { ...(input.economy || {}), minBet: 1 }
@@ -176,7 +179,7 @@ const mergeConfig = (raw: unknown): GameConfig => {
 	 * tekrar çalışmasını engeller); motor da reddedilen metni aşama aşama
 	 * sadeleştirip yeniden dener (bkz. gameSanitize).
 	 */
-	const migratedReply = needsV4Migration
+	const migratedReply = needsTemplateRefresh
 		? defaultReply()
 		: {
 				...(input.reply || {}),
@@ -186,7 +189,7 @@ const mergeConfig = (raw: unknown): GameConfig => {
 	return {
 		...base,
 		...input,
-		schemaVersion: 4,
+		schemaVersion: 5,
 		channelSlugs: Array.isArray(input.channelSlugs)
 			? input.channelSlugs.filter((s) => typeof s === "string" && s.trim())
 			: [],

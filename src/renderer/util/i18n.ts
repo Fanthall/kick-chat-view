@@ -891,8 +891,8 @@ export const dict: Dict = {
 	},
 	"game.chat-reward": { tr: "Sohbet ödülü", en: "Chat reward" },
 	"game.chat-reward-sub": {
-		tr: "Oyuna katılmış izleyici chate her yazdığında sessizce puan kazanır — bot bunu duyurmaz. Bekleme veya uzunluk şartı yoktur; tek sınır oturum başına toplam tavandır.",
-		en: "Players who joined the game earn points silently for every chat message — the bot never announces it. There is no cooldown or length requirement; the only limit is the per-session cap.",
+		tr: "Oyuna katılmış izleyici chate her yazdığında sessizce puan kazanır — bot bunu duyurmaz. Bekleme, uzunluk veya tekrar şartı yoktur. Oturum tavanı 0 ise sınır da yoktur.",
+		en: "Players who joined the game earn points silently for every chat message — the bot never announces it. No cooldown, length or repetition rules. A session cap of 0 means unlimited.",
 	},
 	"game.chat-reward.per-message": {
 		tr: "Mesaj başına puan",
@@ -1149,7 +1149,13 @@ export const dict: Dict = {
 		tr: "Her bahiste 0 ile 20 arası zar atılır. 20 attın mı 5 kat, 18-19 ise 3 kat, 15-17 ise 2 kat, 12-14 ise 1,5 kat, 10-11 ise 1,2 kat kazanırsın. 7-9 yarısını, 4-6 çeyreğini, 1-3 kıl payını geri verir, 0 ise hepsi gider",
 		en: "Every bet rolls a die from 0 to 20. Roll 20 for 5x, 18-19 for 3x, 15-17 for 2x, 12-14 for 1,5x, 10-11 for 1,2x. 7-9 returns half, 4-6 a quarter, 1-3 a sliver, and 0 loses it all",
 	},
+	// İki sürüm: yayıncı bir tavan koymuşsa onu söyleriz, koymamışsa sınırsız
+	// olduğunu. "5.000 puana kadar" demek tavan yokken yanlış bilgi olurdu.
 	"game.default.help-reward": {
+		tr: "Ayrıca chate yazdıkça sessizce puan kazanırsın, bunun için bir şey yapmana gerek yok. Ne kadar çok sohbet edersen o kadar çok puan, üst sınır yok",
+		en: "You also earn points silently just by chatting, no command needed. The more you talk the more you earn, with no upper limit",
+	},
+	"game.default.help-reward-capped": {
 		tr: "Ayrıca chate yazdıkça sessizce puan kazanırsın, bunun için bir şey yapmana gerek yok. Ne kadar çok sohbet edersen o kadar çok puan, oturum başına {rewardCap} puana kadar",
 		en: "You also earn points silently just by chatting, no command needed. The more you talk the more you earn, up to {rewardCap} points per session",
 	},

@@ -217,6 +217,35 @@ describe("bahis akışı", () => {
 		expect(sendChatMessageMock).toHaveBeenCalledTimes(1);
 	});
 
+	/**
+	 * REGRESYON (2026-07-26): `each` modunda deliver() await EDİLMEDEN
+	 * çağrılıyordu; `!oyun` yardımının üç parçası paralel gidip chate KARIŞIK
+	 * SIRAYLA düşüyordu (3. parça 1.'den önce görünüyordu).
+	 */
+	test("çok parçalı cevap chate YAZILDIĞI SIRAYLA gider", async () => {
+		setupConfig({ reply: { ...DEFAULT_GAME_CONFIG.reply, mode: "each" } });
+		// İlk gönderim kasten yavaşlatılır: sıra korunmuyorsa 2. mesaj öne geçer.
+		let first = true;
+		sendChatMessageMock.mockImplementation((_req: any) => {
+			if (first) {
+				first = false;
+				return new Promise<void>((resolve) => setTimeout(resolve, 30));
+			}
+			return Promise.resolve();
+		});
+
+		evaluateGameMessage(CHANNEL, "ali", "!oyun", nextId());
+		await __flushQueuesForTest(CHANNEL);
+
+		const texts = sentTexts();
+		expect(texts.length).toBeGreaterThanOrEqual(3);
+		// 1) nasıl katılınır → 2) zar tablosu → 3) sohbet ödülü
+		expect(texts[0]).toContain("Katılmak için");
+		expect(texts[1]).toContain("zar atılır");
+		expect(texts[2]).toContain("chate yazdıkça");
+		sendChatMessageMock.mockImplementation(() => Promise.resolve());
+	});
+
 	test("bakiyeden fazla bahis reddedilir, bakiye korunur", async () => {
 		setupConfig();
 		evaluateGameMessage(CHANNEL, "ali", "!bahis 999999", nextId());

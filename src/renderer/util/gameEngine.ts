@@ -347,6 +347,26 @@ const flushQueue = async (channelSlug: string) => {
 	}
 };
 
+/**
+ * Kanal başına gönderim zinciri.
+ *
+ * NEDEN (2026-07-26): `each` modunda `deliver()` await EDİLMEDEN çağrılıyordu;
+ * arka arkaya kuyruğa giren parçalar (örn. `!oyun` yardımının üç parçası)
+ * paralel gidip chate KARIŞIK SIRAYLA düşüyordu — 3. parça 1.'den önce
+ * görünüyordu. Artık her kanal için gönderimler sırayla zincirlenir.
+ */
+const sendChains = new Map<string, Promise<void>>();
+
+const sendInOrder = (channelSlug: string, task: () => Promise<void>) => {
+	const key = channelSlug.toLowerCase();
+	const next = (sendChains.get(key) || Promise.resolve())
+		.then(task)
+		// Bir gönderim patlarsa zincir kopmasın; hata deliver içinde raporlanır.
+		.catch(() => undefined);
+	sendChains.set(key, next);
+	return next;
+};
+
 const enqueue = (reply: PendingReply) => {
 	const cfg = config();
 	if (cfg.reply.mode === "silent") {
@@ -355,7 +375,9 @@ const enqueue = (reply: PendingReply) => {
 	}
 
 	if (cfg.reply.mode === "each") {
-		deliver(reply.channelSlug, reply.text, reply.replyToMessageId);
+		sendInOrder(reply.channelSlug, () =>
+			deliver(reply.channelSlug, reply.text, reply.replyToMessageId)
+		);
 		return;
 	}
 
@@ -797,7 +819,14 @@ export const evaluateGameMessage = (
 			};
 			const parts = [cfg.reply.helpTemplate, text("game.default.help-dice")];
 			if (cfg.economy.chatReward.enabled) {
-				parts.push(text("game.default.help-reward"));
+				// Tavan yoksa "şu kadara kadar" demek yanlış bilgi olur.
+				parts.push(
+					text(
+						cfg.economy.chatReward.maxPerSession > 0
+							? "game.default.help-reward-capped"
+							: "game.default.help-reward"
+					)
+				);
 			}
 			for (const part of parts) {
 				if (!part.trim()) continue;
@@ -832,6 +861,9 @@ export const __resetGameEngineForTest = () => {
 	seenMessageSet.clear();
 	channelInfoCache.clear();
 	queues.clear();
+	sendChains.clear();
+	sanitizeLevels.clear();
+	diagnostics.clear();
 	for (const timer of flushTimers.values()) clearTimeout(timer);
 	flushTimers.clear();
 };
@@ -840,6 +872,9 @@ export const __flushQueuesForTest = async (channelSlug: string) => {
 	const timer = flushTimers.get(channelSlug);
 	if (timer) clearTimeout(timer);
 	await flushQueue(channelSlug);
+	// `each` modunda gönderimler zincire alınır; testin sonucu görebilmesi için
+	// zincirin de bitmesi beklenir.
+	await (sendChains.get(channelSlug.toLowerCase()) || Promise.resolve());
 };
 
 export const __seedChannelInfoForTest = (

@@ -1,3 +1,15 @@
+# 4.6.23 — 2026-07-26
+
+Cevap sırası düzeltildi, pasif kazançtaki tavan kaldırıldı.
+
+## [Bahis oyunu] — 2026-07-26
+
+- **Fix — cevaplar karışık sırayla gidiyordu.** `each` modunda gönderim `await` edilmeden başlatılıyordu; `!oyun` yardımının üç parçası paralel gidip chate ters sırada düşüyordu (3. parça 1.'den önce görünüyordu). Artık her kanal için gönderimler **sıraya alınıyor**: yazıldıkları sırayla çıkıyorlar. Regresyon testiyle kilitlendi (ilk gönderim kasten yavaşlatılıp sıranın korunduğu doğrulanıyor).
+- **Fix — eski yardım metni duruyordu.** Ayrıntılı `!oyun` anlatımı 4.6.22'de eklendi ama kayıtlı ayar zaten sürüm 4 olduğu için şablon yenileme adımı çalışmıyordu; chatte hâlâ tek satırlık eski liste görünüyordu. Şema **sürüm 5**'e taşındı, şablonlar bir kez daha yenileniyor.
+- **Pasif kazançta üst sınır kaldırıldı** (kullanıcı kararı): oturum tavanı varsayılan olarak **0 = sınırsız**. Sohbet eden oyuncu sürekli kazanır; denge mesaj başına düşük puanla (5) kurulur. Yayıncı isterse panelden yine bir tavan koyabilir.
+- Yardım metni tavana göre doğru konuşuyor: tavan yoksa "üst sınır yok", varsa "oturum başına N puana kadar".
+- Testler: 174 oyun testi.
+
 # 4.6.22 — 2026-07-26
 
 Sohbet ederek pasif puan kazanma + detaylı `!oyun` anlatımı.
