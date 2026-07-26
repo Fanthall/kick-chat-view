@@ -49,7 +49,7 @@ describe("config I/O", () => {
 	 * duruyordu; sürüm 2 geçişi olmasaydı güncelleme sonrası bot yine susardı.
 	 * Ayrıca tag+reply için `each`, kullanıcı kararı için `minBet: 1` gerekiyor.
 	 */
-	test("eski kayıt (dryRun + batch + minBet 100) sürüm 2'ye taşınır", () => {
+	test("eski kayıt (dryRun + batch + minBet 100) güncel şemaya taşınır", () => {
 		localStorage.setItem(
 			"chatViewGameConfig",
 			JSON.stringify({
@@ -60,11 +60,14 @@ describe("config I/O", () => {
 			})
 		);
 		const loaded = loadGameConfig();
-		expect(loaded.schemaVersion).toBe(2);
+		expect(loaded.schemaVersion).toBe(DEFAULT_GAME_CONFIG.schemaVersion);
 		expect(loaded.enabled).toBe(true);
 		expect(loaded.reply.mode).toBe("each");
 		expect(loaded.economy.minBet).toBe(1);
 		expect(loaded).not.toHaveProperty("dryRun");
+		// v3: eski kayıttaki anlatısız şablon zar metniyle değiştirilir.
+		expect(loaded.reply.winTemplate).toContain("{roll}");
+		expect(loaded.reply.winTemplate).toContain("{outcome}");
 	});
 
 	test("geçiş bir kez uygulanır — sonrasında kullanıcı seçimi korunur", () => {
@@ -120,9 +123,14 @@ describe("config I/O", () => {
 		["tr", "en"].forEach((lang) => {
 			localStorage.setItem("chatViewLanguage", lang);
 			const cfg = loadGameConfig();
-			["{username}", "{amount}", "{balance}"].forEach((ph) => {
-				expect(cfg.reply.winTemplate).toContain(ph);
-			});
+			// Kazanç metni "ne oldu da ne kazandım" zincirini kurar; kayıp metni
+			// ayrıca {amount} ile ne kaybedildiğini yazar.
+			["{username}", "{roll}", "{outcome}", "{multiplier}", "{bet}", "{returned}", "{balance}"].forEach(
+				(ph) => {
+					expect(cfg.reply.winTemplate).toContain(ph);
+				}
+			);
+			expect(cfg.reply.lossTemplate).toContain("{amount}");
 			expect(cfg.reply.topTemplate).toContain("{top}");
 			expect(cfg.reply.helpTemplate).toContain("{betCommand}");
 		});

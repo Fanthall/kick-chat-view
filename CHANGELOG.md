@@ -1,3 +1,21 @@
+# 4.6.19 — 2026-07-26
+
+Bahis sonucu artık anlatılıyor: d20 zar atışı + tam para akışı.
+
+## [Bahis oyunu] — 2026-07-26
+
+- **Yeni — zar anlatısı.** "3 kat! +2.000" tek başına oyuncuya neden kazandığını anlatmıyordu. Her sonuç artık **0-20 arası bir zar atışına** bağlı ve chatte gösteriliyor:
+
+  `@ali 🎲 17/20 · İyi attın! 2 kat — 1.000 yatırdın, 2.000 aldın 🎉 (bakiye: 11.250)`
+  `@ali 🎲 8/20 · yarısı amorti — 1.000 yatırdın, 500 geri geldi, -500 💀 (bakiye: 12.650)`
+  `@ali 🎲 0/20 · zar tutmadı — 1.000 yatırdın, 0 geri geldi, -1.000 💀`
+
+- **İlişki monoton:** atış yükseldikçe ödül büyür. `20` = 5 kat (tek sayı, en nadir) · `18-19` = 3 kat · `15-17` = 2 kat · `12-14` = 1,5 kat · `10-11` = 1,2 kat · `7-9` = yarısı amorti · `4-6` = çeyreği · `1-3` = kıl payı · `0` = tamamı gider. Aralıkların boşluksuz, çakışmasız ve monoton olduğu testle korunuyor.
+- **Para akışı eksiksiz:** şablonlar artık ne yatırıldığını, kaç kat olduğunu, ne geri geldiğini ve yeni bakiyeyi birlikte yazıyor (`{roll}` `{maxRoll}` `{outcome}` `{multiplier}` `{bet}` `{returned}` `{amount}` `{balance}`).
+- **Geçiş (otomatik):** Eski kayıttaki kazanç/kayıp şablonları bu yer tutucuları içermediği için sonuç yine anlatısız kalırdı; ayar şeması **sürüm 3**'e taşınırken bu iki şablon bir kez varsayılana alınıyor. Elle özelleştirilen diğer şablonlara (katılma, sıralama, yardım…) dokunulmaz.
+- Not: zar sonucu **belirlemez, anlatır** — kazanma olasılığı davranış eğrisinden, ödeme ağırlıklı kademe çekilişinden gelir; atış o kademenin aralığından üretilir, böylece görülen zar ile ödenen çarpan her zaman tutarlıdır.
+- i18n TR + EN tam (140 anahtar). Testler: 137 oyun testi (yeni `gameOutcome` paketi dahil).
+
 # 4.6.18 — 2026-07-26
 
 Test modu kaldırıldı: oyun kutudan çıktığı gibi chate yazar ve oyuncuyu etiketler.

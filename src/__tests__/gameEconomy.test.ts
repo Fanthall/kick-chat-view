@@ -135,8 +135,8 @@ describe("settleBet", () => {
 	const fixedPayout = (win: number, loss: number): GameEconomyConfig => ({
 		...economy,
 		payout: {
-			win: [{ returnMultiplier: win, weight: 1 }],
-			loss: [{ returnMultiplier: loss, weight: 1 }],
+			win: [{ id: "good" as const, returnMultiplier: win, weight: 1 }],
+			loss: [{ id: "quarter" as const, returnMultiplier: loss, weight: 1 }],
 		},
 	});
 
@@ -228,8 +228,8 @@ describe("settleBet", () => {
 		const cfg: GameEconomyConfig = {
 			...economy,
 			payout: {
-				win: [{ returnMultiplier: 3, weight: 1 }],
-				loss: [{ returnMultiplier: 0, weight: 1 }],
+				win: [{ id: "good" as const, returnMultiplier: 3, weight: 1 }],
+				loss: [{ id: "quarter" as const, returnMultiplier: 0, weight: 1 }],
 			},
 		};
 		// rng()=0 → hem kazanç tarafı hem tek kademe.
@@ -244,8 +244,8 @@ describe("settleBet", () => {
 		const cfg: GameEconomyConfig = {
 			...economy,
 			payout: {
-				win: [{ returnMultiplier: 2, weight: 1 }],
-				loss: [{ returnMultiplier: 0.1, weight: 1 }],
+				win: [{ id: "good" as const, returnMultiplier: 2, weight: 1 }],
+				loss: [{ id: "quarter" as const, returnMultiplier: 0.1, weight: 1 }],
 			},
 		};
 		// rng()=0.999 → şans eşiğinin üstünde kalır → kayıp tarafı.
@@ -259,8 +259,8 @@ describe("settleBet", () => {
 describe("ödeme kademeleri", () => {
 	test("pickPayoutTier ağırlığa göre seçer", () => {
 		const tiers = [
-			{ returnMultiplier: 1.5, weight: 70 },
-			{ returnMultiplier: 5, weight: 30 },
+			{ id: "good" as const, returnMultiplier: 1.5, weight: 70 },
+			{ id: "good" as const, returnMultiplier: 5, weight: 30 },
 		];
 		expect(pickPayoutTier(tiers, () => 0).returnMultiplier).toBe(1.5);
 		expect(pickPayoutTier(tiers, () => 0.5).returnMultiplier).toBe(1.5);
@@ -269,8 +269,8 @@ describe("ödeme kademeleri", () => {
 
 	test("ağırlığı 0 olan kademe hiç çıkmaz", () => {
 		const tiers = [
-			{ returnMultiplier: 1.5, weight: 0 },
-			{ returnMultiplier: 5, weight: 10 },
+			{ id: "good" as const, returnMultiplier: 1.5, weight: 0 },
+			{ id: "good" as const, returnMultiplier: 5, weight: 10 },
 		];
 		for (const r of [0, 0.25, 0.5, 0.75, 0.99]) {
 			expect(pickPayoutTier(tiers, () => r).returnMultiplier).toBe(5);
@@ -284,8 +284,8 @@ describe("ödeme kademeleri", () => {
 	test("averageReturn ağırlıklı ortalamayı verir", () => {
 		expect(
 			averageReturn([
-				{ returnMultiplier: 1, weight: 1 },
-				{ returnMultiplier: 3, weight: 1 },
+				{ id: "good" as const, returnMultiplier: 1, weight: 1 },
+				{ id: "good" as const, returnMultiplier: 3, weight: 1 },
 			])
 		).toBeCloseTo(2, 5);
 	});

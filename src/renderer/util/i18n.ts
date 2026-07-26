@@ -1076,15 +1076,28 @@ export const dict: Dict = {
 
 	// Varsayılan chat şablonları — bunlar izleyicinin chatte GÖRDÜĞÜ metinlerdir,
 	// dolayısıyla arayüz diliyle birlikte gelmeleri gerekir (sabit TR bırakılamaz).
+	// Zar sonucu adları — oyuncunun "ne oldu da kazandım" sorusunun cevabı.
+	// Atış yükseldikçe ödül büyür (bkz. gameOutcome > ROLL_RANGES).
+	"game.outcome.jackpot": { tr: "TAM İSABET", en: "JACKPOT" },
+	"game.outcome.great": { tr: "Sağlam atış", en: "Big roll" },
+	"game.outcome.good": { tr: "İyi attın", en: "Good roll" },
+	"game.outcome.fair": { tr: "Fena değil", en: "Decent roll" },
+	"game.outcome.slim": { tr: "Kıl payı tuttu", en: "Just made it" },
+	"game.outcome.half": { tr: "yarısı amorti", en: "half back" },
+	"game.outcome.quarter": { tr: "çeyreği amorti", en: "quarter back" },
+	"game.outcome.scrape": { tr: "kıl payı kurtardın", en: "barely scraped" },
+	"game.outcome.bust": { tr: "zar tutmadı", en: "cold dice" },
+
 	// NOT: kişiye giden cevaplarda ad `@` ile etiketlenir — oyuncu akan chatte
-	// kendi sonucunu bildirimden yakalasın diye.
+	// kendi sonucunu bildirimden yakalasın diye. Metin "ne oldu da ne kazandım"
+	// zincirini eksiksiz kurar: atış · sonuç · çarpan · yatırılan → geri gelen.
 	"game.default.win": {
-		tr: "@{username} {multiplier} kat! +{amount} 🎉 (bakiye: {balance})",
-		en: "@{username} {multiplier}x! +{amount} 🎉 (balance: {balance})",
+		tr: "@{username} 🎲 {roll}/{maxRoll} · {outcome}! {multiplier} kat — {bet} yatırdın, {returned} aldın 🎉 (bakiye: {balance})",
+		en: "@{username} 🎲 {roll}/{maxRoll} · {outcome}! {multiplier}x — staked {bet}, took {returned} 🎉 (balance: {balance})",
 	},
 	"game.default.loss": {
-		tr: "@{username} {multiplier} kat — {returned} geri, -{amount} 💀 (bakiye: {balance})",
-		en: "@{username} {multiplier}x — {returned} back, -{amount} 💀 (balance: {balance})",
+		tr: "@{username} 🎲 {roll}/{maxRoll} · {outcome} — {bet} yatırdın, {returned} geri geldi, -{amount} 💀 (bakiye: {balance})",
+		en: "@{username} 🎲 {roll}/{maxRoll} · {outcome} — staked {bet}, got {returned} back, -{amount} 💀 (balance: {balance})",
 	},
 	"game.default.balance": {
 		tr: "@{username} bakiyen: {balance} puan",

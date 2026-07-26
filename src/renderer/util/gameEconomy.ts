@@ -23,6 +23,8 @@
  * anda oyuncu erimeye başlar. `floor` bu yüzden garantili ev avantajıdır.
  */
 
+import { OutcomeId } from "./gameOutcome";
+
 /** Enjekte edilebilir rastgelelik — testte deterministik dizi verilir. */
 export type Rng = () => number;
 
@@ -69,6 +71,11 @@ export interface PayoutTier {
 	returnMultiplier: number;
 	/** Kendi tarafındaki (kazanç/kayıp) diğer kademelere göre ağırlık. */
 	weight: number;
+	/**
+	 * Anlatı kimliği — chatte gösterilecek zar atışı (bkz. gameOutcome).
+	 * Oyuncu "neden kazandım" sorusunu bununla cevaplar.
+	 */
+	id: OutcomeId;
 }
 
 /**
@@ -194,18 +201,20 @@ export const CURVE_PRESETS: Record<CurvePresetId, GameCurveConfig> = {
  * Bu, eğrinin "başta kazandır, ısrar edeni erit" tasarımıyla uyumludur.
  */
 export const DEFAULT_PAYOUT: PayoutTable = {
+	// Çarpan büyüdükçe gereken atış yükselir ve nadirleşir — oyuncu neden o
+	// kadar kazandığını zardan okur (bkz. gameOutcome > ROLL_RANGES).
 	win: [
-		{ returnMultiplier: 1.2, weight: 30 }, // ucu ucuna kâr
-		{ returnMultiplier: 1.5, weight: 30 },
-		{ returnMultiplier: 2, weight: 25 }, // 2 katı
-		{ returnMultiplier: 3, weight: 12 }, // 3 katı
-		{ returnMultiplier: 5, weight: 3 }, // nadir büyük vuruş
+		{ id: "slim", returnMultiplier: 1.2, weight: 30 }, // 🎲 10-11
+		{ id: "fair", returnMultiplier: 1.5, weight: 30 }, // 🎲 12-14
+		{ id: "good", returnMultiplier: 2, weight: 25 }, // 🎲 15-17
+		{ id: "great", returnMultiplier: 3, weight: 12 }, // 🎲 18-19
+		{ id: "jackpot", returnMultiplier: 5, weight: 3 }, // 🎲 20 — nadir vuruş
 	],
 	loss: [
-		{ returnMultiplier: 0, weight: 45 }, // hepsi gitti
-		{ returnMultiplier: 0.1, weight: 25 }, // %10'u geri
-		{ returnMultiplier: 0.25, weight: 20 }, // çeyreği geri
-		{ returnMultiplier: 0.5, weight: 10 }, // yarısı geri
+		{ id: "bust", returnMultiplier: 0, weight: 45 }, // 🎲 0
+		{ id: "scrape", returnMultiplier: 0.1, weight: 25 }, // 🎲 1-3
+		{ id: "quarter", returnMultiplier: 0.25, weight: 20 }, // 🎲 4-6
+		{ id: "half", returnMultiplier: 0.5, weight: 10 }, // 🎲 7-9
 	],
 };
 
@@ -233,7 +242,7 @@ export const payoutEdge = (table: PayoutTable): number =>
 export const pickPayoutTier = (tiers: PayoutTier[], rng: Rng): PayoutTier => {
 	const usable = tiers.filter((t) => t.weight > 0);
 	// Tablo boşaltıldıysa başabaş dön — bakiye sessizce erimesin.
-	if (!usable.length) return { returnMultiplier: 1, weight: 1 };
+	if (!usable.length) return { id: "half", returnMultiplier: 1, weight: 1 };
 	const total = usable.reduce((sum, t) => sum + t.weight, 0);
 	let roll = rng() * total;
 	for (const tier of usable) {
@@ -376,6 +385,8 @@ export interface BetResult {
 	returned: number;
 	/** Çekilen kademenin çarpanı — cevap metninde "3 katı" / "%10" için. */
 	returnMultiplier: number;
+	/** Çekilen kademenin anlatı kimliği — zar atışı (bkz. gameOutcome). */
+	outcomeId: OutcomeId;
 	balanceBefore: number;
 	balanceAfter: number;
 	chance: number;
@@ -468,6 +479,7 @@ export const settleBet = (
 		delta,
 		returned,
 		returnMultiplier: tier.returnMultiplier,
+		outcomeId: tier.id,
 		balanceBefore: player.balance,
 		balanceAfter,
 		chance,

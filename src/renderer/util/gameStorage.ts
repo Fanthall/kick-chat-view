@@ -86,7 +86,7 @@ export interface GameConfig {
 }
 
 /** Sözlükten aktif dildeki metni al (t() hook'u burada kullanılamaz). */
-const text = (key: string): string => {
+export const text = (key: string): string => {
 	const entry = dict[key];
 	if (!entry) return "";
 	return entry[getLanguage()] || entry.tr || "";
@@ -116,7 +116,7 @@ export const defaultReply = (): GameReplyConfig => ({
 });
 
 export const defaultGameConfig = (): GameConfig => ({
-	schemaVersion: 2,
+	schemaVersion: 3,
 	// Oyun kutudan çıktığı gibi çalışır ve chate YAZAR. Ara "test modu" yoktur:
 	// susturmak isteyen ya oyunu kapatır ya cevap modunu «sessiz» yapar.
 	enabled: true,
@@ -154,18 +154,36 @@ const mergeConfig = (raw: unknown): GameConfig => {
 	 * `minBet: 1`i gerektiriyor. Bunlar bir kez uygulanır; sonrasında kullanıcı
 	 * ne seçerse o kalır (schemaVersion tekrar çalışmasını engeller).
 	 */
-	const needsV2Migration = (input.schemaVersion ?? 1) < 2;
-	const migratedReply = needsV2Migration
-		? { ...(input.reply || {}), mode: "each" as ReplyMode }
-		: input.reply || {};
+	const version = input.schemaVersion ?? 1;
+	const needsV2Migration = version < 2;
+	const needsV3Migration = version < 3;
+
 	const migratedEconomy = needsV2Migration
 		? { ...(input.economy || {}), minBet: 1 }
 		: input.economy || {};
 
+	/**
+	 * v3: kazanç/kayıp metinleri artık eli ve para akışını anlatıyor
+	 * (`{cards}` · `{hand}` · `{bet}` → `{returned}`). Eski kayıttaki şablonlar
+	 * bu yer tutucuları içermediği için sonuç yine "neden kazandım" sorusunu
+	 * cevapsız bırakırdı; bir kez varsayılana alınır. Kullanıcının ELLE
+	 * özelleştirdiği diğer şablonlara (join, top, help…) dokunulmaz.
+	 */
+	const migratedReply = {
+		...(input.reply || {}),
+		...(needsV2Migration ? { mode: "each" as ReplyMode } : {}),
+		...(needsV3Migration
+			? {
+					winTemplate: text("game.default.win"),
+					lossTemplate: text("game.default.loss"),
+				}
+			: {}),
+	};
+
 	return {
 		...base,
 		...input,
-		schemaVersion: 2,
+		schemaVersion: 3,
 		channelSlugs: Array.isArray(input.channelSlugs)
 			? input.channelSlugs.filter((s) => typeof s === "string" && s.trim())
 			: [],

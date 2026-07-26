@@ -38,7 +38,9 @@ import {
 	resolveSession,
 	rollLuckCycle,
 	saveSessions,
+	text,
 } from "./gameStorage";
+import { MAX_ROLL, rollFor } from "./gameOutcome";
 
 // ─── Ayar cache ──────────────────────────────────────────────────────────────
 
@@ -475,6 +477,8 @@ const handleBet = (
 	}
 
 	const result = settleBet(player, requested, cfg.economy, Math.random, Date.now());
+	// Sonucu ANLATAN zar: oyuncu "ne oldu da kazandım" sorusunu buradan okur.
+	const roll = rollFor(result.outcomeId, Math.random);
 	const values = {
 		username: player.username,
 		amount: formatNumber(Math.abs(result.delta)),
@@ -483,6 +487,9 @@ const handleBet = (
 		// Çekilen kademe: "3 kat" / "%10" gibi okunur ifade + ham çarpan.
 		multiplier: formatMultiplier(result.returnMultiplier),
 		returned: formatNumber(result.returned),
+		roll: String(roll),
+		maxRoll: String(MAX_ROLL),
+		outcome: text(`game.outcome.${result.outcomeId}`),
 		...commandNames(cfg),
 	};
 
