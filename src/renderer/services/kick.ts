@@ -12,7 +12,8 @@ interface ChannelMessagesResponse {
 	data: {
 		messages: UserMessage[];
 		cursor?: string;
-		pinned_message?: UserMessage | null;
+		// { message, duration, finish_at, pinned_by } — bkz. util/kickPayloads.ts
+		pinned_message?: unknown;
 	};
 }
 

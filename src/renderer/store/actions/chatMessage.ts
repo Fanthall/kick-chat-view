@@ -7,6 +7,7 @@ import {
 	GiftSubMessage,
 	HostInfo,
 	ModMessage,
+	PinnedChatMessage,
 	SubMessage,
 	UserMessage,
 } from "../../util/chatInterface";
@@ -91,6 +92,16 @@ interface SetStreamMetaAction {
 	type: ChatMessageTypes.SET_STREAM_META_ACTION;
 	meta: StreamMeta;
 }
+interface SetPinnedMessageAction {
+	type: ChatMessageTypes.SET_PINNED_MESSAGE_ACTION;
+	channelSlug: string;
+	pinned: PinnedChatMessage | null;
+}
+interface ClearChannelMessagesAction {
+	type: ChatMessageTypes.CLEAR_CHANNEL_MESSAGES_ACTION;
+	channelSlug: string;
+	clearedAt: number;
+}
 interface AnyAction {
 	type: "ANY_ACTION";
 }
@@ -114,7 +125,29 @@ export type MessageActions =
 	| RemoveHostAction
 	| ClearChannelStateAction
 	| SetConnectionStatusAction
-	| SetModActionStatusAction;
+	| SetModActionStatusAction
+	| SetPinnedMessageAction
+	| ClearChannelMessagesAction;
+
+export const setPinnedMessage = (
+	channelSlug: string,
+	pinned: PinnedChatMessage | null
+): MessageActions => ({
+	type: ChatMessageTypes.SET_PINNED_MESSAGE_ACTION,
+	channelSlug,
+	pinned,
+});
+
+// Moderator sohbeti temizledi (ChatroomClearEvent): kanalin mesajlari silinir,
+// yerine tek bir "sohbet temizlendi" satiri konur.
+export const clearChannelMessages = (
+	channelSlug: string,
+	clearedAt = Date.now()
+): MessageActions => ({
+	type: ChatMessageTypes.CLEAR_CHANNEL_MESSAGES_ACTION,
+	channelSlug,
+	clearedAt,
+});
 
 export const clearChannelState = (): MessageActions => {
 	return {
@@ -366,6 +399,8 @@ const MessageActionsFunc = {
 	clearChannelState,
 	setConnectionStatus,
 	setModActionStatus,
+	setPinnedMessage,
+	clearChannelMessages,
 };
 
 export default MessageActionsFunc;

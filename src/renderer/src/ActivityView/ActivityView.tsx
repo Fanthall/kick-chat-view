@@ -26,6 +26,7 @@ const ACTIVITY_LABELS: Record<ActivityKind, string> = {
 	kicks_gifted: "KICKs",
 	host_raid: "RAID",
 	follow: "FOLLOW",
+	goal_achieved: "GOAL",
 };
 
 const ACTIVITY_ACCENTS: Record<ActivityKind, string> = {
@@ -36,6 +37,7 @@ const ACTIVITY_ACCENTS: Record<ActivityKind, string> = {
 	kicks_gifted: "#61a8ff",
 	host_raid: "#f59e0b",
 	follow: "#22d3ee",
+	goal_achieved: "#26d39b",
 };
 
 const toActivityStatus = (value: any): ActivityStatus => {

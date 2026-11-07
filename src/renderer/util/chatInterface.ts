@@ -117,7 +117,8 @@ export type ActivityKind =
 	| "reward_redemption"
 	| "kicks_gifted"
 	| "host_raid"
-	| "follow";
+	| "follow"
+	| "goal_achieved";
 
 export type ActivityStatus = "pending" | "accepted" | "rejected";
 
@@ -166,4 +167,12 @@ export interface HostInfo {
 	optional_message: string;
 	number_viewers: number;
 	host_username: string;
+}
+
+// Kanalda sabitlenmis sohbet mesaji (PinnedMessageCreatedEvent / gecmis yaniti).
+export interface PinnedChatMessage {
+	message: UserMessage;
+	pinnedBy?: string;
+	// Sabitlemenin bitecegi an (epoch ms); yoksa sure sinirsiz.
+	finishAt?: number;
 }

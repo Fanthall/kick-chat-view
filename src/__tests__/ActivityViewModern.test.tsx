@@ -30,6 +30,7 @@ const baseMessages = {
 	channelBadges: [],
 	channelBadgesByChannel: {},
 	streamMetaByChannel: {},
+	pinnedByChannel: {},
 };
 
 function buildStore(activityList: ActivityItem[]) {

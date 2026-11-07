@@ -2983,6 +2983,46 @@ html.modern-shell-root[data-theme="light"] {
 	font-size: var(--ms-fs-12);
 	color: var(--ms-fg-3);
 }
+/* Sabitlenen mesaj: listenin üstünde, sohbet satırıyla aynı tipografi. */
+[data-app-shell="modern"] .chat-pinned {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 8px 14px 4px;
+	padding: 8px 10px;
+	border-radius: 8px;
+	background: var(--ms-bg-2);
+	border: 1px solid var(--ms-bd-2);
+}
+[data-app-shell="modern"] .chat-pinned .sys-icon {
+	margin-top: 2px;
+	color: var(--ms-ac-warn);
+}
+[data-app-shell="modern"] .chat-pinned-body {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+[data-app-shell="modern"] .chat-pinned-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: baseline;
+	font-size: var(--ms-fs-12);
+}
+[data-app-shell="modern"] .chat-pinned-sender {
+	font-weight: 700;
+	color: var(--ms-fg-1);
+}
+[data-app-shell="modern"] .chat-pinned-by {
+	color: var(--ms-fg-3);
+}
+[data-app-shell="modern"] .chat-pinned-text {
+	font-size: 13px;
+	color: var(--ms-fg-1);
+	overflow-wrap: anywhere;
+	max-height: 4.5em;
+	overflow: hidden;
+}
 [data-app-shell="modern"] .sys-icon {
 	display: inline-flex;
 	align-items: center;

@@ -83,6 +83,7 @@ function getDefaultMessagesState() {
 		channelBadgesByChannel: {},
 		hostInfo: [],
 		streamMetaByChannel: {},
+		pinnedByChannel: {},
 	};
 }
 

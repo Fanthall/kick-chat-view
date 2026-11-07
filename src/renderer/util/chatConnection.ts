@@ -38,13 +38,28 @@ import { evaluateGameMessage } from "./gameEngine";
 import { isDuplicateGift } from "./giftDedup";
 // FIX-GIFT-LEADERBOARD (2026-07-06): GiftsLeaderboardUpdated'i gift sanmayı önler.
 import { looksLikeGiftEvent } from "./giftEventClassify";
-interface EventType {
-	channel: string;
-	data: string;
-	event: string;
-}
+import type { KickRealtimeConnection } from "../../shared/kickRealtime";
+import {
+	buildConnectFrame,
+	buildRefreshFrame,
+	CONNECT_COMMAND_ID,
+	isEventAllowedOnChannel,
+	isServerPing,
+	KickEvent,
+	kickRealtimeChannels,
+	parseRealtimeFrames,
+	toKickEvent,
+	tokenRefreshDelayMs,
+} from "./kickRealtime";
+import { MainProcessSocket, SOCKET_OPEN } from "./realtimeSocket";
+import {
+	parseGoal,
+	parseNewSubscriber,
+	parsePinnedMessage,
+	parseStreamHosted,
+} from "./kickPayloads";
 
-const activeSockets = new Map<string, WebSocket>();
+const activeSockets = new Map<string, MainProcessSocket>();
 const channelEmoteLoaders = new Set<string>();
 // Sprint 46: per-channel last followers count cache for delta computation.
 const lastFollowersCount = new Map<string, number>();
@@ -61,14 +76,13 @@ const SEVENTV_REFRESH_DEBOUNCE_MS = 750;
 // fallback'ini dener; boylece OAuth olmadan da topbar surekli tazelenir.
 const STREAM_META_POLL_MS = 30 * 1000;
 
-// ─── FIX-1/FIX-2: Pusher heartbeat (ping/pong) + backoff reconnect ───────────
-// Pusher protokolu: bagli istemci sunucudan `pusher:ping` alir ve
-// `pusher:pong` ile cevap vermek zorundadir; yoksa sunucu `activity_timeout`
-// (genelde 120sn) sonra socket'i kapatir. Ayrica istemci-tarafli watchdog ile
-// trafik durdugunda proaktif ping atip, hic aktivite yoksa olu socket'i kapatip
-// reconnect tetikliyoruz.
-const PUSHER_DEFAULT_ACTIVITY_TIMEOUT_S = 120;
-// Watchdog tick: bu sureden uzun sessizlikte proaktif ping at.
+// ─── Kick canli soketi (Centrifugo): heartbeat + backoff reconnect ───────────
+// Sunucu `connect` cevabindaki `ping` (sn) araliginda `{}` yollar; istemci `{}`
+// ile cevap vermezse sunucu socket'i kapatir. Istemci-tarafli watchdog, hic
+// cerceve gelmeyen olu socket'i kapatip reconnect tetikler.
+// `connect` cevabi gelene kadar varsayilan ping araligi (Kick: 25 sn).
+const REALTIME_DEFAULT_PING_S = 25;
+// Watchdog kontrol araligi.
 const WATCHDOG_TICK_MS = 30 * 1000;
 // Pong/aktivite icin verilen ek tolerans; bu sureyi de asarsa socket olu sayilir.
 const WATCHDOG_GRACE_MS = 30 * 1000;
@@ -79,8 +93,13 @@ const RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 30000];
 const watchdogTimers = new Map<string, ReturnType<typeof setInterval>>();
 // Per-channel son aktivite (herhangi bir mesaj) zaman damgasi (ms).
 const lastActivityAt = new Map<string, number>();
-// Per-channel sunucudan gelen activity_timeout (ms).
+// Per-channel sunucunun ping araligi (ms).
 const channelActivityTimeoutMs = new Map<string, number>();
+// Per-channel bekleyen jeton yenileme timer'i (Centrifugo jetonu ~45 dk gecerli).
+const tokenRefreshTimers = new Map<string, ReturnType<typeof setTimeout>>();
+// Per-channel baglanti denemesi sayaci; asenkron pazarlik sirasinda gelen yeni
+// deneme eskisini gecersiz kilar.
+const connectGenerations = new Map<string, number>();
 // FIX-2: per-channel reconnect denemesi sayaci + bekleyen reconnect timer.
 const reconnectAttempts = new Map<string, number>();
 const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -99,6 +118,14 @@ const clearWatchdog = (channelName: string) => {
 	if (timer) {
 		clearInterval(timer);
 		watchdogTimers.delete(channelName);
+	}
+};
+
+const clearTokenRefresh = (channelName: string) => {
+	const timer = tokenRefreshTimers.get(channelName);
+	if (timer) {
+		clearTimeout(timer);
+		tokenRefreshTimers.delete(channelName);
 	}
 };
 
@@ -361,6 +388,7 @@ export const chatListener = (slug?: string) => {
 		// FIX-1/FIX-2: onceki socket'e ait timer'lari temizle (leak guard).
 		clearWatchdog(channelName);
 		clearReconnectTimer(channelName);
+		clearTokenRefresh(channelName);
 
 		const existingSocket = activeSockets.get(channelName);
 		if (existingSocket) {
@@ -368,223 +396,21 @@ export const chatListener = (slug?: string) => {
 			activeSockets.delete(channelName);
 		}
 
+		// Kanal bilgisi + soket pazarligi asenkron; bu arada ayni kanal icin yeni
+		// bir chatListener ya da disconnect gelirse eski deneme sessizce biter.
+		const generation = (connectGenerations.get(channelName) ?? 0) + 1;
+		connectGenerations.set(channelName, generation);
+		const isCurrentAttempt = () =>
+			connectGenerations.get(channelName) === generation &&
+			!intentionalClose.has(channelName);
+
 		dispatch(MessageActionsFunc.setConnectionStatus("connecting", channelName));
 
-		const socket = new WebSocket(
-			"wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false"
-		);
-		activeSockets.set(channelName, socket);
-		// FIX-1: watchdog baz degerleri.
-		lastActivityAt.set(channelName, Date.now());
-		channelActivityTimeoutMs.set(
-			channelName,
-			PUSHER_DEFAULT_ACTIVITY_TIMEOUT_S * 1000
-		);
-
-		// FIX-1: istemci-tarafli heartbeat watchdog. Trafik durdugunda proaktif
-		// ping atar; hic aktivite yoksa olu socket'i kapatir (close handler
-		// FIX-2 reconnect'i tetikler). Per-channel; close/yeni socket'te temizlenir.
-		const watchdog = setInterval(() => {
-			// Stale guard: bu interval artik aktif olmayan bir socket'e aitse dur.
-			if (activeSockets.get(channelName) !== socket) {
-				clearInterval(watchdog);
-				return;
-			}
-			if (socket.readyState !== WebSocket.OPEN) {
-				return;
-			}
-			const now = Date.now();
-			const last = lastActivityAt.get(channelName) ?? now;
-			const timeout =
-				channelActivityTimeoutMs.get(channelName) ??
-				PUSHER_DEFAULT_ACTIVITY_TIMEOUT_S * 1000;
-			const silence = now - last;
-			// timeout + grace boyunca hic aktivite yoksa socket olu say.
-			if (silence > timeout + WATCHDOG_GRACE_MS) {
-				verboseLog(
-					"[chat watchdog] no activity, closing dead socket",
-					channelName,
-					`silence=${silence}ms`
-				);
-				try {
-					socket.close();
-				} catch {
-					// noop
-				}
-				return;
-			}
-			// Sessizlik WATCHDOG_TICK_MS'i astiysa proaktif ping at.
-			if (silence >= WATCHDOG_TICK_MS) {
-				try {
-					socket.send('{"event":"pusher:ping","data":{}}');
-					verboseLog("[chat watchdog] proactive ping", channelName);
-				} catch {
-					// noop
-				}
-			}
-		}, WATCHDOG_TICK_MS);
-		watchdogTimers.set(channelName, watchdog);
-
-		socket.addEventListener("open", (event) => {
-			if (channelName) {
-				getChannelData(channelName)
-					.then((res) => {
-						const channelId = res.data.id;
-						const channelUserId = res.data.user_id;
-						dispatch(
-							MessageActionsFunc.setChannelBadges(
-								res.data.subscriber_badges.reverse(),
-								channelName
-							)
-						);
-
-						loadChannelEmoteBundle(dispatch, channelName, channelUserId);
-						startStreamMetaPolling(dispatch, channelName);
-
-						getChannelMessages(channelId)
-							.then((historyRes) => {
-								const historyMessages =
-									historyRes.data.data.messages || [];
-								historyMessages
-									.slice()
-									.sort(
-										(a, b) =>
-											new Date(a.created_at).getTime() -
-											new Date(b.created_at).getTime()
-									)
-									.forEach((message) => {
-										if (activeSockets.get(channelName) === socket) {
-											dispatch(
-												MessageActionsFunc.newMessage({
-													...message,
-													channelSlug: channelName,
-												})
-											);
-										}
-									});
-							})
-							.catch((err) => {
-								console.log("Kick history load failed", err);
-							});
-						socket.send(
-							`{"event":"pusher:subscribe","data":{"auth":"","channel":"chatrooms.${res.data.chatroom.id}.v2"}}`
-						);
-						// Sprint 45: channel_<id> Pusher kanalında KicksGifted
-						// event'i yayınlanıyor (gift_transaction_id + sender +
-						// gift.amount + mesaj). Multi-channel — tüm izlenen
-						// kanallar için çalışır.
-						socket.send(
-							`{"event":"pusher:subscribe","data":{"auth":"","channel":"channel_${res.data.id}"}}`
-						);
-						// Sprint 49: chatroom_<chatroom_id> Pusher kanalında
-						// RewardRedeemedEvent yayınlanıyor. Multi-channel.
-						socket.send(
-							`{"event":"pusher:subscribe","data":{"auth":"","channel":"chatroom_${res.data.chatroom.id}"}}`
-						);
-					})
-					.catch((err) => {
-						console.log("Kick channel load failed", err);
-						dispatch(
-							MessageActionsFunc.setConnectionStatus(
-								"disconnected",
-								channelName
-							)
-						);
-						activeSockets.delete(channelName);
-						socket.close();
-					});
-			}
-		});
-
-		socket.addEventListener("close", () => {
-			// Stale-socket guard: yalnizca hala aktif olan socket'in close'u
-			// state'i degistirir / reconnect tetikler. Eski socket'in gec gelen
-			// close'u yeni baglantiyi bozmamali.
-			if (activeSockets.get(channelName) === socket) {
-				activeSockets.delete(channelName);
-				stopStreamMetaPolling(channelName);
-				// FIX-1: bu socket'e ait watchdog'u temizle (leak guard).
-				clearWatchdog(channelName);
-				dispatch(
-					MessageActionsFunc.setConnectionStatus("disconnected", channelName)
-				);
-				// FIX-2: kanal hala izleniyorsa (bilincli kapatma degilse) backoff
-				// ile yeniden baglan.
-				scheduleReconnect(dispatch, channelName, chatListener);
-			}
-		});
-
-		socket.addEventListener("error", () => {
-			if (activeSockets.get(channelName) === socket) {
-				dispatch(
-					MessageActionsFunc.setConnectionStatus("disconnected", channelName)
-				);
-				// Not: reconnect'i burada planlamiyoruz; "error" sonrasi tarayici
-				// daima "close" event'i de yayar ve reconnect orada (tek noktada)
-				// tetiklenir. Bu, cift reconnect planlamasini onler.
-			}
-		});
-
-		// Listen for messages
-		socket.addEventListener("message", (event) => {
-			if (activeSockets.get(channelName) !== socket) {
-				return;
-			}
-			// FIX-1: herhangi bir mesaj = aktivite. Watchdog bunu kullanir.
-			lastActivityAt.set(channelName, Date.now());
-			let parsedEvent: EventType;
-			try {
-				parsedEvent = JSON.parse(event.data);
-			} catch (err) {
-				console.log("Kick websocket parse failed", err);
-				return;
-			}
+		// Kick olayini isler. Govde Pusher donemiyle ayni (event adi + JSON
+		// string data); Centrifugo zarfi `toKickEvent` ile bu sekle cevrilir.
+		const handleKickEvent = (parsedEvent: KickEvent) => {
 			try {
 				switch (parsedEvent.event) {
-					// FIX-1: Pusher protokol mesajlari ────────────────────────
-					case "pusher:connection_established": {
-						// data.activity_timeout (sn) — watchdog bunu baz alir.
-						try {
-							const payload = JSON.parse(parsedEvent.data || "{}");
-							const timeoutS = Number(payload?.activity_timeout);
-							if (Number.isFinite(timeoutS) && timeoutS > 0) {
-								channelActivityTimeoutMs.set(
-									channelName,
-									timeoutS * 1000
-								);
-								verboseLog(
-									"[chat] connection_established",
-									channelName,
-									`activity_timeout=${timeoutS}s`
-								);
-							}
-						} catch {
-							// noop: timeout okunamazsa default kalir
-						}
-						break;
-					}
-					case "pusher:ping":
-						// Sunucu ping atti — derhal pong ile cevapla, yoksa
-						// activity_timeout sonra socket kapanir.
-						try {
-							socket.send('{"event":"pusher:pong","data":{}}');
-							verboseLog("[chat] pong sent", channelName);
-						} catch {
-							// noop
-						}
-						break;
-					case "pusher:pong":
-						// Bizim proaktif ping'imize sunucu yaniti — sadece aktivite
-						// (yukarida lastActivityAt guncellendi). Ek is yok.
-						break;
-					case "pusher_internal:subscription_succeeded":
-						// FIX-2: basarili abonelik = saglikli baglanti, backoff sayacini
-						// sifirla. (Bir sonraki kopusta tekrar 1sn'den baslar.)
-						reconnectAttempts.set(channelName, 0);
-						dispatch(
-							MessageActionsFunc.setConnectionStatus("connected", channelName)
-						);
-						break;
 					case "App\\Events\\ChatMessageEvent":
 						const parsedMessage: UserMessage = JSON.parse(parsedEvent.data);
 						dispatch(
@@ -700,6 +526,34 @@ export const chatListener = (slug?: string) => {
 					} catch (autoErr) {
 						console.log("automation sub eval failed", autoErr);
 					}
+					break;
+				// Ilk kez abone olan: Kick artik bunu kanal akisi olayiyla bildiriyor.
+				// Ayni yoldan (subMessage) gecer: aktivite, bant, cift kayit ve hediye
+				// alicisi bastirma korumalari aynen gecerli.
+				case "App\\Events\\NewActivityFeedEvent": {
+					const newSubscriber = parseNewSubscriber(parsedEvent.data);
+					if (!newSubscriber) break;
+					dispatch(
+						MessageActionsFunc.subMessage(
+							enrichLegacySubscriptionPayload({
+								chatroom_id: 0,
+								username: newSubscriber.username,
+								months: 1,
+								channelSlug: channelName,
+								create_at: newSubscriber.createdAt,
+							})
+						)
+					);
+					try {
+						evaluateSubEvent(channelName, newSubscriber.username, 1, false);
+					} catch (autoErr) {
+						console.log("automation new subscriber eval failed", autoErr);
+					}
+					break;
+				}
+				// Ayni aboneligin tekrarlari; NewActivityFeedEvent isleniyor.
+				case "App\\Events\\ChannelSubscriptionEvent":
+				case "App\\Events\\NewSubscriberUpdatedEvent":
 					break;
 				case "App\\Events\\GiftedSubscriptionsEvent": {
 					const parsedGiftSubMessage: LegacyGiftedSubscriptionsPayload = JSON.parse(
@@ -882,8 +736,11 @@ export const chatListener = (slug?: string) => {
 					}
 					break;
 				}
-				case "App\\Events\\StreamHostEvent":
-					const parsedHostInfo: HostInfo = JSON.parse(parsedEvent.data);
+				// Host/raid: Kick artik `StreamHostedEvent` adiyla ve `chatrooms.<id>`
+				// kanalinda yayinliyor (eski `StreamHostEvent` gelmiyor).
+				case "App\\Events\\StreamHostedEvent":
+					const parsedHostInfo: HostInfo = parseStreamHosted(parsedEvent.data);
+					if (!parsedHostInfo.host_username) break;
 					dispatch(
 						MessageActionsFunc.setHostInfo({
 							host_username: parsedHostInfo.host_username,
@@ -902,6 +759,62 @@ export const chatListener = (slug?: string) => {
 					} catch (autoErr) {
 						console.log("automation host eval failed", autoErr);
 					}
+					break;
+				// Yayin basladi/bitti: ust bardaki CANLI/izleyici/baslik 30 sn'lik
+				// yoklamayi beklemeden hemen tazelenir.
+				case "App\\Events\\StreamerIsLive":
+				case "App\\Events\\StopStreamBroadcast":
+					dispatch(refreshStreamMeta(channelName));
+					break;
+				// Moderator sohbeti temizledi.
+				case "App\\Events\\ChatroomClearEvent":
+					dispatch(MessageActionsFunc.clearChannelMessages(channelName));
+					break;
+				case "App\\Events\\PinnedMessageCreatedEvent": {
+					const pinned = parsePinnedMessage(JSON.parse(parsedEvent.data || "{}"));
+					if (pinned) {
+						dispatch(
+							MessageActionsFunc.setPinnedMessage(channelName, {
+								...pinned,
+								message: { ...pinned.message, channelSlug: channelName },
+							})
+						);
+					}
+					break;
+				}
+				case "App\\Events\\PinnedMessageDeletedEvent":
+					dispatch(MessageActionsFunc.setPinnedMessage(channelName, null));
+					break;
+				// Hedef tamamlandi → aktivite. Ilerleme dakikada birkac kez geldigi
+				// icin akisi doldurmasin diye diger hedef olaylari sessiz gecilir.
+				case "GoalAchievedEvent": {
+					const goal = parseGoal(parsedEvent.data);
+					if (goal) {
+						const achievedAt = Date.now();
+						dispatch(
+							MessageActionsFunc.addActivity({
+								id: `goal-${goal.id}`,
+								channelSlug: channelName,
+								kind: "goal_achieved",
+								actor: { username: channelName },
+								amount: goal.targetValue,
+								title: goal.type,
+								createdAt: achievedAt,
+								create_at: achievedAt,
+								raw: goal,
+							})
+						);
+					}
+					break;
+				}
+				// Bilinen ama uygulamada karsiligi olmayan olaylar: "bilinmeyen olay"
+				// loguna dusmesin.
+				case "GoalCreatedEvent":
+				case "GoalUpdatedEvent":
+				case "GoalProgressUpdateEvent":
+				case "GoalCanceledEvent":
+				case "KicksLeaderboardUpdated":
+				case "GiftsLeaderboardUpdated":
 					break;
 				case "RewardRedeemedEvent": {
 					// Sprint 49: chatroom_<id> kanalında reward redemption.
@@ -1143,7 +1056,7 @@ export const chatListener = (slug?: string) => {
 								"true"
 							) {
 								console.log(
-									"[Reward Pusher]",
+									"[Reward realtime]",
 									channelName,
 									"event:",
 									evtName,
@@ -1159,7 +1072,12 @@ export const chatListener = (slug?: string) => {
 					if (
 						localStorage.getItem("chatViewVerboseLogging") === "true"
 					) {
-						console.log("[Pusher unknown event]", parsedEvent.event);
+						console.log(
+							"[Kick realtime unknown event]",
+							parsedEvent.event,
+							parsedEvent.channel,
+							parsedEvent.data.slice(0, 800)
+						);
 					}
 					break;
 				}
@@ -1167,7 +1085,264 @@ export const chatListener = (slug?: string) => {
 			} catch (err) {
 				console.log("Kick websocket event parse failed", parsedEvent.event, err);
 			}
-		});
+		};
+
+		// Centrifugo soketi (main process'te acilir, MainProcessSocket vekiliyle
+		// konusulur): ac → connect + abonelikler → sunucunun `{}` ping'ine
+		// `{}` ile cevap → jeton suresi dolmadan `refresh`. Kopunca backoff ile
+		// bastan (kanal bilgisi + yeni jeton) baglanilir.
+		const openRealtimeSocket = (
+			realtime: KickRealtimeConnection,
+			channelId: number,
+			chatroomId: number
+		) => {
+			const socket = new MainProcessSocket(realtime.url);
+			activeSockets.set(channelName, socket);
+			const subscriptions = kickRealtimeChannels(channelId, chatroomId);
+			let nextCommandId = CONNECT_COMMAND_ID + subscriptions.length + 1;
+			lastActivityAt.set(channelName, Date.now());
+			channelActivityTimeoutMs.set(
+				channelName,
+				REALTIME_DEFAULT_PING_S * 1000
+			);
+
+			// Watchdog: sunucu `ping` saniyede bir `{}` yollar. ping + tolerans
+			// boyunca hic cerceve gelmezse socket olu sayilir ve kapatilir (close
+			// handler yeniden baglanir). Centrifugo'da istemci ping'i yok.
+			const watchdog = setInterval(() => {
+				if (activeSockets.get(channelName) !== socket) {
+					clearInterval(watchdog);
+					return;
+				}
+				if (socket.readyState !== SOCKET_OPEN) {
+					return;
+				}
+				const now = Date.now();
+				const silence = now - (lastActivityAt.get(channelName) ?? now);
+				const timeout =
+					channelActivityTimeoutMs.get(channelName) ??
+					REALTIME_DEFAULT_PING_S * 1000;
+				if (silence > timeout + WATCHDOG_GRACE_MS) {
+					verboseLog(
+						"[chat watchdog] no activity, closing dead socket",
+						channelName,
+						`silence=${silence}ms`
+					);
+					try {
+						socket.close();
+					} catch {
+						// noop
+					}
+				}
+			}, WATCHDOG_TICK_MS);
+			watchdogTimers.set(channelName, watchdog);
+
+			const scheduleTokenRefresh = (ttlSeconds?: number) => {
+				clearTokenRefresh(channelName);
+				if (!ttlSeconds || ttlSeconds <= 0) return;
+				const timer = setTimeout(() => {
+					tokenRefreshTimers.delete(channelName);
+					window.electron.kick
+						.getRealtimeToken(realtime.clientId)
+						.then((token) => {
+							if (
+								activeSockets.get(channelName) !== socket ||
+								socket.readyState !== SOCKET_OPEN
+							) {
+								return;
+							}
+							socket.send(buildRefreshFrame(token, nextCommandId));
+							nextCommandId += 1;
+						})
+						.catch((err) => {
+							// Yenilenemezse temiz baslangic: close handler yeniden baglanir.
+							console.log("Kick realtime token refresh failed", err);
+							if (activeSockets.get(channelName) === socket) {
+								socket.close();
+							}
+						});
+				}, tokenRefreshDelayMs(ttlSeconds));
+				tokenRefreshTimers.set(channelName, timer);
+			};
+
+			socket.addEventListener("open", () => {
+				socket.send(buildConnectFrame(realtime.token, subscriptions));
+			});
+
+			socket.addEventListener("close", () => {
+				// Stale-socket guard: yalnizca hala aktif olan socket'in close'u
+				// state'i degistirir / reconnect tetikler. Eski socket'in gec gelen
+				// close'u yeni baglantiyi bozmamali.
+				if (activeSockets.get(channelName) === socket) {
+					activeSockets.delete(channelName);
+					stopStreamMetaPolling(channelName);
+					clearWatchdog(channelName);
+					clearTokenRefresh(channelName);
+					dispatch(
+						MessageActionsFunc.setConnectionStatus("disconnected", channelName)
+					);
+					// Kanal hala izleniyorsa (bilincli kapatma degilse) backoff ile
+					// yeniden baglan.
+					scheduleReconnect(dispatch, channelName, chatListener);
+				}
+			});
+
+			socket.addEventListener("error", () => {
+				if (activeSockets.get(channelName) === socket) {
+					dispatch(
+						MessageActionsFunc.setConnectionStatus("disconnected", channelName)
+					);
+					// Reconnect burada planlanmaz: "error" sonrasi tarayici daima
+					// "close" da yayar; reconnect tek noktada (close) tetiklenir.
+				}
+			});
+
+			socket.addEventListener("message", (event) => {
+				if (activeSockets.get(channelName) !== socket) {
+					return;
+				}
+				// Herhangi bir cerceve = aktivite. Watchdog bunu kullanir.
+				lastActivityAt.set(channelName, Date.now());
+				for (const reply of parseRealtimeFrames(event.data)) {
+					if (isServerPing(reply)) {
+						// Cevapsiz ping'de sunucu baglantiyi kapatir.
+						try {
+							socket.send("{}");
+						} catch {
+							// noop
+						}
+						continue;
+					}
+					if (reply.error) {
+						console.log("Kick realtime error", reply.id, reply.error);
+						// connect reddedildiyse socket ise yaramaz; bastan baglan.
+						if (reply.id === CONNECT_COMMAND_ID) {
+							socket.close();
+						}
+						continue;
+					}
+					if (reply.connect) {
+						const pingS = Number(reply.connect.ping);
+						if (Number.isFinite(pingS) && pingS > 0) {
+							channelActivityTimeoutMs.set(channelName, pingS * 1000);
+						}
+						if (reply.connect.expires) {
+							scheduleTokenRefresh(reply.connect.ttl);
+						}
+						continue;
+					}
+					if (reply.refresh) {
+						if (reply.refresh.expires) {
+							scheduleTokenRefresh(reply.refresh.ttl);
+						}
+						continue;
+					}
+					if (reply.subscribe) {
+						// Basarili abonelik = saglikli baglanti; backoff sifirlanir
+						// (bir sonraki kopusta tekrar 1 sn'den baslar).
+						reconnectAttempts.set(channelName, 0);
+						dispatch(
+							MessageActionsFunc.setConnectionStatus("connected", channelName)
+						);
+						continue;
+					}
+					if (reply.push?.disconnect) {
+						verboseLog(
+							"[chat] server disconnect",
+							channelName,
+							reply.push.disconnect
+						);
+						socket.close();
+						continue;
+					}
+					const kickEvent = toKickEvent(reply);
+					if (kickEvent && isEventAllowedOnChannel(kickEvent)) {
+						handleKickEvent(kickEvent);
+					}
+				}
+			});
+		};
+
+		getChannelData(channelName)
+			.then((res) => {
+				if (!isCurrentAttempt()) return;
+				const channelId = res.data.id;
+				const chatroomId = res.data.chatroom.id;
+				const channelUserId = res.data.user_id;
+				dispatch(
+					MessageActionsFunc.setChannelBadges(
+						res.data.subscriber_badges.reverse(),
+						channelName
+					)
+				);
+
+				loadChannelEmoteBundle(dispatch, channelName, channelUserId);
+				startStreamMetaPolling(dispatch, channelName);
+
+				getChannelMessages(channelId)
+					.then((historyRes) => {
+						if (isCurrentAttempt()) {
+							const pinned = parsePinnedMessage(historyRes.data.data.pinned_message);
+							dispatch(
+								MessageActionsFunc.setPinnedMessage(
+									channelName,
+									pinned
+										? {
+												...pinned,
+												message: { ...pinned.message, channelSlug: channelName },
+										  }
+										: null
+								)
+							);
+						}
+						const historyMessages = historyRes.data.data.messages || [];
+						historyMessages
+							.slice()
+							.sort(
+								(a, b) =>
+									new Date(a.created_at).getTime() -
+									new Date(b.created_at).getTime()
+							)
+							.forEach((message) => {
+								if (isCurrentAttempt()) {
+									dispatch(
+										MessageActionsFunc.newMessage({
+											...message,
+											channelSlug: channelName,
+										})
+									);
+								}
+							});
+					})
+					.catch((err) => {
+						console.log("Kick history load failed", err);
+					});
+
+				window.electron.kick
+					.getRealtimeConnection(channelId)
+					.then((realtime) => {
+						if (!isCurrentAttempt()) return;
+						openRealtimeSocket(realtime, channelId, chatroomId);
+					})
+					.catch((err) => {
+						// Ag ya da Kick tarafi gecici hata: backoff ile yeniden dene.
+						console.log("Kick realtime connection failed", err);
+						if (!isCurrentAttempt()) return;
+						stopStreamMetaPolling(channelName);
+						dispatch(
+							MessageActionsFunc.setConnectionStatus("disconnected", channelName)
+						);
+						scheduleReconnect(dispatch, channelName, chatListener);
+					});
+			})
+			.catch((err) => {
+				// Kanal bulunamadi / Kick API hatasi: eskisi gibi yeniden denenmez.
+				console.log("Kick channel load failed", err);
+				if (!isCurrentAttempt()) return;
+				dispatch(
+					MessageActionsFunc.setConnectionStatus("disconnected", channelName)
+				);
+			});
 	};
 };
 
@@ -1182,6 +1357,7 @@ export const disconnectChannel = (slug?: string) => {
 	intentionalClose.add(channelName);
 	clearWatchdog(channelName);
 	clearReconnectTimer(channelName);
+	clearTokenRefresh(channelName);
 	reconnectAttempts.delete(channelName);
 	stopStreamMetaPolling(channelName);
 	const socket = activeSockets.get(channelName);

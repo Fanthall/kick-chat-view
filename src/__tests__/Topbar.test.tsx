@@ -32,6 +32,7 @@ const baseMessages = {
 	channelBadges: [],
 	channelBadgesByChannel: {},
 	streamMetaByChannel: {},
+	pinnedByChannel: {},
 	globalEmoteSets: [],
 	emoteSetsByChannel: {},
 	connectionStatus: "idle",

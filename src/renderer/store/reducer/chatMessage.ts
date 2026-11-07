@@ -5,6 +5,7 @@ import {
 	ActivityItem,
 	HostInfo,
 	ModMessage,
+	PinnedChatMessage,
 	UserMessage,
 } from "../../util/chatInterface";
 import { StreamMeta } from "../../util/streamMeta";
@@ -29,6 +30,7 @@ interface MessageState {
 	channelBadgesByChannel: Record<string, SubscriberBadge[]>;
 	hostInfo: HostInfo[];
 	streamMetaByChannel: Record<string, StreamMeta>;
+	pinnedByChannel: Record<string, PinnedChatMessage | null>;
 }
 const initialState: MessageState = {
 	kickEmoteList: [],
@@ -44,6 +46,7 @@ const initialState: MessageState = {
 	channelBadgesByChannel: {},
 	hostInfo: [],
 	streamMetaByChannel: {},
+	pinnedByChannel: {},
 };
 
 const LOCAL_MESSAGE_ID_PREFIX = "local-";
@@ -382,6 +385,39 @@ const ChatMessageReducers = (
 			modAction: [],
 			channelBadges: [],
 			hostInfo: [],
+			pinnedByChannel: {},
+		};
+	} else if (action.type === ChatMessageTypes.SET_PINNED_MESSAGE_ACTION) {
+		return {
+			...state,
+			pinnedByChannel: {
+				...state.pinnedByChannel,
+				[action.channelSlug]: action.pinned,
+			},
+		};
+	} else if (action.type === ChatMessageTypes.CLEAR_CHANNEL_MESSAGES_ACTION) {
+		// Kick'teki gibi kanalin tum sohbet satirlari kalkar; yerine tek bir
+		// "sohbet temizlendi" satiri (metni ChatModern'de cevrilir) eklenir.
+		const clearedNotice: UserMessage = {
+			id: `chat-cleared-${action.channelSlug}-${action.clearedAt}`,
+			channelSlug: action.channelSlug,
+			chatroom_id: 0,
+			content: "",
+			type: "chat-cleared",
+			created_at: new Date(action.clearedAt).toISOString(),
+			sender: {
+				id: 0,
+				username: "",
+				slug: "",
+				identity: { color: "", badges: [] },
+			},
+		};
+		return {
+			...state,
+			// Kesin esitlik: kanalsiz (eski) satirlar baska kanalin temizligiyle silinmesin.
+			messageList: state.messageList
+				.filter((item) => item.channelSlug !== action.channelSlug)
+				.concat(clearedNotice),
 		};
 	} else if (action.type === ChatMessageTypes.SET_CONNECTION_STATUS_ACTION) {
 		return {

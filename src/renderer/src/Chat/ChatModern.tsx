@@ -25,12 +25,14 @@ import React, {
 import {
 	LuClock,
 	LuCornerUpLeft,
+	LuEraser,
 	LuInfo,
 	LuPin,
 	LuRefreshCw,
 	LuShield,
 	LuSmile,
 	LuTrash2,
+	LuX,
 } from "react-icons/lu";
 import { toast } from "react-toastify";
 import MessageActionsFunc from "../../store/actions/chatMessage";
@@ -436,6 +438,24 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 	const listRef = useRef<HTMLDivElement>(null);
 
 	const channelName = getActiveChannelSlug();
+
+	// Sabitlenen mesaj (Kick PinnedMessageCreated/DeletedEvent + geçmiş yanıtı).
+	// Süresi dolunca ya da kullanıcı gizleyince kalkar; yeni sabitleme yeniden gösterir.
+	const pinned = channelName ? messages.pinnedByChannel?.[channelName] : undefined;
+	const [hiddenPinId, setHiddenPinId] = useState<string | undefined>(undefined);
+	const [, setPinExpiryTick] = useState(0);
+	useEffect(() => {
+		if (!pinned?.finishAt) return undefined;
+		const remainingMs = pinned.finishAt - Date.now();
+		if (remainingMs <= 0) return undefined;
+		const timer = setTimeout(() => setPinExpiryTick((n) => n + 1), remainingMs + 50);
+		return () => clearTimeout(timer);
+	}, [pinned?.finishAt]);
+	const showPinned =
+		!!pinned &&
+		pinned.message.id !== hiddenPinId &&
+		(!pinned.finishAt || pinned.finishAt > Date.now());
+
 	// Faz 2: bağlantı durumundan chat state matrisi türet (salt okuma; chatConnection
 	// davranışına dokunulmaz). connecting/idle→skeleton, connected+0 mesaj→boş, disconnected→banner.
 	const connState =
@@ -1495,6 +1515,44 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 				</div>
 			</div>
 
+			{showPinned && pinned && (
+				<div className="chat-pinned" role="note" aria-label={t("chat.pinned.label")}>
+					<span className="sys-icon" aria-hidden>
+						<LuPin size={12} />
+					</span>
+					<div className="chat-pinned-body">
+						<div className="chat-pinned-meta">
+							<span className="chat-pinned-sender">
+								{pinned.message.sender?.username}
+							</span>
+							{pinned.pinnedBy && (
+								<span className="chat-pinned-by">
+									{t("chat.pinned.by").replace("{user}", pinned.pinnedBy)}
+								</span>
+							)}
+						</div>
+						<div
+							className="chat-pinned-text"
+							dangerouslySetInnerHTML={{
+								__html: renderMessageContent(
+									`pinned-${pinned.message.id}`,
+									pinned.message.content || ""
+								),
+							}}
+						/>
+					</div>
+					<button
+						type="button"
+						className="icon-btn"
+						onClick={() => setHiddenPinId(pinned.message.id)}
+						title={t("chat.pinned.hide")}
+						aria-label={t("chat.pinned.hide")}
+					>
+						<LuX size={12} aria-hidden />
+					</button>
+				</div>
+			)}
+
 			{/* Message list */}
 			<div
 				ref={listRef}
@@ -1548,6 +1606,18 @@ const ChatModern: FunctionComponent<ChatModernProps> = ({ onSelectModUser }) => 
 					</div>
 				)}
 				{visibleMessages.map((msg) => {
+					// Moderatör sohbeti temizledi (ChatroomClearEvent).
+					if (msg.type === "chat-cleared") {
+						return (
+							<div key={`chat-row-${msg.id}`} className="chat-system" role="status">
+								<span className="sys-icon" aria-hidden>
+									<LuEraser size={12} />
+								</span>
+								<span>{t("chat.cleared")}</span>
+								<span className="mono">{Moment(msg.created_at).format("HH:mm")}</span>
+							</div>
+						);
+					}
 					// Sprint 35: subscription + gift-sub banner rows — Pusher
 					// SubscriptionEvent / GiftedSubscriptionsEvent reducer
 					// tarafından bu synthetic mesajlara dönüştürülüyor.

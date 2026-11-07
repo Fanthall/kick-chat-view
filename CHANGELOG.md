@@ -1,3 +1,24 @@
+# 4.6.24 — 2026-11-07
+
+Canlı sohbet ve aktivite yeniden çalışıyor: Kick'in yeni canlı olay sistemine geçildi; host/raid, sabitlenen mesaj, sohbet temizleme ve hedef olayları eklendi.
+
+## [Kick bağlantısı] — 2026-11-07
+
+- **Fix — aktivite alanı ve canlı sohbet gelmiyordu.** Kick eski Pusher anahtarını kaldırdı; soket bağlanır bağlanmaz `4001 App key not in this cluster` ile reddediliyordu. Aktivite paneli "bağlantı koptu" bandında kalıyor, sohbette yalnız yeniden bağlanma denemelerinde çekilen geçmiş görünüyordu.
+- **Yeni bağlantı akışı.** kick.com'un kendi istemcisi gibi önce bağlantı adresi ve jeton alınıyor (`web.kick.com/api/v1/realtime/...`), sonra Centrifugo soketine bağlanılıyor. Olay içerikleri eskisiyle aynı; yalnız zarf değişti.
+- Pazarlık ve soket **ana süreçte** (Electron main) çalışıyor: bu uç noktalar tarayıcı kökenlerini kabul etmiyor. Arayüz soketle ince bir vekil üzerinden konuşuyor; pencere kapanınca ya da yenilenince eski soketler kapanıyor.
+- Jeton (~45 dk) süresi dolmadan yenileniyor; kopunca kanal bilgisi ve yeni jetonla baştan bağlanılıyor.
+
+## [Yeni Kick olayları] — 2026-11-07
+
+- **Yeni aboneler aktivitede.** Kick ilk kez abone olanı artık yalnız kanal akışı olayıyla (`NewActivityFeedEvent`, `new_subscriber`) bildiriyor; eski `SubscriptionEvent` gelmiyordu. Abonelik kartı, sohbet bandı ve otomasyon bu olayla tetikleniyor; yenilemeler eskisi gibi kutlama mesajından geliyor.
+- **Host/raid yeniden çalışıyor.** Kick bu olayı artık `StreamHostedEvent` adıyla ve ayrı bir kanalda gönderiyor; aktivite kartı, sohbet bandı ve otomasyon yeniden tetikleniyor.
+- **Sabitlenen mesaj.** Sohbet listesinin üstünde gönderen, sabitleyen ve mesajla gösteriliyor; süresi dolunca ya da gizlenince kalkıyor. Bağlanırken mevcut sabitleme de yükleniyor.
+- **Sohbet temizleme.** Moderatör sohbeti temizlediğinde kanalın mesajları kalkıyor, yerine tek bir "sohbet temizlendi" satırı geliyor.
+- **Hedef tamamlandı** aktivitede görünüyor ("Abone hedefi tamamlandı — 4.000"). Hedef ilerlemesi dakikada birkaç kez geldiği için akışa düşmüyor.
+- **Yayın başladı/bitti** olayıyla üst bardaki CANLI durumu ve başlık 30 saniyeyi beklemeden tazeleniyor.
+- Ayrıntılı log açıkken tanınmayan olaylar içerikleriyle birlikte yazılıyor.
+
 # 4.6.23 — 2026-07-26
 
 Cevap sırası düzeltildi, pasif kazançtaki tavan kaldırıldı.

@@ -111,12 +111,13 @@ const KIND_TO_FILTER: Record<ActivityKind, FilterId> = {
 	reward_redemption: "reward",
 	host_raid: "all",
 	follow: "all",
+	goal_achieved: "all",
 };
 
 // ─── Icon + accent per kind ──────────────────────────────────────────────────
 type AccentCls = "sub" | "gift" | "kicks" | "reward" | "host" | "follow";
 
-const KIND_META: Record<ActivityKind, { iconName: "crown" | "gift" | "bolt" | "coin" | "user" | "heart"; cls: AccentCls }> = {
+const KIND_META: Record<ActivityKind, { iconName: "crown" | "gift" | "bolt" | "coin" | "user" | "heart" | "star"; cls: AccentCls }> = {
 	subscription_new: { iconName: "crown", cls: "sub" },
 	subscription_renewal: { iconName: "crown", cls: "sub" },
 	subscription_gift: { iconName: "gift", cls: "gift" },
@@ -124,6 +125,7 @@ const KIND_META: Record<ActivityKind, { iconName: "crown" | "gift" | "bolt" | "c
 	reward_redemption: { iconName: "coin", cls: "reward" },
 	host_raid: { iconName: "user", cls: "host" },
 	follow: { iconName: "heart", cls: "follow" },
+	goal_achieved: { iconName: "star", cls: "reward" },
 };
 
 const toActivityStatus = (value: unknown): ActivityStatus => {
@@ -245,6 +247,21 @@ const ActivityRow: FunctionComponent<ActivityRowProps> = ({
 		lineNode = (
 			<>
 				<b>{actorName}</b> <b>{activity.title || t("activity.line.a-reward")}</b> {t("activity.line.redeemed")}
+			</>
+		);
+	} else if (activity.kind === "goal_achieved") {
+		// title = Kick hedef türü (subscriptions / followers / kicks).
+		const goalKey = `activity.goal.${activity.title}`;
+		const goalLabel = t(goalKey) === goalKey ? t("activity.goal.generic") : t(goalKey);
+		lineNode = (
+			<>
+				<b>{goalLabel}</b> {t("activity.line.goal-achieved")}
+				{activity.amount != null && (
+					<>
+						{" "}
+						— <b className="mono num">{fmtNum(activity.amount)}</b>
+					</>
+				)}
 			</>
 		);
 	}

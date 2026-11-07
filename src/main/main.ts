@@ -39,6 +39,8 @@ import {
 	timeoutKickUser,
 	unbanKickUser,
 } from "./kickService";
+import { getKickRealtimeConnection, getKickRealtimeToken } from "./kickRealtime";
+import { registerRealtimeSocketIpc } from "./realtimeSocket";
 import type { UserWindowPayload } from "../shared/userWindow";
 import type { PanelWindowPayload, PanelKind } from "../shared/panelWindow";
 import MenuBuilder from "./menu";
@@ -272,6 +274,17 @@ ipcMain.handle("kick:reject-channel-reward-redemptions", (_event, ids: string[])
 ipcMain.handle("kick:get-kicks-leaderboard", (_event, top?: number) => {
 	return getKickKicksLeaderboard(top);
 });
+
+// Canli sohbet/olay soketi (Centrifugo) icin adres + jeton; OAuth gerektirmez.
+ipcMain.handle("kick:get-realtime-connection", (_event, channelId: number) => {
+	return getKickRealtimeConnection(channelId);
+});
+
+ipcMain.handle("kick:get-realtime-token", (_event, clientId: string) => {
+	return getKickRealtimeToken(clientId);
+});
+
+registerRealtimeSocketIpc();
 
 ipcMain.handle("user-window:open", (_event, payload: UserWindowPayload) => {
 	createUserWindow(payload);

@@ -18,6 +18,10 @@ import type {
 	KickRewardRedemptionsQuery,
 	KickSendChatMessageRequest,
 } from "./kickService";
+import type {
+	KickRealtimeConnection,
+	RealtimeSocketEvent,
+} from "../shared/kickRealtime";
 import type { UserWindowPayload } from "../shared/userWindow";
 import type { PanelWindowPayload } from "../shared/panelWindow";
 
@@ -132,6 +136,34 @@ const electronHandler = {
 			top?: number
 		): Promise<KickApiResponse<KickKicksLeaderboard>> {
 			return ipcRenderer.invoke("kick:get-kicks-leaderboard", top);
+		},
+		getRealtimeConnection(channelId: number): Promise<KickRealtimeConnection> {
+			return ipcRenderer.invoke("kick:get-realtime-connection", channelId);
+		},
+		getRealtimeToken(clientId: string): Promise<string> {
+			return ipcRenderer.invoke("kick:get-realtime-token", clientId);
+		},
+	},
+	// Kick canli soketi main process'te acilir; bkz. src/main/realtimeSocket.ts.
+	realtimeSocket: {
+		open(id: string, url: string): Promise<void> {
+			return ipcRenderer.invoke("realtime-socket:open", id, url);
+		},
+		send(id: string, data: string): void {
+			ipcRenderer.send("realtime-socket:send", id, data);
+		},
+		close(id: string): void {
+			ipcRenderer.send("realtime-socket:close", id);
+		},
+		onEvent(func: (event: RealtimeSocketEvent) => void) {
+			const subscription = (
+				_event: IpcRendererEvent,
+				payload: RealtimeSocketEvent
+			) => func(payload);
+			ipcRenderer.on("realtime-socket:event", subscription);
+			return () => {
+				ipcRenderer.removeListener("realtime-socket:event", subscription);
+			};
 		},
 	},
 	userWindow: {
